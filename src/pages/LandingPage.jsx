@@ -16,6 +16,10 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import PublicNavbar from '../components/public/PublicNavbar';
 import PublicFooter from '../components/public/PublicFooter';
 
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
+const PETS_ENDPOINT = '/mascotas/listar'; 
+const SERVICES_ENDPOINT = '/servicios/listar'; 
+
 // TEMA PERSONALIZADO
 const customTheme = createTheme({
     palette: {
@@ -78,7 +82,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         const fetchMascotas = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('https://adopciones-impa-backend.onrender.com/mascotas/listar');
+                const response = await fetch(`${API_URL_BACKEND}${PETS_ENDPOINT}`);
                 if (!response.ok) {
                     throw new Error('Error al cargar las mascotas');
                 }
@@ -101,7 +105,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         const fetchServicios = async () => {
             try {
                 setLoadingServicios(true);
-                const response = await fetch('https://adopciones-impa-backend.onrender.com/servicios/listar');
+                const response = await fetch(`${API_URL_BACKEND}${SERVICES_ENDPOINT}`);
                 if (!response.ok) {
                     throw new Error('Error al cargar los servicios');
                 }
