@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Pets, Person, Edit, Delete } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const ADOPCIONES_ENDPOINT = '/adopciones/listar'; 
 
 const AdopcionesListPage = ({ isManagementView = false }) => {
@@ -26,7 +26,7 @@ const AdopcionesListPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_BASE_URL}${ADOPCIONES_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${ADOPCIONES_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

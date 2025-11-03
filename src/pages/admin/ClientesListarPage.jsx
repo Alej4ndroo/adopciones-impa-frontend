@@ -9,7 +9,7 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { Person } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CLIENTES_ENDPOINT = '/personas/listar'; 
 
 const ClientesListarPage = ({ isManagementView = false }) => {
@@ -29,7 +29,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_BASE_URL}${CLIENTES_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${CLIENTES_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

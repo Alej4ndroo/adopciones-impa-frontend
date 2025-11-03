@@ -15,8 +15,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN DE CLIENTE ---
-const API_BASE_URL = 'http://localhost:3000'; 
-// 🚨 MODIFICADO: Cambiado el endpoint para registro de clientes
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CREATE_CLIENT_ENDPOINT = '/personas/crear'; 
 
 // 🚨 ELIMINADO: Las opciones de rol se configuran para ser solo 'Cliente' (id 5, por ejemplo)
@@ -157,7 +156,7 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
         // 4. Envío a la API
         try {
             // 🚨 MODIFICADO: Usando el nuevo endpoint de clientes
-            const response = await axios.post(`${API_BASE_URL}${CREATE_CLIENT_ENDPOINT}`, payload, { 
+            const response = await axios.post(`${API_URL_BACKEND}${CREATE_CLIENT_ENDPOINT}`, payload, { 
                 headers: { 
                     Authorization: `Bearer ${token}`,
                 },

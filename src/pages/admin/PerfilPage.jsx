@@ -21,7 +21,7 @@ import {
 import axios from 'axios';
 
 // --- CONFIGURACIÓN DE API ---
-const API_BASE_URL = 'https://adopciones-impa-backend.onrender.com/'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const PROFILE_ENDPOINT = '/empleados/obtener-perfil';
 const PROFILE_UPDATE_ENDPOINT = '/empleados/actualizar';
 
@@ -49,7 +49,7 @@ const PerfilUsuarioPage = () => {
                 return;
             }
 
-            const response = await axios.get(`${API_BASE_URL}${PROFILE_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${PROFILE_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -107,7 +107,7 @@ const PerfilUsuarioPage = () => {
                 dataToSend.foto_perfil_base64 = base64String;
             }
 
-            const response = await axios.patch(`${API_BASE_URL}${PROFILE_UPDATE_ENDPOINT}`, dataToSend, {
+            const response = await axios.patch(`${API_URL_BACKEND}${PROFILE_UPDATE_ENDPOINT}`, dataToSend, {
                  headers: { Authorization: `Bearer ${token}` }
             });
 

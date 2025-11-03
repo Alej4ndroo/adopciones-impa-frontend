@@ -8,7 +8,7 @@ import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const USER_STATUS_ENDPOINT = '/user-status'; 
 const EMPLOYEES_ROLES = ['admin', 'director', 'veterinario', 'empleado'];
 
@@ -87,7 +87,7 @@ const AppCore = () => {
 
     const fetchUserData = async (token) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}${USER_STATUS_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${USER_STATUS_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             return response.data.usuario;

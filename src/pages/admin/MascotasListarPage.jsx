@@ -9,7 +9,7 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { Pets, BugReport, CrueltyFree } from '@mui/icons-material'; // Usaremos Pets para perros/gatos
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const PETS_ENDPOINT = '/mascotas/listar'; 
 
 const MascotasListarPage = ({ isManagementView = false }) => {
@@ -29,7 +29,7 @@ const MascotasListarPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_BASE_URL}${PETS_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${PETS_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

@@ -6,7 +6,7 @@ import { Container, Box, Typography, TextField, Button, Alert, CircularProgress 
 import { LockOpen } from '@mui/icons-material';
 
 // ⚠️ Ajusta esta URL al puerto de tu backend (probablemente 3000)
-const API_BASE_URL = 'https://adopciones-impa-backend.onrender.com'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 
 const LoginMUI = ({ onLoginSuccess }) => {
   const [correo_electronico, setcorreo_electronico] = useState('');
@@ -21,7 +21,7 @@ const LoginMUI = ({ onLoginSuccess }) => {
 
     try {
       // Petición al backend
-    const response = await axios.post(`${API_BASE_URL}/login`, {
+    const response = await axios.post(`${API_URL_BACKEND}/login`, {
         correo_electronico: correo_electronico,
         contrasena: password, 
     });
@@ -44,7 +44,7 @@ const LoginMUI = ({ onLoginSuccess }) => {
       if (err.response && (err.response.status === 401 || err.response.status === 400)) {
         setError('Usuario o contraseña incorrectos.');
       } else if (err.request) {
-        setError(`No se pudo conectar con el servidor en ${API_BASE_URL}.`);
+        setError(`No se pudo conectar con el servidor en ${API_URL_BACKEND}.`);
       } else {
         setError('Ocurrió un error inesperado al iniciar sesión.');
       }

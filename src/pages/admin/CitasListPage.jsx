@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Event, Edit, Delete } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CITAS_ENDPOINT = '/citas/listar'; 
 
 const CitasListPage = ({ isManagementView = false }) => {
@@ -26,7 +26,7 @@ const CitasListPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_BASE_URL}${CITAS_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${CITAS_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

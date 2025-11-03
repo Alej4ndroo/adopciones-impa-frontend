@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN DE CONSULTA ---
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CREATE_CONSULTA_ENDPOINT = '/consultas/crear'; 
 
 // 🚨 MODIFICADO: Endpoints para cargar datos
@@ -68,14 +68,14 @@ const ConsultasCrearPage = () => {
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 // 💡 Llama a expedientes
-                // const resExpedientes = await axios.get(`${API_BASE_URL}${EXPEDIENTES_ENDPOINT}`, { headers: { Authorization: `Bearer ${token}` } });
+                // const resExpedientes = await axios.get(`${API_URL_BACKEND}${EXPEDIENTES_ENDPOINT}`, { headers: { Authorization: `Bearer ${token}` } });
                 setExpedientes([ // 👈 Simulación de Expedientes
                     { id_expediente: 1, mascota: 'Firulais', cliente: 'Juan Pérez' },
                     { id_expediente: 2, mascota: 'Mishifu', cliente: 'Ana Gómez' },
                 ]);
 
                 // 💡 Llama a veterinarios
-                // const resVets = await axios.get(`${API_BASE_URL}${VETERINARIOS_ENDPOINT}`, { headers: { Authorization: `Bearer ${token}` } });
+                // const resVets = await axios.get(`${API_URL_BACKEND}${VETERINARIOS_ENDPOINT}`, { headers: { Authorization: `Bearer ${token}` } });
                 setVeterinarios([ // 👈 Simulación de Veterinarios
                     { id_empleado: 1, nombre: 'Dr. Alan Grant' },
                     { id_empleado: 3, nombre: 'Dra. Ellie Sattler' },
@@ -133,7 +133,7 @@ const ConsultasCrearPage = () => {
 
         // 4. Envío a la API
         try {
-            const response = await axios.post(`${API_BASE_URL}${CREATE_CONSULTA_ENDPOINT}`, payload, { 
+            const response = await axios.post(`${API_URL_BACKEND}${CREATE_CONSULTA_ENDPOINT}`, payload, { 
                 headers: { Authorization: `Bearer ${token}` },
             });
 

@@ -13,17 +13,14 @@ import {
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 
-// -------------------------------------------------------------------
-// 🔑 CONFIGURACIÓN DE RUTAS DE API ACTUALIZADA
-// -------------------------------------------------------------------
-const BASE_URL = 'http://localhost:3000'; // Tu servidor de backend
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const API_URLS = {
     // Estas rutas deben devolver un ARRAY de elementos que contaremos con .length
-    MASCOTAS_DISPONIBLES: `${BASE_URL}/mascotas/contar`,
-    SOLICITUDES_PENDIENTES: `${BASE_URL}/adopciones/pendientes`, 
-    CITAS_HOY: `${BASE_URL}/citas/contar`, 
+    MASCOTAS_DISPONIBLES: `${API_URL_BACKEND}/mascotas/contar`,
+    SOLICITUDES_PENDIENTES: `${API_URL_BACKEND}/adopciones/pendientes`, 
+    CITAS_HOY: `${API_URL_BACKEND}/citas/contar`, 
     // Asumo que esta ruta devuelve un único objeto con el total de ingresos.
-    INGRESOS_MES: `${BASE_URL}/finanzas/ingresos/mes`, 
+    INGRESOS_MES: `${API_URL_BACKEND}/finanzas/ingresos/mes`, 
 };
 
 // -------------------------------------------------------------------

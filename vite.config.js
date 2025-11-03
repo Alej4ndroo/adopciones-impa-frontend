@@ -2,9 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), svgr()],
-  server: {
+  server: mode === 'development' ? {
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -12,6 +12,5 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
-    
-  }
-})
+  } : {}
+}))

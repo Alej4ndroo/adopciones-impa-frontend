@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN ---
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CREATE_EMPLOYEE_ENDPOINT = '/empleados/crear'; 
 
 const ROL_OPTIONS = [
@@ -170,7 +170,7 @@ const EmpleadosCrearPage = () => {
 
         // 4. Envío a la API
         try {
-            const response = await axios.post(`${API_BASE_URL}${CREATE_EMPLOYEE_ENDPOINT}`, payload, {
+            const response = await axios.post(`${API_URL_BACKEND}${CREATE_EMPLOYEE_ENDPOINT}`, payload, {
                 headers: { 
                     Authorization: `Bearer ${token}`,
                 },

@@ -11,7 +11,7 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { Person, Visibility, Close, Phone, Email, LocationOn } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
 
 // --- 1. Componente para mostrar el detalle completo (Dentro de un Drawer) ---
@@ -147,7 +147,7 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_BASE_URL}${EMPLEADOS_ENDPOINT}`, {
+            const response = await axios.get(`${API_URL_BACKEND}${EMPLEADOS_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

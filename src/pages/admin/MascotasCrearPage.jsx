@@ -16,7 +16,7 @@ import {
     Info as InfoIcon
 } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
 const CREATE_PET_ENDPOINT = '/mascotas/crear';
 
 const ESPECIE_OPTIONS = ['perro', 'gato', 'conejo', 'hamster', 'otro'];
@@ -202,7 +202,7 @@ const MascotasCrearPage = () => {
         };
 
         try {
-            const response = await axios.post(`${API_BASE_URL}${CREATE_PET_ENDPOINT}`, payload, {
+            const response = await axios.post(`${API_URL_BACKEND}${CREATE_PET_ENDPOINT}`, payload, {
                 headers: { 
                     Authorization: `Bearer ${token}`,
                 },
