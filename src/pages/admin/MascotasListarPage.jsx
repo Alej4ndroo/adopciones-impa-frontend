@@ -9,7 +9,7 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { Pets, BugReport, CrueltyFree } from '@mui/icons-material'; // Usaremos Pets para perros/gatos
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const PETS_ENDPOINT = '/mascotas/listar'; 
 
 const MascotasListarPage = ({ isManagementView = false }) => {

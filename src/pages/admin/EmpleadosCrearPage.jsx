@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN ---
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_EMPLOYEE_ENDPOINT = '/empleados/crear'; 
 
 const ROL_OPTIONS = [

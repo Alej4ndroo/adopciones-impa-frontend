@@ -11,7 +11,7 @@ import {
 import { LayoutDashboard } from 'lucide-react';
 import { Person, Visibility, Close, Phone, Email, LocationOn } from '@mui/icons-material';
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
 
 // --- 1. Componente para mostrar el detalle completo (Dentro de un Drawer) ---

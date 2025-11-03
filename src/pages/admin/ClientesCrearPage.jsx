@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN DE CLIENTE ---
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_CLIENT_ENDPOINT = '/personas/crear'; 
 
 // 🚨 ELIMINADO: Las opciones de rol se configuran para ser solo 'Cliente' (id 5, por ejemplo)

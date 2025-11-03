@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN DE CONSULTA ---
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_CONSULTA_ENDPOINT = '/consultas/crear'; 
 
 // 🚨 MODIFICADO: Endpoints para cargar datos

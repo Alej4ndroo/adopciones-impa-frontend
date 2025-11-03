@@ -13,7 +13,7 @@ import {
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const API_URLS = {
     // Estas rutas deben devolver un ARRAY de elementos que contaremos con .length
     MASCOTAS_DISPONIBLES: `${API_URL_BACKEND}/mascotas/contar`,

@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Pets, Edit, Delete, MedicalServices } from '@mui/icons-material';
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CONSULTAS_ENDPOINT = '/consultas/listar'; 
 
 const ConsultasListarPage = ({ isManagementView = false }) => {

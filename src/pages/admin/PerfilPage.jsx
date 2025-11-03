@@ -21,7 +21,7 @@ import {
 import axios from 'axios';
 
 // --- CONFIGURACIÓN DE API ---
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const PROFILE_ENDPOINT = '/empleados/obtener-perfil';
 const PROFILE_UPDATE_ENDPOINT = '/empleados/actualizar';
 

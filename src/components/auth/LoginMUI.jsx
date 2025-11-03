@@ -6,7 +6,7 @@ import { Container, Box, Typography, TextField, Button, Alert, CircularProgress 
 import { LockOpen } from '@mui/icons-material';
 
 // ⚠️ Ajusta esta URL al puerto de tu backend (probablemente 3000)
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 
 const LoginMUI = ({ onLoginSuccess }) => {
   const [correo_electronico, setcorreo_electronico] = useState('');

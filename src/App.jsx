@@ -8,7 +8,7 @@ import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const USER_STATUS_ENDPOINT = '/user-status'; 
 const EMPLOYEES_ROLES = ['admin', 'director', 'veterinario', 'empleado'];
 

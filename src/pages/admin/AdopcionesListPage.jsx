@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Pets, Person, Edit, Delete } from '@mui/icons-material';
 
-const API_URL_BACKEND = import.meta.env.API_URL_BACKEND;
+const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const ADOPCIONES_ENDPOINT = '/adopciones/listar'; 
 
 const AdopcionesListPage = ({ isManagementView = false }) => {
