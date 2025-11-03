@@ -21,7 +21,7 @@ import {
 import axios from 'axios';
 
 // --- CONFIGURACIÓN DE API ---
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_BASE_URL = 'https://adopciones-impa-backend.onrender.com/'; 
 const PROFILE_ENDPOINT = '/empleados/obtener-perfil';
 const PROFILE_UPDATE_ENDPOINT = '/empleados/actualizar';
 

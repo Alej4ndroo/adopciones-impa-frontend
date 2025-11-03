@@ -6,7 +6,7 @@ import { Container, Box, Typography, TextField, Button, Alert, CircularProgress 
 import { LockOpen } from '@mui/icons-material';
 
 // ⚠️ Ajusta esta URL al puerto de tu backend (probablemente 3000)
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_BASE_URL = 'https://adopciones-impa-backend.onrender.com'; 
 
 const LoginMUI = ({ onLoginSuccess }) => {
   const [correo_electronico, setcorreo_electronico] = useState('');

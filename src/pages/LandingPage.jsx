@@ -78,7 +78,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         const fetchMascotas = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('http://localhost:3000/mascotas/listar');
+                const response = await fetch('https://adopciones-impa-backend.onrender.com/mascotas/listar');
                 if (!response.ok) {
                     throw new Error('Error al cargar las mascotas');
                 }
@@ -101,7 +101,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         const fetchServicios = async () => {
             try {
                 setLoadingServicios(true);
-                const response = await fetch('http://localhost:3000/servicios/listar');
+                const response = await fetch('https://adopciones-impa-backend.onrender.com/servicios/listar');
                 if (!response.ok) {
                     throw new Error('Error al cargar los servicios');
                 }
