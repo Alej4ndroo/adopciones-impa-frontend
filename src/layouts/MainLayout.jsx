@@ -1,5 +1,5 @@
 // src/layouts/MainLayout.jsx
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, CssBaseline, Toolbar } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavbarMUI from '../components/admin/NavbarMUI';
@@ -11,7 +11,12 @@ const MainLayout = ({ currentUser, onLogout }) => {
   const userPermissions = currentUser?.permisos || [];
   const location = useLocation();
 
-  // 💾 Guarda la última ruta del dashboard para restaurarla en futuros logins
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   useEffect(() => {
     if (location.pathname.startsWith('/dashboard')) {
       localStorage.setItem('lastDashboardPath', location.pathname);
@@ -26,9 +31,15 @@ const MainLayout = ({ currentUser, onLogout }) => {
         sidebarWidth={drawerWidth} 
         currentUser={currentUser}
         onLogout={onLogout} 
+        onDrawerToggle={handleDrawerToggle}
       /> 
 
-      <SidebarMUI userPermissions={userPermissions} />
+      <SidebarMUI 
+        userPermissions={userPermissions} 
+        drawerWidth={drawerWidth}
+        mobileOpen={mobileOpen} 
+        onDrawerToggle={handleDrawerToggle}
+      />
       
       <Box
         component="main"

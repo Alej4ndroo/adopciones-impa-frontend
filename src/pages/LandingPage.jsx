@@ -387,26 +387,6 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
                 </Container>
             </Box>
 
-            {/* Estadísticas */}
-            <Box sx={{ bgcolor: 'white', py: 6, mt: -1 }}>
-                <Container maxWidth="lg">
-                    <Grid container spacing={4}>
-                        {stats.map((stat, index) => (
-                            <Grid item xs={6} md={3} key={index}>
-                                <Box sx={{ textAlign: 'center', p: 2 }}>
-                                    <Typography variant="h3" sx={{ color: 'secondary.main', fontWeight: 800, mb: 1 }}>
-                                        {stat.number}
-                                    </Typography>
-                                    <Typography variant="body1" color="text.secondary">
-                                        {stat.label}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        ))}
-                    </Grid>
-                </Container>
-            </Box>
-
             {/* --- Perros Section --- */}
             <Container maxWidth="lg" sx={{ py: 10 }}>
                 <Box sx={{ textAlign: 'center', mb: 8 }}>
@@ -524,61 +504,6 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
                                 </Card>
                             </Grid>
                         ))}
-                    </Grid>
-                </Container>
-            </Box>
-
-            {/* --- Misión: Mejorado visualmente --- */}
-            <Box sx={{ py: 10, bgcolor: 'background.default' }}>
-                <Container maxWidth="lg">
-                    <Grid container spacing={6} alignItems="center">
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="h2" sx={{ color: 'secondary.main', mb: 3 }}>
-                                Nuestra Misión
-                            </Typography>
-                            <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-                                En el Instituto Mexicano de Protección Animal (IMPA), creemos que cada animal merece amor. Nuestro equipo se dedica incansablemente a **rescatar** y brindar **rehabilitación completa**, asegurando una transición feliz a su nuevo hogar.
-                            </Typography>
-                            <Box sx={{ mt: 4 }}>
-                                {['Atención veterinaria completa', 'Seguimiento post-adopción', 'Asesoría personalizada'].map((item, index) => (
-                                    <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                                        <CheckCircle color="primary" sx={{ mr: 2, mt: '4px', flexShrink: 0 }} />
-                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>{item}</Typography>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box
-                                sx={{
-                                    width: '100%', 
-                                    height: 400, 
-                                    borderRadius: 4,
-                                    // Mejoras visuales: Imagen de fondo y un overlay sutil
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    boxShadow: '0 20px 60px rgba(0, 123, 255, 0.3)'
-                                }}
-                            >
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        bgcolor: 'rgba(0, 0, 0, 0.2)', // Overlay oscuro para mejor contraste
-                                        zIndex: 1
-                                    }}
-                                />
-                                <Bone size={120} color="white" style={{ zIndex: 2 }} />
-                            </Box>
-                        </Grid>
                     </Grid>
                 </Container>
             </Box>

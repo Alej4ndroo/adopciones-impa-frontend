@@ -169,18 +169,33 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                             style={{ width: 70, height: 70, marginRight: '8px', objectFit: 'contain' }} 
                         /> 
                         <Typography 
-                            variant="h5" 
-                            component="h1" 
-                            sx={{ 
-                                fontWeight: '600', 
-                                color: '#00799B', 
-                                marginLeft: 2, 
-                                letterSpacing: '2px', 
-                                display: { xs: 'none', sm: 'block' }
-                            }}
-                        >
-                            INSTITUTO MORELIANO DE PROTECCIÓN ANIMAL
-                        </Typography>
+                            variant="h4" 
+                            component="h1" 
+                            sx={{ 
+                                fontWeight: '600', 
+                                color: '#00799B', 
+                                marginLeft: 2, 
+                                letterSpacing: '2px', 
+                                display: { xs: 'none', sm: 'block' } // Oculto en 'xs'
+                            }}
+                        >
+                            INSTITUTO MORELIANO DE PROTECCIÓN ANIMAL
+                        </Typography>
+                        
+                        {/* 2. Texto para Móvil (sólo xs) */}
+                        <Typography 
+                            variant="h4"
+                            component="h1" 
+                            sx={{ 
+                                fontWeight: '600', 
+                                color: '#00799B', 
+                                marginLeft: 2, 
+                                letterSpacing: '2px', 
+                                display: { xs: 'block', sm: 'none' } // Visible en 'xs', oculto en 'sm'
+                            }}
+                        >
+                            IMPA
+                        </Typography>
                     </Box>
                     
                     {/* Espaciador */}
