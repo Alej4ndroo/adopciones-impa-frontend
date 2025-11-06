@@ -16,7 +16,7 @@ import {
 
 // --- CONFIGURACIÓN DE CLIENTE ---
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
-const CREATE_CLIENT_ENDPOINT = '/personas/crear'; 
+const CREATE_CLIENT_ENDPOINT = '/usuarios/crear'; 
 
 // 🚨 ELIMINADO: Las opciones de rol se configuran para ser solo 'Cliente' (id 5, por ejemplo)
 // Suponemos que el rol de Cliente tiene el ID 5 en la base de datos

@@ -22,7 +22,7 @@ import {
 } from '@mui/icons-material';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
-const CLIENTES_ENDPOINT = '/personas/listar'; 
+const CLIENTES_ENDPOINT = '/usuarios/listar';
 
 // --- Componente para mostrar el detalle completo (Drawer mejorado) ---
 const ClienteDetailDrawer = ({ cliente, open, onClose, isManagementView }) => {
@@ -580,7 +580,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                                     }}
                                 >
                                     <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                                        #{cliente.id_persona || cliente.id}
+                                        #{cliente.id_usuario}
                                     </TableCell>
                                     <TableCell>
                                         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -593,23 +593,23 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                                                     fontWeight: 700
                                                 }}
                                             >
-                                                {cliente.usuarios.nombre.charAt(0).toUpperCase()}
+                                                {cliente.nombre.charAt(0).toUpperCase()}
                                             </Avatar>
                                             <Typography fontWeight={600}>
-                                                {cliente.usuarios.nombre}
+                                                {cliente.nombre}
                                             </Typography>
                                         </Stack>
                                     </TableCell>
                                     {!isTablet && (
                                         <TableCell sx={{ color: 'text.secondary' }}>
-                                            {cliente.usuarios.correo_electronico}
+                                            {cliente.correo_electronico}
                                         </TableCell>
                                     )}
                                     <TableCell>
                                         <Stack direction="row" spacing={0.5} alignItems="center">
                                             <PhoneIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                                             <Typography variant="body2" fontWeight={500}>
-                                                {cliente.usuarios.telefono || 'N/A'}
+                                                {cliente.telefono || 'N/A'}
                                             </Typography>
                                         </Stack>
                                     </TableCell>
