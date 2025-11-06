@@ -11,8 +11,10 @@ import ClientesListarPage from './ClientesListarPage';
 import ClientesCrearPage from './ClientesCrearPage';
 import MascotasListarPage from './MascotasListarPage';
 import MascotasCrearPage from './MascotasCrearPage';
-import CitasListPage from './CitasListPage';
-import AdopcionesListPage from './AdopcionesListPage';
+import CitasListarPage from './CitasListarPage';
+import CitasCrearPage from './CitasCrearPage';
+import AdopcionesListarPage from './AdopcionesListarPage';
+import AdopcionesCrearPage from './AdopcionesCrearPage';
 import ConsultasListarPage from './ConsultasListarPage';
 import ConsultasCrearPage from './ConsultasCrearPage';
 
@@ -38,10 +40,12 @@ const DashboardRoutes = () => (
     <Route path="mascotas/registrar" element={<MascotasCrearPage />} />
 
     {/* Citas */}
-    <Route path="citas/ver" element={<CitasListPage />} />
+    <Route path="citas/ver" element={<CitasListarPage />} />
+    <Route path="citas/crear" element={<CitasCrearPage />} />
 
     {/* Adopciones */}
-    <Route path="adopciones/ver" element={<AdopcionesListPage />} />
+    <Route path="adopciones/ver" element={<AdopcionesListarPage />} />
+    <Route path="adopciones/crear" element={<AdopcionesCrearPage />} />
 
     {/* Consultas */}
     <Route path="consultas/ver" element={<ConsultasListarPage />} />

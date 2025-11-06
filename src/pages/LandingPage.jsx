@@ -11,6 +11,7 @@ import {
     HeartHandshake, Stethoscope, Shield, Bone, PawPrint, Heart, Syringe
 } from 'lucide-react'; 
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { Link } from 'react-router-dom';
 
 // Componentes Separados
 import PublicNavbar from '../components/public/PublicNavbar';
@@ -175,18 +176,21 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         // --- FIN DE LA LÓGICA DE BASE64 ---
         
         return (
-            <Card sx={{ 
-                height: 500, 
-                width: 350,
-                display: 'flex', 
-                flexDirection: 'column',
-                transition: 'all 0.3s ease',
-                borderRadius: 3,
-                '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: 6
-                }
-            }}>
+            <Card 
+                component={Link} // 🔑 Usamos Link como componente base
+                to={`/mascota/${pet.id_mascota}`}
+                sx={{ 
+                    height: 500, 
+                    width: 350,
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    transition: 'all 0.3s ease',
+                    borderRadius: 3,
+                    '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 6
+                    }
+                }}>
                 <CardMedia
                     component="img"
                     height="240"

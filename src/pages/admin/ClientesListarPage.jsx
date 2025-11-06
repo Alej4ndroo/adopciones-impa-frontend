@@ -476,7 +476,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                 sx={{ 
                     p: { xs: 2, sm: 3 },
                     mb: 4,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    background: `linear-gradient(135deg, #1E74D1 0%, #038ffaff 100%)`,
                     borderRadius: 3,
                     color: 'white'
                 }}

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 // Importaciones de Páginas y Layouts
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
+import PetDetailPage from './pages/PetDetailPage';
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
@@ -165,6 +166,18 @@ const AppCore = () => {
                     path="*"
                     element={
                         <LandingPage
+                            isAuthenticated={isAuthenticated}
+                            currentUser={currentUser}
+                            onLoginSuccess={handleLoginSuccess}
+                            onLogout={handleLogout}
+                        />
+                    }
+                />
+
+                <Route
+                    path="/mascota/:petId" // Esto ahora capturará el ID de la URL
+                    element={
+                        <PetDetailPage
                             isAuthenticated={isAuthenticated}
                             currentUser={currentUser}
                             onLoginSuccess={handleLoginSuccess}

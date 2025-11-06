@@ -218,7 +218,7 @@ const PerfilUsuarioPage = () => {
                 justifyContent: 'center', 
                 alignItems: 'center', 
                 minHeight: '80vh',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`
+                background: `linear-gradient(135deg, #1E74D1 0%, #038ffaff 100%)`,
             }}>
                 <Stack alignItems="center" spacing={2}>
                     <CircularProgress size={60} />
@@ -263,7 +263,7 @@ const PerfilUsuarioPage = () => {
                     p: 4,
                     mb: 4,
                     borderRadius: 3,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    background: `linear-gradient(135deg, #1E74D1 0%, #038ffaff 100%)`,
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden'
@@ -487,7 +487,7 @@ const PerfilUsuarioPage = () => {
                                         width: 4, 
                                         height: 32, 
                                         borderRadius: 2,
-                                        background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                                        background: `linear-gradient(180deg, #1E74D1 0%, #038ffaff 100%)`,
                                     }} 
                                 />
                                 <Typography variant="h6" fontWeight={700} color="primary">
@@ -524,7 +524,7 @@ const PerfilUsuarioPage = () => {
                                         width: 4, 
                                         height: 32, 
                                         borderRadius: 2,
-                                        background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                                        background: `linear-gradient(180deg, #1E74D1 0%, #038ffaff 100%)`,
                                     }} 
                                 />
                                 <Typography variant="h6" fontWeight={700} color="primary">
@@ -561,7 +561,7 @@ const PerfilUsuarioPage = () => {
                                         width: 4, 
                                         height: 32, 
                                         borderRadius: 2,
-                                        background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                                        background: `linear-gradient(180deg, #1E74D1 0%, #038ffaff 100%)`,
                                     }} 
                                 />
                                 <Typography variant="h6" fontWeight={700} color="primary">
@@ -625,7 +625,7 @@ const PerfilUsuarioPage = () => {
                                     borderRadius: 2,
                                     py: 1.5,
                                     fontWeight: 600,
-                                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                                    background: `linear-gradient(135deg, #1E74D1 0%, #038ffaff 100%)`,
                                 }} 
                                 startIcon={<DocumentIcon />}
                             >
