@@ -72,7 +72,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
     const [mascota, setMascota] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [mainImage, setMainImage] = useState(null); // Imagen principal
+    const [mainImage, setMainImage] = useState(null);
 
     useEffect(() => {
         if (!petId) {
