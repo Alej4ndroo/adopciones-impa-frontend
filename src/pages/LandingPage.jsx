@@ -186,6 +186,8 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
                     flexDirection: 'column',
                     transition: 'all 0.3s ease',
                     borderRadius: 3,
+                    textDecoration: 'none',
+                    color: 'inherit',
                     '&:hover': {
                         transform: 'translateY(-8px)',
                         boxShadow: 6
