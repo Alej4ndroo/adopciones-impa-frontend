@@ -11,7 +11,7 @@ import {
     Save as SaveIcon,
     Close as CloseIcon,
     CheckCircle as CheckCircleIcon, 
-    CloudUpload as CloudUploadIcon,
+    // 🚨 ELIMINADO: CloudUploadIcon
 } from '@mui/icons-material';
 
 // --- CONFIGURACIÓN DE CLIENTE ---
@@ -24,15 +24,7 @@ const CLIENT_ROL_ID = 4;
 
 // --- FUNCIONES DE UTILIDAD (Se mantienen las de archivo y validación) ---
 
-// Función para convertir archivo a Base64
-const convertFileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file); 
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-    });
-};
+// 🚨 ELIMINADO: Función convertFileToBase64
 
 // 🔒 FUNCIÓN DE VALIDACIÓN DE SEGURIDAD (Se mantiene por seguridad de usuario)
 const validatePassword = (password) => {
@@ -74,7 +66,7 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
         activo: true, // El cliente está activo por defecto
     });
     
-    const [fotoPerfilFile, setFotoPerfilFile] = useState(null);
+    // 🚨 ELIMINADO: Estado fotoPerfilFile
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
@@ -94,15 +86,8 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
         });
     };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        setFotoPerfilFile(file || null);
-    };
-
-    const handleRemoveFile = () => {
-        setFotoPerfilFile(null);
-        document.getElementById('profile-image-upload-button').value = ''; 
-    };
+    // 🚨 ELIMINADO: handleFileChange
+    // 🚨 ELIMINADO: handleRemoveFile
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -126,22 +111,12 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
             return;
         }
 
-        // 2. Convertir imagen (Opcional para cliente)
-        let fotoPerfilBase64 = null;
-        if (fotoPerfilFile) {
-            try {
-                fotoPerfilBase64 = await convertFileToBase64(fotoPerfilFile);
-            } catch (err) {
-                setError("Error al procesar la foto de perfil. Intente de nuevo.");
-                setLoading(false);
-                return;
-            }
-        }
+        // 🚨 ELIMINADO: Bloque 2 (Convertir imagen)
 
         // 3. Preparar Payload
         const payload = {
             ...formData,
-            foto_perfil_base64: fotoPerfilBase64, 
+            // 🚨 ELIMINADO: foto_perfil_base64
             id_rol: CLIENT_ROL_ID, // 🚨 Se asegura el ID de Rol de Cliente
         };
         
@@ -173,7 +148,7 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
                 id_rol: CLIENT_ROL_ID,
                 activo: true,
             });
-            setFotoPerfilFile(null); 
+            // 🚨 ELIMINADO: setFotoPerfilFile(null); 
             setPasswordError(null);
 
         } catch (err) {
@@ -340,57 +315,8 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
                     </Grid>
                 </Box>
 
-                <Divider sx={{ my: 4 }} />
-
-                {/* 🚨 ELIMINADO: Se borra la sección de Información Laboral (solo aplica para empleados) */}
-                {/* 🚨 AGREGADO: Se puede usar esta sección para subir foto de perfil (se mantuvo la lógica para la foto) */}
-                 <Box sx={{ mb: 5 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-                        <Box 
-                            sx={{ 
-                                width: 4, height: 28, borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }} 
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
-                            Foto de Perfil (Opcional)
-                        </Typography>
-                    </Stack>
-                    <Grid container spacing={3} alignItems="center">
-                        <Grid item xs={12}>
-                             <Button
-                                variant="outlined"
-                                component="label"
-                                startIcon={<CloudUploadIcon />}
-                                sx={{ borderRadius: 2, borderColor: theme.palette.primary.main, color: theme.palette.primary.main }}
-                            >
-                                Seleccionar Archivo
-                                <input
-                                    type="file"
-                                    hidden
-                                    accept="image/*"
-                                    id="profile-image-upload-button"
-                                    onChange={handleFileChange}
-                                />
-                            </Button>
-                            <Box sx={{ mt: 1, minHeight: '1.5em' }}>
-                                {fotoPerfilFile ? (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography variant="body2">{fotoPerfilFile.name}</Typography>
-                                        <Button size="small" color="error" onClick={handleRemoveFile}>
-                                            <CloseIcon fontSize="small" />
-                                        </Button>
-                                    </Stack>
-                                ) : (
-                                    <Typography variant="body2" color="textSecondary">Ningún archivo seleccionado.</Typography>
-                                )}
-                            </Box>
-                        </Grid>
-                    </Grid>
-                </Box>
-                
-                <Divider sx={{ my: 4 }} />
-
+                {/* 🚨 ELIMINADO: Sección de Foto de Perfil */}
+                {/* 🚨 ELIMINADO: Divider que seguía a la sección de foto */}
 
                 {/* Botón de Envío */}
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 3 }}>

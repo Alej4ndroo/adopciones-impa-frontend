@@ -4,7 +4,7 @@ import { Route } from 'react-router-dom';
 
 // 🔑 Importa tus páginas
 import DashboardPage from './DashboardPage';
-import PerfilPage from './PerfilPage';
+import EmpleadosPerfilPage from './EmpleadosPerfilPage';
 import EmpleadosListarPage from './EmpleadosListarPage';
 import EmpleadosCrearPage from './EmpleadosCrearPage';
 import ClientesListarPage from './ClientesListarPage';
@@ -25,7 +25,7 @@ const DashboardRoutes = () => (
     <Route index element={<DashboardPage />} />
     
     {/* Perfil */}
-    <Route path="perfil" element={<PerfilPage />} />
+    <Route path="perfil" element={<EmpleadosPerfilPage />} />
 
     {/* Empleados */}
     <Route path="empleados/ver" element={<EmpleadosListarPage />} />

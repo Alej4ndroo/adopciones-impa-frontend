@@ -1,8 +1,8 @@
 // src/components/layout/PublicNavbar.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-    AppBar, Toolbar, Typography, Button, Box, Avatar, Fade, 
-    IconButton, Modal, Menu, MenuItem, Badge, Divider, CircularProgress
+    AppBar, Toolbar, Typography, Button, Box, Avatar, Fade, 
+    IconButton, Modal, Menu, MenuItem, Badge, Divider, CircularProgress
 } from '@mui/material';
 import { Login, Close, Logout, Notifications, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -11,51 +11,51 @@ import IMPALogo from '../../assets/img/logo_impa_azul.png';
 
 // Función para generar un color aleatorio (pastel o vibrante, ajusta según necesidad)
 const stringToColor = (string) => {
-    let hash = 0;
-    let i;
+    let hash = 0;
+    let i;
 
-    /* eslint-disable no-bitwise */
-    for (i = 0; i < string.length; i += 1) {
-        hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
+    /* eslint-disable no-bitwise */
+    for (i = 0; i < string.length; i += 1) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
 
-    let color = '#';
+    let color = '#';
 
-    for (i = 0; i < 3; i += 1) {
-        const value = (hash >> (i * 8)) & 0xff;
-        color += `00${(value).toString(16)}`.slice(-2);
-    }
-    /* eslint-enable no-bitwise */
+    for (i = 0; i < 3; i += 1) {
+        const value = (hash >> (i * 8)) & 0xff;
+        color += `00${(value).toString(16)}`.slice(-2);
+    }
+    /* eslint-enable no-bitwise */
 
-    return color;
+    return color;
 };
 
 const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
-    const [openModal, setOpenModal] = useState(false); 
-    const [anchorElMenu, setAnchorElMenu] = useState(null); // Menú de Perfil
-    const [anchorElNotif, setAnchorElNotif] = useState(null); // Menú de Notificaciones
+    const [openModal, setOpenModal] = useState(false); 
+    const [anchorElMenu, setAnchorElMenu] = useState(null); // Menú de Perfil
+    const [anchorElNotif, setAnchorElNotif] = useState(null); // Menú de Notificaciones
 
     // Estados para Notificaciones
     const [notifications, setNotifications] = useState([]);
     const [loadingNotif, setLoadingNotif] = useState(false);
     const badgeContent = notifications.length; // Contador de notificaciones
     
-    const openMenu = Boolean(anchorElMenu);
+    const openMenu = Boolean(anchorElMenu);
     const openNotif = Boolean(anchorElNotif);
 
-    const navigate = useNavigate();
+    const navigate = useNavigate();
 
-    const handleOpen = () => setOpenModal(true);
-    const handleClose = () => setOpenModal(false);
+    const handleOpen = () => setOpenModal(true);
+    const handleClose = () => setOpenModal(false);
 
-    const handleModalLoginSuccess = (user) => {
-        onLoginSuccess(user);
-        handleClose();
-    };
+    const handleModalLoginSuccess = (user) => {
+        onLoginSuccess(user);
+        handleClose();
+    };
 
-    const handleLogoClick = () => {
-        navigate(isAuthenticated ? '/dashboard' : '/'); 
-    };
+    const handleLogoClick = () => {
+        navigate(isAuthenticated ? '/dashboard' : '/'); 
+    };
     
     // --- Lógica del Menú de Perfil ---
     const handleMenuOpen = (event) => {
@@ -64,6 +64,12 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
 
     const handleMenuClose = () => {
         setAnchorElMenu(null);
+    };
+
+    // 🎯 NUEVO: Manejador para ir al perfil
+    const handleProfileClick = () => {
+        navigate('/perfil'); // Redirige a la página de perfil
+        handleMenuClose();  // Cierra el menú
     };
 
     const handleLogoutClick = () => {
@@ -108,7 +114,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
 
             // Aquí asumo que tu API devuelve un JSON como este:
             // [{ id: 1, mensaje: 'Nuevo reporte creado' }, ...]
-            const data = await response.json(); 
+            // const data = await response.json(); 
             // setNotifications(data); // Usa esto con tu API real
 
             // **Datos simulados para demostración:**
@@ -140,35 +146,35 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
     };
 
 
-    return (
-        <>
-            <AppBar 
-                position="sticky" 
-                elevation={0}
-                sx={{ 
-                    bgcolor: 'rgba(255, 255, 255, 0.95)', 
-                    backdropFilter: 'blur(10px)',
-                    borderBottom: '1px solid rgba(25, 118, 210, 0.1)'
-                }}
-            >
-                <Toolbar sx={{ px: { xs: 2, sm: 3 }, py: 1 }}> 
-                    
-                    {/* 🎯 Logo clickeable */}
-                    <Box 
-                        sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            cursor: 'pointer',
-                            '&:hover': { opacity: 0.8, transition: '0.2s' }
-                        }}
-                        onClick={handleLogoClick}
-                    >
-                        <img 
-                            src={IMPALogo} 
-                            alt="IMPA Logo" 
-                            style={{ width: 70, height: 70, marginRight: '8px', objectFit: 'contain' }} 
-                        /> 
-                        <Typography 
+    return (
+        <>
+            <AppBar 
+                position="sticky" 
+                elevation={0}
+                sx={{ 
+                    bgcolor: 'rgba(255, 255, 255, 0.95)', 
+                    backdropFilter: 'blur(10px)',
+                    borderBottom: '1px solid rgba(25, 118, 210, 0.1)'
+                }}
+            >
+                <Toolbar sx={{ px: { xs: 2, sm: 3 }, py: 1 }}> 
+                    
+                    {/* 🎯 Logo clickeable */}
+                    <Box 
+                        sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.8, transition: '0.2s' }
+                        }}
+                        onClick={handleLogoClick}
+                    >
+                        <img 
+                            src={IMPALogo} 
+                            alt="IMPA Logo" 
+                            style={{ width: 70, height: 70, marginRight: '8px', objectFit: 'contain' }} 
+                        /> 
+                        <Typography 
                             variant="h4" 
                             component="h1" 
                             sx={{ 
@@ -196,14 +202,14 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                         >
                             IMPA
                         </Typography>
-                    </Box>
-                    
-                    {/* Espaciador */}
-                    <Box sx={{ flexGrow: 1 }} /> 
-                    
-                    {/* Controles de usuario */}
-                    {isAuthenticated ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    </Box>
+                    
+                    {/* Espaciador */}
+                    <Box sx={{ flexGrow: 1 }} /> 
+                    
+                    {/* Controles de usuario */}
+                    {isAuthenticated ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             {/* 🔔 Campanita de Notificaciones */}
                             <IconButton
                                 size="large"
@@ -265,7 +271,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                             </Menu>
                                 
                             {/* Avatar / Icono de Perfil */}
-                            <IconButton
+                            <IconButton
                                 onClick={handleMenuOpen}
                                 size="large"
                                 edge="end"
@@ -306,64 +312,73 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                                         Hola, {currentUser?.nombre || 'Usuario'}
                                     </Typography>
                                 </MenuItem>
+
+                                {/* --- MODIFICACIÓN AQUÍ --- */}
+                                <Divider sx={{ my: 0.5 }} /> 
+                                <MenuItem onClick={handleProfileClick}>
+                                    <AccountCircle fontSize="small" sx={{ mr: 1 }} />
+                                    Mi Perfil
+                                </MenuItem>
+                                {/* --- FIN DE LA MODIFICACIÓN --- */}
+
                                 <MenuItem onClick={handleLogoutClick}>
                                     <Logout fontSize="small" sx={{ mr: 1 }} />
                                     Cerrar Sesión
                                 </MenuItem>
                             </Menu>
-                        </Box>
-                    ) : (
-                        <Button 
-                            variant="contained" 
-                            startIcon={<Login />} 
-                            onClick={handleOpen}
-                            sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
-                        >
-                            Acceder
-                        </Button>
-                    )}
-                </Toolbar>
-            </AppBar>
-            
-            {/* Modal de Login (sin cambios) */}
-            <Modal open={openModal} onClose={handleClose}>
-                <Fade in={openModal}>
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: { xs: '90%', sm: 400 },
-                            bgcolor: 'background.paper',
-                            boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
-                            borderRadius: 3,
-                            p: 4
-                        }}
-                    >
-                        <IconButton
-                            onClick={handleClose}
-                            sx={{ position: 'absolute', right: 8, top: 8 }}
-                        >
-                            <Close />
-                        </IconButton>
-                        <Box sx={{ textAlign: 'center', mb: 3 }}>
-                            <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                                <Login />
-                            </Avatar>
-                            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                                Acceder al Sistema
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Para empleados y clientes registrados
-                            </Typography>
-                        </Box>
-                        <LoginMUI onLoginSuccess={handleModalLoginSuccess} />
-                    </Box>
-                </Fade>
-            </Modal>
-        </>
-    );
+                        </Box>
+                    ) : (
+                        <Button 
+                            variant="contained" 
+                            startIcon={<Login />} 
+                            onClick={handleOpen}
+                            sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+                        >
+                            Acceder
+                        </Button>
+                    )}
+                </Toolbar>
+            </AppBar>
+            
+            {/* Modal de Login (sin cambios) */}
+            <Modal open={openModal} onClose={handleClose}>
+                <Fade in={openModal}>
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: { xs: '90%', sm: 400 },
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+                            borderRadius: 3,
+                            p: 4
+                        }}
+                    >
+                        <IconButton
+                            onClick={handleClose}
+                            sx={{ position: 'absolute', right: 8, top: 8 }}
+                        >
+                            <Close />
+                        </IconButton>
+                        <Box sx={{ textAlign: 'center', mb: 3 }}>
+                            <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+                                <Login />
+                            </Avatar>
+                            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                                Acceder al Sistema
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Para empleados y clientes registrados
+                            </Typography>
+                        </Box>
+                        <LoginMUI onLoginSuccess={handleModalLoginSuccess} />
+                    </Box>
+                </Fade>
+            </Modal>
+        </>
+    );
 };
 
 export default PublicNavbar;

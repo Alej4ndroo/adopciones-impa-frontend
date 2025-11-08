@@ -1,115 +1,101 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, IconButton, Box, Button, Chip } from '@mui/material';
-// 1. ⬅️ Importa el ícono del menú (hamburguesa)
+import { AppBar, Toolbar, Typography, IconButton, Box, Button, Chip, Avatar } from '@mui/material';
 import { UserCircle, Bell, LogOut, Menu as MenuIcon } from 'lucide-react';
 
-// 2. ⬅️ Acepta el prop 'onDrawerToggle'
 const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
     const navigate = useNavigate();
+    const [fotoPerfil, setFotoPerfil] = useState(null);
 
-    const userName = currentUser?.nombre || 'Empleado'; 
+    console.log('NavbarMUI - currentUser:', currentUser);
+    useEffect(() => {
+        if (currentUser?.foto_perfil_base64) {
+            const fotoRaw = currentUser.foto_perfil_base64;
+            const fotoURI = fotoRaw.startsWith('data:')
+                ? fotoRaw.replace(/\s+/g, '')
+                : `data:image/jpeg;base64,${fotoRaw.replace(/\s+/g, '')}`;
+            setFotoPerfil(fotoURI);
+        } else {
+            setFotoPerfil(null);
+        }
+    }, [currentUser]); // 🔹 se ejecuta cuando cambia currentUser
+
+    const userName = currentUser?.nombre || 'Empleado';
     const greeting = `Bienvenid@, ${userName}`;
-    
-    // Simulación de notificaciones
-    const notificationCount = 3; 
+    const notificationCount = 3;
 
-    const handleProfileClick = () => {
-        navigate('/dashboard/perfil');
-    };
-    
+    const handleProfileClick = () => navigate('/dashboard/perfil');
+
     return (
-        <AppBar 
-            position="fixed" 
-            sx={{ 
+        <AppBar
+            position="fixed"
+            sx={{
                 height: 70,
-                // 3. ⬅️ Ancho y Margen Responsivos
-                width: { sm: `calc(100% - ${sidebarWidth}px)` }, 
-                ml: { sm: `${sidebarWidth}px` }, 
-                // En móvil (xs), width será 100% y ml será 0 por defecto
-                
-                backgroundColor: '#1565C0', 
-                boxShadow: 2, 
+                width: { sm: `calc(100% - ${sidebarWidth}px)` },
+                ml: { sm: `${sidebarWidth}px` },
+                backgroundColor: '#1565C0',
+                boxShadow: 2,
                 color: 'white',
-                
-                // 4. ⬅️ zIndex para estar sobre el Sidebar permanente
-                zIndex: 1200, 
+                zIndex: 1200,
             }}
         >
-            <Toolbar 
-                sx={{ 
-                    justifyContent: 'space-between', 
-                    minHeight: '64px !important', 
-                    paddingY: 1, 
-                }}
-            >
-                
+            <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {/* --- 5. BOTÓN DE HAMBURGUESA (MÓVIL) --- */}
                     <IconButton
                         color="inherit"
                         aria-label="open drawer"
                         edge="start"
-                        onClick={onDrawerToggle} // ⬅️ Llama a la función del padre
-                        sx={{ 
-                            mr: 2, 
-                            display: { xs: 'flex', sm: 'none' } // ⬅️ SOLO se muestra en móvil
-                        }}
+                        onClick={onDrawerToggle}
+                        sx={{ mr: 2, display: { xs: 'flex', sm: 'none' } }}
                     >
                         <MenuIcon />
                     </IconButton>
 
-                    {/* Saludo - Oculto en móvil */}
-                    <Typography 
-                        variant="h6" 
-                        sx={{ 
-                            fontWeight: 500,
-                            // 6. ⬅️ Oculta el saludo en 'xs' para dar espacio
-                            display: { xs: 'none', sm: 'block' } 
-                        }}
-                    >
+                    <Typography variant="h6" sx={{ fontWeight: 500, display: { xs: 'none', sm: 'block' } }}>
                         {greeting}
                     </Typography>
                 </Box>
 
-                {/* Controles de Usuario y Notificaciones (Sin cambios) */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    
-                    {/* Botón de Notificaciones */}
                     <IconButton color="inherit" sx={{ position: 'relative' }}>
                         <Bell size={24} color="#ffffffff" />
                         {notificationCount > 0 && (
-                            <Chip 
-                                label={notificationCount} 
+                            <Chip
+                                label={notificationCount}
                                 size="small"
                                 color="error"
-                                sx={{ 
-                                    position: 'absolute', 
-                                    top: 4, 
-                                    right: 4, 
-                                    height: 16, 
+                                sx={{
+                                    position: 'absolute',
+                                    top: 4,
+                                    right: 4,
+                                    height: 16,
                                     borderRadius: '8px',
                                     fontSize: '0.6rem',
-                                    fontWeight: 'bold'
+                                    fontWeight: 'bold',
                                 }}
                             />
                         )}
                     </IconButton>
 
-                    {/* Ícono de Perfil */}
-                    <IconButton 
-                        color="inherit" 
-                        sx={{ p: 0 }}
-                        onClick={handleProfileClick}
-                    >
-                        <UserCircle size={30} color="#ffffffff" />
+                    <IconButton color="inherit" sx={{ p: 0 }} onClick={handleProfileClick}>
+                        {fotoPerfil ? (
+                            <Avatar
+                                src={fotoPerfil}
+                                alt={userName}
+                                sx={{
+                                    width: 34,
+                                    height: 34,
+                                    border: '2px solid rgba(255,255,255,0.18)',
+                                }}
+                            />
+                        ) : (
+                            <UserCircle size={30} color="#ffffffff" />
+                        )}
                     </IconButton>
-                    
-                    {/* Botón de Cerrar Sesión */}
-                    <Button 
-                        variant="outlined" 
-                        // @ts-ignore
-                        color="white" // 'white' no es un color de MUI, pero funciona con 'inherit'
+
+                    <Button
+                        variant="outlined"
+                        color="inherit"
                         size="small"
                         startIcon={<LogOut size={18} />}
                         onClick={onLogout}
@@ -117,7 +103,6 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
                     >
                         Salir
                     </Button>
-
                 </Box>
             </Toolbar>
         </AppBar>

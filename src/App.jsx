@@ -6,28 +6,26 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 // Importaciones de Páginas y Layouts
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
+import PerfilPage from './pages/PerfilPage';
 import PetDetailPage from './pages/PetDetailPage';
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const USER_STATUS_ENDPOINT = '/user-status'; 
-const EMPLOYEES_ROLES = ['admin', 'director', 'veterinario', 'empleado'];
 
-const shouldSeeDashboard = (role) => EMPLOYEES_ROLES.includes(role);
+const canSeeDashboard = (user) => {
+  if (!user || !user.permisos) return false;
+  return user.permisos.includes('acceso_dashboard'); 
+};
 
-// ----------------------------------------------------------------------
-// 🔑 Componente para proteger rutas del dashboard
-// ----------------------------------------------------------------------
 const ProtectedDashboardRoute = ({ children, isAuthenticated, currentUser }) => {
     if (!isAuthenticated) return <Navigate to="/" replace />;
-    const userRole = currentUser?.nombre_rol;
-    if (!shouldSeeDashboard(userRole)) return <Navigate to="/" replace />;
+    
+    if (!canSeeDashboard(currentUser)) return <Navigate to="/" replace />;
+    
     return children;
 };
 
-// ----------------------------------------------------------------------
-// 1. Lógica Central de la Aplicación (Manejador de Auth y Roles)
-// ----------------------------------------------------------------------
 const AppCore = () => { 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
@@ -76,8 +74,7 @@ const AppCore = () => {
             setIsAuthenticated(true);
             setCurrentUser(user);
 
-            const userRole = user.nombre_rol;
-            if (shouldSeeDashboard(userRole)) {
+            if (canSeeDashboard(user)) {
                 const lastPath = localStorage.getItem('lastDashboardPath');
                 navigate(lastPath || '/dashboard', { replace: true });
             }
@@ -91,7 +88,8 @@ const AppCore = () => {
             const response = await axios.get(`${API_URL_BACKEND}${USER_STATUS_ENDPOINT}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            return response.data.usuario;
+            // ¡Esto ya funciona perfecto con tu nueva API!
+            return response.data.usuario; 
         } catch (error) {
             console.error('⚠️ [Auth] Token inválido o expirado:', error);
             localStorage.removeItem('authToken');
@@ -102,7 +100,7 @@ const AppCore = () => {
     };
 
     useEffect(() => {
-        if (isAuthenticated && currentUser && shouldSeeDashboard(currentUser.nombre_rol) && !location.pathname.startsWith('/dashboard')) {
+        if (isAuthenticated && currentUser && canSeeDashboard(currentUser) && !location.pathname.startsWith('/dashboard')) {
             const lastPath = localStorage.getItem('lastDashboardPath');
             navigate(lastPath || '/dashboard', { replace: true });
         }
@@ -124,7 +122,7 @@ const AppCore = () => {
                 }
             }
 
-            if (user && shouldSeeDashboard(user.nombre_rol) && !location.pathname.startsWith('/dashboard')) {
+            if (user && canSeeDashboard(user) && !location.pathname.startsWith('/dashboard')) {
                 const lastPath = localStorage.getItem('lastDashboardPath');
                 navigate(lastPath || '/dashboard', { replace: true });
             }
@@ -163,9 +161,9 @@ const AppCore = () => {
                 </Route>
 
                 <Route
-                    path="*"
+                    path="/mascota/:petId"
                     element={
-                        <LandingPage
+                        <PetDetailPage
                             isAuthenticated={isAuthenticated}
                             currentUser={currentUser}
                             onLoginSuccess={handleLoginSuccess}
@@ -175,9 +173,21 @@ const AppCore = () => {
                 />
 
                 <Route
-                    path="/mascota/:petId" // Esto ahora capturará el ID de la URL
+                    path="/perfil"
                     element={
-                        <PetDetailPage
+                        <PerfilPage
+                            isAuthenticated={isAuthenticated}
+                            currentUser={currentUser}
+                            onLoginSuccess={handleLoginSuccess}
+                            onLogout={handleLogout}
+                        />
+                    }
+                />
+
+                <Route
+                    path="*" 
+                    element={
+                        <LandingPage
                             isAuthenticated={isAuthenticated}
                             currentUser={currentUser}
                             onLoginSuccess={handleLoginSuccess}
@@ -190,9 +200,6 @@ const AppCore = () => {
     );
 };
 
-// ----------------------------------------------------------------------
-// 3. Componente Raíz que envuelve con BrowserRouter
-// ----------------------------------------------------------------------
 const App = () => (
     <BrowserRouter>
         <AppCore />

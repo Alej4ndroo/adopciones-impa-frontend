@@ -25,7 +25,6 @@ const LoginMUI = ({ onLoginSuccess }) => {
         correo_electronico: correo_electronico,
         contrasena: password, 
     });
-
       // Se asume que el backend devuelve { token: "...", usuario: {...} }
       const { token, usuario } = response.data; 
 
