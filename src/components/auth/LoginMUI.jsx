@@ -36,7 +36,7 @@ const LoginMUI = ({ onLoginSuccess }) => {
       localStorage.setItem('authToken', token);
       
       // Llamar al manejador de éxito en App.jsx
-      onLoginSuccess(usuario); 
+      onLoginSuccess({ token, user: usuario });
 
     } catch (err) {
       console.error('Error de autenticación:', err);

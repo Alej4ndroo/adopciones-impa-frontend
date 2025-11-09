@@ -43,9 +43,6 @@ const customTheme = createTheme({
 });
 
 const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
-    
-    console.log('PerfilPage - currentUser:', currentUser);
-    
     // Estados para los datos del perfil
     const [misCitas, setMisCitas] = useState([]);
     const [misAdopciones, setMisAdopciones] = useState([]);

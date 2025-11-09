@@ -325,7 +325,6 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
         <ThemeProvider theme={customTheme}>
             <CssBaseline />
             
-            {/* NAVBAR (Asumo que ya lo corregiste) */}
             <PublicNavbar
                 isAuthenticated={isAuthenticated}
                 currentUser={currentUser}
@@ -333,7 +332,6 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
                 onLogout={onLogout}
             />
 
-            {/* HERO SECTION */}
             <Box
                 sx={{
                     position: 'relative',
