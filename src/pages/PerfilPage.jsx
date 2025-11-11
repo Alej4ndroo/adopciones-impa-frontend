@@ -18,7 +18,7 @@ import PublicNavbar from '../components/public/PublicNavbar';
 import PublicFooter from '../components/public/PublicFooter';
 
 // URL de la API
-const API_URL_BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const VITE_API_URL_BACKEND = import.meta.env.VITE_VITE_API_URL_BACKEND;
 
 // TEMA PERSONALIZADO
 const customTheme = createTheme({
@@ -99,14 +99,14 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             setLoading(true);
             
             // Fetch citas
-            const citasResponse = await fetch(`${API_URL_BACKEND}/citas/usuario/${currentUser.id_usuario}`);
+            const citasResponse = await fetch(`${VITE_API_URL_BACKEND}/citas/usuario/${currentUser.id_usuario}`);
             if (citasResponse.ok) {
                 const citasData = await citasResponse.json();
                 setMisCitas(citasData);
             }
             
             // Fetch adopciones
-            const adopcionesResponse = await fetch(`${API_URL_BACKEND}/adopciones/usuario/${currentUser.id_usuario}`);
+            const adopcionesResponse = await fetch(`${VITE_API_URL_BACKEND}/adopciones/usuario/${currentUser.id_usuario}`);
             if (adopcionesResponse.ok) {
                 const adopcionesData = await adopcionesResponse.json();
                 setMisAdopciones(adopcionesData);
@@ -143,7 +143,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             reader.onloadend = async () => {
                 const base64String = reader.result.split(',')[1]; // Remover el prefijo data:image/...
                 
-                const response = await fetch(`${API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
+                const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -171,7 +171,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
     // Actualizar datos del perfil
     const handleUpdateProfile = async () => {
         try {
-            const response = await fetch(`${API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
+            const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -202,7 +202,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                 es_principal: true
             };
 
-            const response = await fetch(`${API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
+            const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
