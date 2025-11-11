@@ -18,7 +18,7 @@ import PublicNavbar from '../components/public/PublicNavbar';
 import PublicFooter from '../components/public/PublicFooter';
 
 // URL de la API
-const VITE_API_URL_BACKEND = import.meta.env.VITE_VITE_API_URL_BACKEND;
+const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 
 // TEMA PERSONALIZADO
 const customTheme = createTheme({
