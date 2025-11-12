@@ -128,8 +128,6 @@ const ConsultasCrearPage = () => {
             // Asegurar que la fecha próxima sea NULL si está vacía
             proxima_cita: formData.proxima_cita || null,
         };
-        
-        console.log("Payload preparado para envío de Consulta:", payload);
 
         // 4. Envío a la API
         try {

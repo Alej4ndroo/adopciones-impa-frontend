@@ -7,7 +7,6 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
     const navigate = useNavigate();
     const [fotoPerfil, setFotoPerfil] = useState(null);
 
-    console.log('NavbarMUI - currentUser:', currentUser);
     useEffect(() => {
         if (currentUser?.foto_perfil_base64) {
             const fotoRaw = currentUser.foto_perfil_base64;

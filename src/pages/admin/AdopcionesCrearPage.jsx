@@ -134,8 +134,6 @@ const AdopcionesCrearPage = () => {
             delete payload.fecha_devolucion;
         }
 
-        console.log("Payload preparado para envío:", payload);
-
         // Envío a la API
         try {
             const response = await axios.post(

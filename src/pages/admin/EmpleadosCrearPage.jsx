@@ -166,8 +166,6 @@ const EmpleadosCrearPage = () => {
             }
         });
 
-        console.log("Payload preparado para envío:", payload);
-
         // 4. Envío a la API
         try {
             const response = await axios.post(`${API_URL_BACKEND}${CREATE_EMPLOYEE_ENDPOINT}`, payload, {

@@ -68,7 +68,6 @@ const PerfilUsuarioPage = () => {
             });
 
             setUserData(response.data);
-            console.log("Datos del perfil cargados:", response.data);
 
         } catch (err) {
             console.error("Error al cargar el perfil:", err.response || err);

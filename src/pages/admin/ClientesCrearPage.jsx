@@ -126,8 +126,6 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
             }
         });
 
-        console.log("Payload preparado para envío de Cliente:", payload);
-
         // 4. Envío a la API
         try {
             // 🚨 MODIFICADO: Usando el nuevo endpoint de clientes
