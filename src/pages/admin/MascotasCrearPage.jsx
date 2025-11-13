@@ -22,7 +22,6 @@ const CREATE_PET_ENDPOINT = '/mascotas/crear';
 const ESPECIE_OPTIONS = ['perro', 'gato', 'conejo', 'hamster', 'otro'];
 const TAMANO_OPTIONS = ['pequeño', 'mediano', 'grande'];
 const SEXO_OPTIONS = ['macho', 'hembra'];
-const ESTADO_ADOPCION_OPTIONS = ['disponible', 'en_proceso', 'adoptado'];
 
 const convertFileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -183,6 +182,21 @@ const MascotasCrearPage = () => {
             return;
         }
 
+        const userDataString = localStorage.getItem('userData');
+        let id_usuario;
+
+        try {
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                id_usuario = userData.id_usuario;
+            }
+        } catch (err) {
+            console.error("Error al parsear userData de localStorage:", err);
+            setError("Error al leer los datos del usuario. Inicie sesión de nuevo.");
+            setLoading(false);
+            return;
+        }
+
         const base64Images = [];
         try {
             const conversions = imageFiles.map(file => convertFileToBase64(file));
@@ -198,7 +212,8 @@ const MascotasCrearPage = () => {
         const payload = {
             ...formData,
             imagenes_base64: base64Images, 
-            edad_en_meses: parseInt(formData.edad_en_meses, 10) || 0
+            edad_en_meses: parseInt(formData.edad_en_meses, 10) || 0,
+            creado_por: id_usuario
         };
 
         try {

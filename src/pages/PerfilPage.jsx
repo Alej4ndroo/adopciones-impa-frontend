@@ -1,11 +1,11 @@
-// src/pages/PerfilPage.jsx
-
-import React, { useState, useEffect } from 'react';
+//pages/PerfilPage.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Container, Box, Grid, Card, CardContent, Avatar,
     Typography, Button, CssBaseline, Chip, CircularProgress, Alert,
     List, ListItem, ListItemIcon, ListItemText, Divider, Dialog,
-    DialogTitle, DialogContent, DialogActions, TextField, IconButton
+    DialogTitle, DialogContent, DialogActions, TextField, IconButton,
+    Stack, useTheme, alpha, Zoom
 } from '@mui/material';
 import {
     Email, Badge, Pets, Event, Phone, Home, CameraAlt, Edit, Close
@@ -23,16 +23,9 @@ const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 // TEMA PERSONALIZADO
 const customTheme = createTheme({
     palette: {
-        primary: {
-            main: '#007BFF',
-        },
-        secondary: {
-            main: '#5C6BC0',
-        },
-        background: {
-            default: '#f4f7ff',
-            paper: '#ffffff',
-        }
+        primary: { main: '#007BFF' },
+        secondary: { main: '#5C6BC0' },
+        background: { default: '#f4f7ff', paper: '#ffffff' }
     },
     typography: {
         fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -42,12 +35,50 @@ const customTheme = createTheme({
     },
 });
 
+// -------------------------------------------------------------------
+// 🚀 FUNCIÓN HELPER - Actualización de Usuario
+// -------------------------------------------------------------------
+const apiUpdateUser = async (userId, data) => {
+    const token = localStorage.getItem('authToken'); 
+    
+    if (!token) {
+        throw new Error('No autenticado. Por favor, inicie sesión.');
+    }
+
+    const url = `${VITE_API_URL_BACKEND}/usuarios/actualizar/${userId}`;
+    const config = {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    };
+
+    const response = await fetch(url, config);
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})); 
+        throw new Error(errorData.message || 'Error al actualizar los datos.');
+    }
+
+    return response.json(); 
+};
+// -------------------------------------------------------------------
+
+
 const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
-    // Estados para los datos del perfil
+    const theme = useTheme();
+    
+    // 🔥 CAMBIO PRINCIPAL: Un solo estado para el usuario (como EmpleadosPerfilPage)
+    const [userData, setUserData] = useState(null);
+    
+    // Estados para los datos del perfil (citas/adopciones)
     const [misCitas, setMisCitas] = useState([]);
     const [misAdopciones, setMisAdopciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
     
     // Estados para los modales de edición
     const [openEditProfile, setOpenEditProfile] = useState(false);
@@ -64,6 +95,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
     // Estado para nueva foto
     const [newPhoto, setNewPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
+    const [isSavingPhoto, setIsSavingPhoto] = useState(false);
     
     // Estado para nueva dirección
     const [newAddress, setNewAddress] = useState({
@@ -77,36 +109,48 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
         pais: 'México'
     });
 
-    // Efecto para cargar los datos del usuario
+    // Ref para el input de foto
+    const photoInputRef = useRef(null);
+
+    // 🔥 CAMBIO: useEffect simplificado - Solo carga inicial
     useEffect(() => {
         if (currentUser) {
-            // Inicializar datos editables
+            setUserData(currentUser);
+            
             setEditedUser({
                 nombre: currentUser.nombre || '',
                 telefono: currentUser.telefono || '',
-                fecha_nacimiento: currentUser.fecha_nacimiento || ''
+                fecha_nacimiento: currentUser.fecha_nacimiento ? currentUser.fecha_nacimiento.split('T')[0] : ''
             });
             
-            // Cargar datos desde la API
-            fetchUserData();
+            fetchUserData(currentUser.id_usuario);
         } else {
+            setUserData(null);
+            setMisCitas([]);
+            setMisAdopciones([]);
             setLoading(false);
         }
-    }, [currentUser]);
+    }, [currentUser?.id_usuario]); // 🔥 Solo reacciona al cambio de ID
 
-    const fetchUserData = async () => {
+
+    // Carga los datos secundarios (citas, adopciones)
+    const fetchUserData = async (usuarioId) => {
         try {
             setLoading(true);
+            setError(null);
             
+            const token = localStorage.getItem('authToken');
+            const headers = { 'Authorization': `Bearer ${token}` };
+
             // Fetch citas
-            const citasResponse = await fetch(`${VITE_API_URL_BACKEND}/citas/usuario/${currentUser.id_usuario}`);
+            const citasResponse = await fetch(`${VITE_API_URL_BACKEND}/citas/usuario/${usuarioId}`, { headers });
             if (citasResponse.ok) {
                 const citasData = await citasResponse.json();
                 setMisCitas(citasData);
             }
             
             // Fetch adopciones
-            const adopcionesResponse = await fetch(`${VITE_API_URL_BACKEND}/adopciones/usuario/${currentUser.id_usuario}`);
+            const adopcionesResponse = await fetch(`${VITE_API_URL_BACKEND}/adopciones/usuario/${usuarioId}`, { headers });
             if (adopcionesResponse.ok) {
                 const adopcionesData = await adopcionesResponse.json();
                 setMisAdopciones(adopcionesData);
@@ -122,9 +166,23 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
 
     // Manejar cambio de foto
     const handlePhotoChange = (event) => {
-        const file = event.target.files[0];
+        const file = event.target.files?.[0];
+        
+        setError(null);
+        setSuccessMessage(null);
+
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                setError('Por favor, selecciona un archivo de imagen válido.');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+                setError('La imagen no puede superar los 5MB.');
+                return;
+            }
+
             setNewPhoto(file);
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPhotoPreview(reader.result);
@@ -133,101 +191,167 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
         }
     };
 
-    // Subir foto de perfil (usando la misma ruta de actualización)
+    // -------------------------------------------------------------------
+    // 🔥 FUNCIONES DE ACTUALIZACIÓN CORREGIDAS
+    // -------------------------------------------------------------------
+
     const handleUploadPhoto = async () => {
         if (!newPhoto) return;
         
-        try {
-            // Convertir la foto a base64
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result.split(',')[1]; // Remover el prefijo data:image/...
+        setIsSavingPhoto(true);
+        setError(null);
+        setSuccessMessage(null);
+        
+        const reader = new FileReader();
+        
+        reader.onloadend = async () => {
+            try {
+                const base64String = reader.result.split(',')[1];
+                const photoData = { foto_perfil_base64: base64String };
+
+                const response = await apiUpdateUser(userData.id_usuario, photoData);
                 
-                const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        foto_perfil_base64: base64String
-                    })
-                });
+                // 🔥 Extrae el usuario de la respuesta
+                const usuarioActualizado = response.usuario || response;
                 
-                if (response.ok) {
-                    alert('Foto actualizada correctamente');
-                    window.location.reload();
-                    setOpenEditPhoto(false);
-                } else {
-                    alert('Error al subir la foto');
+                // 🔥 Actualiza el estado local
+                setUserData(usuarioActualizado);
+                
+                // 🔥 Actualiza también el localStorage y currentUser del padre
+                localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
+                if (onLoginSuccess) {
+                    // Reconstruye el payload completo con el token existente
+                    const token = localStorage.getItem('authToken');
+                    onLoginSuccess({ token, user: usuarioActualizado });
                 }
-            };
-            reader.readAsDataURL(newPhoto);
-        } catch (err) {
-            console.error('Error al subir foto:', err);
-            alert('Error al subir la foto');
-        }
+
+                setSuccessMessage('Foto actualizada correctamente');
+                setOpenEditPhoto(false); 
+                setNewPhoto(null); 
+                setPhotoPreview(null);
+
+            } catch (err) {
+                console.error('Error al subir foto:', err);
+                setError(err.message);
+            } finally {
+                setIsSavingPhoto(false);
+            }
+        };
+
+        reader.onerror = () => {
+             console.error('Error al leer el archivo de imagen.');
+             setError('Error al procesar la foto.');
+             setIsSavingPhoto(false);
+        };
+
+        reader.readAsDataURL(newPhoto);
     };
 
-    // Actualizar datos del perfil
     const handleUpdateProfile = async () => {
         try {
-            const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(editedUser)
-            });
+            setError(null);
+            setSuccessMessage(null);
+
+            const response = await apiUpdateUser(userData.id_usuario, editedUser);
             
-            if (response.ok) {
-                alert('Perfil actualizado correctamente');
-                window.location.reload();
-                setOpenEditProfile(false);
-            } else {
-                alert('Error al actualizar el perfil');
+            // 🔥 Extrae el usuario de la respuesta
+            const usuarioActualizado = response.usuario || response;
+            
+            // 🔥 Actualiza el estado local
+            setUserData(usuarioActualizado);
+            
+            // 🔥 Actualiza también el localStorage y currentUser del padre
+            localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
+            if (onLoginSuccess) {
+                // Reconstruye el payload completo con el token existente
+                const token = localStorage.getItem('authToken');
+                onLoginSuccess({ token, user: usuarioActualizado });
             }
+            
+            setSuccessMessage('Perfil actualizado correctamente');
+            setOpenEditProfile(false); 
+
         } catch (err) {
             console.error('Error al actualizar perfil:', err);
-            alert('Error al actualizar el perfil');
+            setError(err.message);
         }
     };
 
-    // Agregar o actualizar dirección (usando la misma ruta de actualización)
     const handleAddAddress = async () => {
         try {
-            // Preparar datos de dirección con es_principal en true para que sea la dirección principal
+            setError(null);
+            setSuccessMessage(null);
+
             const addressData = {
                 ...newAddress,
                 tipo_direccion: 'residencial',
                 es_principal: true
             };
 
-            const response = await fetch(`${VITE_API_URL_BACKEND}/usuarios/${currentUser.id_usuario}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(addressData)
-            });
+            const response = await apiUpdateUser(userData.id_usuario, addressData);
             
-            if (response.ok) {
-                alert('Dirección actualizada correctamente');
-                window.location.reload();
-                setOpenAddAddress(false);
-            } else {
-                alert('Error al agregar dirección');
+            // 🔥 Extrae el usuario de la respuesta
+            const usuarioActualizado = response.usuario || response;
+            
+            // 🔥 Actualiza el estado local
+            setUserData(usuarioActualizado);
+            
+            // 🔥 Actualiza también el localStorage y currentUser del padre
+            localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
+            if (onLoginSuccess) {
+                // Reconstruye el payload completo con el token existente
+                const token = localStorage.getItem('authToken');
+                onLoginSuccess({ token, user: usuarioActualizado });
             }
+
+            setSuccessMessage('Dirección actualizada correctamente');
+            setOpenAddAddress(false); 
+            setNewAddress({
+                calle: '', numero_exterior: '', numero_interior: '',
+                colonia: '', ciudad: '', estado: '', 
+                codigo_postal: '', pais: 'México'
+            }); 
+
         } catch (err) {
             console.error('Error al agregar dirección:', err);
-            alert('Error al agregar dirección');
+            setError(err.message);
         }
     };
+
+    // -------------------------------------------------------------------
+    // ⬇️ RENDERIZADO (JSX) ⬇️
+    // -------------------------------------------------------------------
+
+    // Loading state
+    if (loading && !userData) {
+        return (
+            <ThemeProvider theme={customTheme}>
+                <CssBaseline />
+                <PublicNavbar
+                    isAuthenticated={isAuthenticated}
+                    currentUser={currentUser}
+                    onLoginSuccess={onLoginSuccess}
+                    onLogout={onLogout}
+                />
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '80vh'
+                }}>
+                    <Stack alignItems="center" spacing={2}>
+                        <CircularProgress size={60} />
+                        <Typography variant="h6" color="textSecondary">Cargando perfil...</Typography>
+                    </Stack>
+                </Box>
+            </ThemeProvider>
+        );
+    }
 
     return (
         <ThemeProvider theme={customTheme}>
             <CssBaseline />
             
-            {/* NAVBAR */}
             <PublicNavbar
                 isAuthenticated={isAuthenticated}
                 currentUser={currentUser}
@@ -235,11 +359,34 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                 onLogout={onLogout}
             />
 
-            {/* CONTENIDO PRINCIPAL (sin Hero Section) */}
             <Container maxWidth="lg" sx={{ py: 8, mt: 8 }}>
 
-                {/* Mensaje si no está autenticado */}
-                {!isAuthenticated || !currentUser ? (
+                {/* 🔥 Alertas globales de feedback */}
+                {error && (
+                    <Zoom in={Boolean(error)}>
+                        <Alert
+                            severity="error"
+                            sx={{ mb: 3, borderRadius: 2 }}
+                            onClose={() => setError(null)}
+                        >
+                            {error}
+                        </Alert>
+                    </Zoom>
+                )}
+                {successMessage && (
+                    <Zoom in={Boolean(successMessage)}>
+                        <Alert
+                            severity="success"
+                            sx={{ mb: 3, borderRadius: 2 }}
+                            onClose={() => setSuccessMessage(null)}
+                        >
+                            {successMessage}
+                        </Alert>
+                    </Zoom>
+                )}
+
+                {/* 🔥 Usamos userData en lugar de localUser */}
+                {!isAuthenticated || !userData ? (
                     <Card sx={{ borderRadius: 3, boxShadow: 3, p: 4, textAlign: 'center' }}>
                         <Alert severity="warning" sx={{ justifyContent: 'center', mb: 3, fontSize: '1.1rem' }}>
                             Por favor, <strong>inicia sesión</strong> para ver y gestionar tu perfil.
@@ -250,7 +397,6 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                     </Card>
 
                 ) : (
-                    /* Contenido si SÍ está autenticado */
                     <Grid container spacing={4}>
                         
                         {/* Columna Izquierda: Tarjeta de Usuario */}
@@ -258,70 +404,111 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                             <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
                                 <CardContent sx={{ p: 4, textAlign: 'center' }}>
                                     <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                        <input
+                                            accept="image/*"
+                                            type="file"
+                                            ref={photoInputRef}
+                                            style={{ display: 'none' }}
+                                            onChange={handlePhotoChange}
+                                        />
                                         <Avatar
-                                            src={currentUser.foto_perfil_base64 ? `data:image/jpeg;base64,${currentUser.foto_perfil_base64}` : undefined}
-                                            sx={{
-                                                width: 120,
-                                                height: 120,
-                                                mx: 'auto',
-                                                mb: 3,
-                                                bgcolor: 'secondary.main',
-                                                fontSize: '3.5rem',
-                                                fontWeight: 600
+                                            src={photoPreview || (userData.foto_perfil_base64 ? `data:image/jpeg;base64,${userData.foto_perfil_base64}` : undefined)}
+                                            sx={{ 
+                                                width: 120, 
+                                                height: 120, 
+                                                mx: 'auto', 
+                                                mb: 3, 
+                                                bgcolor: 'secondary.main', 
+                                                fontSize: '3.5rem', 
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.3s',
+                                                '&:hover': { 
+                                                    transform: 'scale(1.05)',
+                                                    boxShadow: theme.shadows[8]
+                                                }
                                             }}
+                                            onClick={() => photoInputRef.current?.click()}
                                         >
-                                            {!currentUser.foto_perfil_base64 && currentUser.nombre.charAt(0).toUpperCase()}
+                                            {!photoPreview && !userData.foto_perfil_base64 && userData.nombre?.charAt(0).toUpperCase()}
                                         </Avatar>
                                         <IconButton
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: 20,
-                                                right: -10,
-                                                bgcolor: 'primary.main',
-                                                color: 'white',
-                                                '&:hover': { bgcolor: 'primary.dark' }
+                                            sx={{ 
+                                                position: 'absolute', 
+                                                bottom: 20, 
+                                                right: -10, 
+                                                bgcolor: 'primary.main', 
+                                                color: 'white', 
+                                                '&:hover': { bgcolor: 'primary.dark' } 
                                             }}
                                             size="small"
-                                            onClick={() => setOpenEditPhoto(true)}
+                                            onClick={() => photoInputRef.current?.click()}
                                         >
                                             <CameraAlt fontSize="small" />
                                         </IconButton>
+                                        {newPhoto && (
+                                            <Chip
+                                                label="Nueva foto"
+                                                color="success"
+                                                size="small"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: -8,
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.7rem'
+                                                }}
+                                            />
+                                        )}
                                     </Box>
+
+                                    {/* 🔥 Botones para guardar/cancelar foto */}
+                                    {newPhoto && (
+                                        <Stack direction="row" spacing={1} sx={{ mb: 2 }} justifyContent="center">
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                onClick={handleUploadPhoto}
+                                                disabled={isSavingPhoto}
+                                                startIcon={isSavingPhoto ? <CircularProgress size={16} color="inherit" /> : null}
+                                            >
+                                                Guardar
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    setNewPhoto(null);
+                                                    setPhotoPreview(null);
+                                                    if (photoInputRef.current) {
+                                                        photoInputRef.current.value = "";
+                                                    }
+                                                }}
+                                                disabled={isSavingPhoto}
+                                            >
+                                                Cancelar
+                                            </Button>
+                                        </Stack>
+                                    )}
                                     
                                     <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-                                        {currentUser.nombre}
+                                        {userData.nombre}
                                     </Typography>
                                     
-                                    {/* Detalles del usuario */}
                                     <Box sx={{ textAlign: 'left', my: 3 }}>
                                         <List dense>
                                             <ListItem>
-                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
-                                                    <Email />
-                                                </ListItemIcon>
-                                                <ListItemText 
-                                                    primary="Email" 
-                                                    secondary={currentUser.correo_electronico} 
-                                                    secondaryTypographyProps={{ sx: { fontSize: '0.85rem' } }}
-                                                />
+                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}> <Email /> </ListItemIcon>
+                                                <ListItemText primary="Email" secondary={userData.correo_electronico} secondaryTypographyProps={{ sx: { fontSize: '0.85rem' } }} />
                                             </ListItem>
                                             <ListItem>
-                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
-                                                    <Phone />
-                                                </ListItemIcon>
-                                                <ListItemText 
-                                                    primary="Teléfono" 
-                                                    secondary={currentUser.telefono || 'No registrado'} 
-                                                />
+                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}> <Phone /> </ListItemIcon>
+                                                <ListItemText primary="Teléfono" secondary={userData.telefono || 'No registrado'} />
                                             </ListItem>
                                             <ListItem>
-                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
-                                                    <Badge />
-                                                </ListItemIcon>
-                                                <ListItemText 
-                                                    primary="Rol" 
-                                                    secondary={currentUser.rol.nombre_rol.toUpperCase()} 
-                                                />
+                                                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}> <Badge /> </ListItemIcon>
+                                                <ListItemText primary="Rol" secondary={userData.rol?.nombre_rol?.toUpperCase() || 'N/A'} />
                                             </ListItem>
                                         </List>
                                     </Box>
@@ -330,7 +517,14 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                         variant="contained" 
                                         startIcon={<Edit />}
                                         sx={{ borderRadius: 2, fontWeight: 600, width: '100%', py: 1.2 }}
-                                        onClick={() => setOpenEditProfile(true)}
+                                        onClick={() => {
+                                            setEditedUser({
+                                                nombre: userData.nombre || '',
+                                                telefono: userData.telefono || '',
+                                                fecha_nacimiento: userData.fecha_nacimiento ? userData.fecha_nacimiento.split('T')[0] : ''
+                                            });
+                                            setOpenEditProfile(true);
+                                        }}
                                     >
                                         Editar Perfil
                                     </Button>
@@ -348,24 +542,22 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                         Mis Direcciones
                                     </Typography>
                                     
-                                    {currentUser.direcciones && currentUser.direcciones.length === 0 ? (
+                                    {userData.direcciones && userData.direcciones.length === 0 ? (
                                         <Alert severity="info" sx={{ mb: 2 }}>No tienes direcciones registradas.</Alert>
                                     ) : (
                                         <List>
-                                            {currentUser.direcciones && currentUser.direcciones.map((dir, index) => (
+                                            {userData.direcciones && userData.direcciones.map((dir, index) => (
                                                 <React.Fragment key={dir.id_direccion || index}>
                                                     <ListItem>
                                                         <ListItemIcon>
-                                                            <Avatar sx={{ bgcolor: 'primary.light' }}>
-                                                                <Home fontSize="small" />
-                                                            </Avatar>
+                                                            <Avatar sx={{ bgcolor: 'primary.light' }}> <Home fontSize="small" /> </Avatar>
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={`${dir.calle} ${dir.numero_exterior}${dir.numero_interior ? ' Int. ' + dir.numero_interior : ''}`}
                                                             secondary={`${dir.colonia}, ${dir.ciudad}, ${dir.estado} - CP ${dir.codigo_postal}`}
                                                         />
                                                     </ListItem>
-                                                    {index < currentUser.direcciones.length - 1 && <Divider variant="inset" component="li" />}
+                                                    {index < userData.direcciones.length - 1 && <Divider variant="inset" component="li" />}
                                                 </React.Fragment>
                                             ))}
                                         </List>
@@ -384,36 +576,25 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                             {/* Sección: Mis Citas */}
                             <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 4 }}>
                                 <CardContent sx={{ p: 4 }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'primary.main' }}>
-                                        Mis Citas
-                                    </Typography>
-
+                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'primary.main' }}> Mis Citas </Typography>
                                     {loading ? (
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                                            <CircularProgress />
-                                        </Box>
-                                    ) : error ? (
-                                        <Alert severity="error">{error}</Alert>
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
                                     ) : misCitas.length === 0 ? (
                                         <Alert severity="info">No tienes citas programadas.</Alert>
                                     ) : (
                                         <List>
                                             {misCitas.map((cita, index) => (
-                                                 <React.Fragment key={cita.id_cita}>
+                                                <React.Fragment key={cita.id_cita}>
                                                     <ListItem>
                                                         <ListItemIcon>
-                                                            <Avatar sx={{ bgcolor: 'primary.light' }}>
-                                                                <Event fontSize="small" />
-                                                            </Avatar>
+                                                            <Avatar sx={{ bgcolor: 'primary.light' }}> <Event fontSize="small" /> </Avatar>
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={cita.motivo || 'Cita veterinaria'} 
                                                             secondary={`Fecha: ${new Date(cita.fecha_hora).toLocaleDateString()} - ${new Date(cita.fecha_hora).toLocaleTimeString()} | Estado: ${cita.estado}`} 
                                                         />
                                                         {cita.estado === 'pendiente' && (
-                                                            <Button size="small" variant="outlined" color="error">
-                                                                Cancelar
-                                                            </Button>
+                                                            <Button size="small" variant="outlined" color="error"> Cancelar </Button>
                                                         )}
                                                     </ListItem>
                                                     {index < misCitas.length - 1 && <Divider variant="inset" component="li" />}
@@ -421,12 +602,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                             ))}
                                         </List>
                                     )}
-                                    <Button 
-                                        variant="contained" 
-                                        component={Link}
-                                        to="/citas"
-                                        sx={{ mt: 2, fontWeight: 600 }}
-                                    >
+                                    <Button variant="contained" component={Link} to="/citas" sx={{ mt: 2, fontWeight: 600 }} >
                                         Agendar Nueva Cita
                                     </Button>
                                 </CardContent>
@@ -435,16 +611,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                             {/* Sección: Mis Adopciones */}
                             <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
                                 <CardContent sx={{ p: 4 }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'primary.main' }}>
-                                        Mis Solicitudes de Adopción
-                                    </Typography>
-
+                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, color: 'primary.main' }}> Mis Solicitudes de Adopción </Typography>
                                     {loading ? (
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                                            <CircularProgress />
-                                        </Box>
-                                    ) : error ? (
-                                        <Alert severity="error">{error}</Alert>
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
                                     ) : misAdopciones.length === 0 ? (
                                         <Alert severity="info">No tienes solicitudes de adopción.</Alert>
                                     ) : (
@@ -453,9 +622,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                                 <React.Fragment key={adopcion.id_adopcion}>
                                                     <ListItem>
                                                         <ListItemIcon>
-                                                            <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                                                                <Pets fontSize="small" />
-                                                            </Avatar>
+                                                            <Avatar sx={{ bgcolor: 'secondary.main' }}> <Pets fontSize="small" /> </Avatar>
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={`Mascota: ${adopcion.mascota?.nombre || 'N/A'}`}
@@ -463,11 +630,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                                         />
                                                         <Chip 
                                                             label={adopcion.estado} 
-                                                            color={
-                                                                adopcion.estado === 'aprobada' ? 'success' : 
-                                                                adopcion.estado === 'rechazada' ? 'error' : 
-                                                                'warning'
-                                                            }
+                                                            color={ adopcion.estado === 'aprobada' ? 'success' : adopcion.estado === 'rechazada' ? 'error' : 'warning' }
                                                             size="small"
                                                         />
                                                     </ListItem>
@@ -476,12 +639,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                                             ))}
                                         </List>
                                     )}
-                                    <Button 
-                                        variant="contained" 
-                                        component={Link}
-                                        to="/adopciones"
-                                        sx={{ mt: 2, fontWeight: 600 }}
-                                    >
+                                    <Button variant="contained" component={Link} to="/adopciones" sx={{ mt: 2, fontWeight: 600 }} >
                                         Ver Mascotas en Adopción
                                     </Button>
                                 </CardContent>
@@ -493,35 +651,34 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
 
             </Container>
 
-            {/* MODALES DE EDICIÓN */}
-            
+            {/* ------------------------------------------------------------------- */}
+            {/* ⬇️ MODALES ⬇️ */}
+            {/* ------------------------------------------------------------------- */}
+
             {/* Modal: Editar Foto de Perfil */}
             <Dialog open={openEditPhoto} onClose={() => setOpenEditPhoto(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     Cambiar Foto de Perfil
-                    <IconButton
-                        onClick={() => setOpenEditPhoto(false)}
-                        sx={{ position: 'absolute', right: 8, top: 8 }}
-                    >
+                    <IconButton onClick={() => setOpenEditPhoto(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
                         <Close />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
                     <Box sx={{ textAlign: 'center', py: 3 }}>
                         <Avatar
-                            src={photoPreview || (currentUser?.foto_perfil_base64 ? `data:image/jpeg;base64,${currentUser.foto_perfil_base64}` : undefined)}
+                            src={photoPreview || (userData?.foto_perfil_base64 ? `data:image/jpeg;base64,${userData.foto_perfil_base64}` : undefined)}
                             sx={{ width: 150, height: 150, mx: 'auto', mb: 3 }}
                         >
-                            {!photoPreview && !currentUser?.foto_perfil_base64 && currentUser?.nombre.charAt(0).toUpperCase()}
+                            {!photoPreview && !userData?.foto_perfil_base64 && userData?.nombre?.charAt(0).toUpperCase()}
                         </Avatar>
                         <input
                             accept="image/*"
                             style={{ display: 'none' }}
-                            id="photo-upload"
+                            id="photo-upload-modal"
                             type="file"
                             onChange={handlePhotoChange}
                         />
-                        <label htmlFor="photo-upload">
+                        <label htmlFor="photo-upload-modal">
                             <Button variant="outlined" component="span" startIcon={<CameraAlt />}>
                                 Seleccionar Foto
                             </Button>
@@ -530,8 +687,8 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenEditPhoto(false)}>Cancelar</Button>
-                    <Button onClick={handleUploadPhoto} variant="contained" disabled={!newPhoto}>
-                        Subir Foto
+                    <Button onClick={handleUploadPhoto} variant="contained" disabled={!newPhoto || isSavingPhoto}>
+                        {isSavingPhoto ? <CircularProgress size={20} /> : 'Subir Foto'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -540,10 +697,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             <Dialog open={openEditProfile} onClose={() => setOpenEditProfile(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     Editar Perfil
-                    <IconButton
-                        onClick={() => setOpenEditProfile(false)}
-                        sx={{ position: 'absolute', right: 8, top: 8 }}
-                    >
+                    <IconButton onClick={() => setOpenEditProfile(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
                         <Close />
                     </IconButton>
                 </DialogTitle>
@@ -552,7 +706,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                         <TextField
                             fullWidth
                             label="Nombre Completo"
-                            value={editedUser.nombre}
+                            value={editedUser.nombre} 
                             onChange={(e) => setEditedUser({ ...editedUser, nombre: e.target.value })}
                             sx={{ mb: 2 }}
                         />
@@ -567,7 +721,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                             fullWidth
                             label="Fecha de Nacimiento"
                             type="date"
-                            value={editedUser.fecha_nacimiento}
+                            value={editedUser.fecha_nacimiento} 
                             onChange={(e) => setEditedUser({ ...editedUser, fecha_nacimiento: e.target.value })}
                             InputLabelProps={{ shrink: true }}
                         />
@@ -585,78 +739,32 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             <Dialog open={openAddAddress} onClose={() => setOpenAddAddress(false)} maxWidth="md" fullWidth>
                 <DialogTitle>
                     Agregar Nueva Dirección
-                    <IconButton
-                        onClick={() => setOpenAddAddress(false)}
-                        sx={{ position: 'absolute', right: 8, top: 8 }}
-                    >
+                    <IconButton onClick={() => setOpenAddAddress(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
                         <Close />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
                     <Grid container spacing={2} sx={{ pt: 2 }}>
                         <Grid item xs={12} sm={8}>
-                            <TextField
-                                fullWidth
-                                label="Calle"
-                                value={newAddress.calle}
-                                onChange={(e) => setNewAddress({ ...newAddress, calle: e.target.value })}
-                            />
+                            <TextField fullWidth label="Calle" value={newAddress.calle} onChange={(e) => setNewAddress({ ...newAddress, calle: e.target.value })} />
                         </Grid>
                         <Grid item xs={6} sm={2}>
-                            <TextField
-                                fullWidth
-                                label="No. Ext"
-                                value={newAddress.numero_exterior}
-                                onChange={(e) => setNewAddress({ ...newAddress, numero_exterior: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid item xs={6} sm={2}>
-                            <TextField
-                                fullWidth
-                                label="No. Int"
-                                value={newAddress.numero_interior}
-                                onChange={(e) => setNewAddress({ ...newAddress, numero_interior: e.target.value })}
-                            />
+                            <TextField fullWidth label="No. Int" value={newAddress.numero_interior} onChange={(e) => setNewAddress({ ...newAddress, numero_interior: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Colonia"
-                                value={newAddress.colonia}
-                                onChange={(e) => setNewAddress({ ...newAddress, colonia: e.target.value })}
-                            />
+                            <TextField fullWidth label="Colonia" value={newAddress.colonia} onChange={(e) => setNewAddress({ ...newAddress, colonia: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Ciudad"
-                                value={newAddress.ciudad}
-                                onChange={(e) => setNewAddress({ ...newAddress, ciudad: e.target.value })}
-                            />
+                            <TextField fullWidth label="Ciudad" value={newAddress.ciudad} onChange={(e) => setNewAddress({ ...newAddress, ciudad: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Estado"
-                                value={newAddress.estado}
-                                onChange={(e) => setNewAddress({ ...newAddress, estado: e.target.value })}
-                            />
+                            <TextField fullWidth label="Estado" value={newAddress.estado} onChange={(e) => setNewAddress({ ...newAddress, estado: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Código Postal"
-                                value={newAddress.codigo_postal}
-                                onChange={(e) => setNewAddress({ ...newAddress, codigo_postal: e.target.value })}
-                            />
+                            <TextField fullWidth label="Código Postal" value={newAddress.codigo_postal} onChange={(e) => setNewAddress({ ...newAddress, codigo_postal: e.target.value })} />
                         </Grid>
                         <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="País"
-                                value={newAddress.pais}
-                                onChange={(e) => setNewAddress({ ...newAddress, pais: e.target.value })}
-                            />
+                            <TextField fullWidth label="País" value={newAddress.pais} onChange={(e) => setNewAddress({ ...newAddress, pais: e.target.value })} />
                         </Grid>
                     </Grid>
                 </DialogContent>
@@ -667,8 +775,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            {/* FOOTER */}
+            
             <PublicFooter />
 
         </ThemeProvider>

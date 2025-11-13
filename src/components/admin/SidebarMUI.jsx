@@ -172,8 +172,10 @@ const SidebarMUI = ({ userPermissions = [], drawerWidth, mobileOpen, onDrawerTog
                   onClick={() => {
                     if (hasVisibleSubMenu) {
                       toggleSubMenu(item.name); // Si tiene submenú, lo abre/cierra
-                    } else {
-                      onDrawerToggle(); // Si es un link directo, cierra el drawer móvil
+                    
+                    // AÑADE ESTA CONDICIÓN
+                    } else if (mobileOpen) { 
+                      onDrawerToggle(); // Si es un link directo, CIERRA el drawer SÓLO SI ESTÁ EN MÓVIL
                     }
                   }}
 
@@ -208,9 +210,13 @@ const SidebarMUI = ({ userPermissions = [], drawerWidth, mobileOpen, onDrawerTog
                             to={destinationPath}
                             
                             // 2. ⬅️ ¡CAMBIO AQUÍ!
-                            onClick={onDrawerToggle} // Cierra el drawer móvil al hacer clic
+                            onClick={() => {
+                              if (mobileOpen) {
+                                onDrawerToggle();
+                              }
+                            }} 
 
-                            sx={{ 
+                            sx={{
                                 py: 1,
                                 '&.active': {
                                     backgroundColor: '#e3f2fd', 

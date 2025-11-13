@@ -1,4 +1,4 @@
-// --- MODIFICADO: Añadido 'useRef' ---
+//pages/admin/EmpleadosPerfilPage.jsx
 import React, { useState, useEffect, useRef } from 'react'; 
 import {
     Box, Typography, Grid, Paper, Divider, CircularProgress,

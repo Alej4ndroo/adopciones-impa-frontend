@@ -43,7 +43,7 @@ const customTheme = createTheme({
     },
 });
 
-const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
+const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
     const [hoveredCard, setHoveredCard] = useState(null); 
     const [mascotas, setMascotas] = useState([]);
     const [servicios, setServicios] = useState([]);
@@ -330,6 +330,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout })
                 currentUser={currentUser}
                 onLoginSuccess={onLoginSuccess}
                 onLogout={onLogout}
+                onOpenLoginModal={onOpenLoginModal}
             />
 
             <Box

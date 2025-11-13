@@ -6,10 +6,8 @@ import {
 } from '@mui/material';
 import { Login, Close, Logout, Notifications, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import LoginMUI from '../auth/LoginMUI'; 
 import IMPALogo from '../../assets/img/logo_impa_azul.png'; 
 
-// Función para generar un color aleatorio (pastel o vibrante, ajusta según necesidad)
 const stringToColor = (string) => {
     let hash = 0;
     let i;
@@ -30,8 +28,7 @@ const stringToColor = (string) => {
     return color;
 };
 
-const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
-    const [openModal, setOpenModal] = useState(false); 
+const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
     const [anchorElMenu, setAnchorElMenu] = useState(null); // Menú de Perfil
     const [anchorElNotif, setAnchorElNotif] = useState(null); // Menú de Notificaciones
 
@@ -44,14 +41,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
     const openNotif = Boolean(anchorElNotif);
 
     const navigate = useNavigate();
-
-    const handleOpen = () => setOpenModal(true);
-    const handleClose = () => setOpenModal(false);
-
-    const handleModalLoginSuccess = (user) => {
-        onLoginSuccess(user);
-        handleClose();
-    };
 
     const handleLogoClick = () => {
         navigate(isAuthenticated ? '/dashboard' : '/'); 
@@ -66,10 +55,9 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
         setAnchorElMenu(null);
     };
 
-    // 🎯 NUEVO: Manejador para ir al perfil
     const handleProfileClick = () => {
-        navigate('/perfil'); // Redirige a la página de perfil
-        handleMenuClose();  // Cierra el menú
+        navigate('/perfil');
+        handleMenuClose(); 
     };
 
     const handleLogoutClick = () => {
@@ -77,7 +65,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
         handleMenuClose();
     };
 
-    // Lógica para obtener las iniciales del usuario
     const getInitials = (name) => {
         if (!name) return 'U';
         return name.split(' ')
@@ -331,7 +318,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                         <Button 
                             variant="contained" 
                             startIcon={<Login />} 
-                            onClick={handleOpen}
+                            onClick={onOpenLoginModal}
                             sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
                         >
                             Acceder
@@ -340,43 +327,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }
                 </Toolbar>
             </AppBar>
             
-            {/* Modal de Login (sin cambios) */}
-            <Modal open={openModal} onClose={handleClose}>
-                <Fade in={openModal}>
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: { xs: '90%', sm: 400 },
-                            bgcolor: 'background.paper',
-                            boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
-                            borderRadius: 3,
-                            p: 4
-                        }}
-                    >
-                        <IconButton
-                            onClick={handleClose}
-                            sx={{ position: 'absolute', right: 8, top: 8 }}
-                        >
-                            <Close />
-                        </IconButton>
-                        <Box sx={{ textAlign: 'center', mb: 3 }}>
-                            <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                                <Login />
-                            </Avatar>
-                            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                                Acceder al Sistema
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Para empleados y clientes registrados
-                            </Typography>
-                        </Box>
-                        <LoginMUI onLoginSuccess={handleModalLoginSuccess} />
-                    </Box>
-                </Fade>
-            </Modal>
         </>
     );
 };

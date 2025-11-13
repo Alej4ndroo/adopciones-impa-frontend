@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Box, CircularProgress, Typography, CssBaseline } from '@mui/material';
+import { 
+    Box, CircularProgress, Typography, CssBaseline,
+    // 🔑 1. IMPORTA LOS COMPONENTES DEL MODAL
+    Modal, Fade, IconButton, Avatar 
+} from '@mui/material';
+import { Login, Close } from '@mui/icons-material'; // 🔑 Importa iconos del modal
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+
+// 🔑 2. IMPORTA EL COMPONENTE DE LOGIN
+import LoginMUI from './components/auth/LoginMUI'; // Ajusta esta ruta si es necesario
 
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
@@ -24,9 +32,17 @@ const AppCore = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [appLoading, setAppLoading] = useState(true);
+  
+  // 🔑 3. DEFINE EL ESTADO DEL MODAL AQUÍ
+  const [openModal, setOpenModal] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const initialCheckDone = useRef(false);
+
+  // 🔑 4. DEFINE LOS HANDLERS DEL MODAL AQUÍ
+  const handleOpenLoginModal = () => setOpenModal(true);
+  const handleCloseLoginModal = () => setOpenModal(false);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -51,6 +67,9 @@ const AppCore = () => {
 
       setIsAuthenticated(true);
       setCurrentUser(user);
+
+      // 🔑 5. CIERRA EL MODAL AL HACER LOGIN EXITOSO
+      handleCloseLoginModal();
 
       if (canSeeDashboard(user)) {
         const lastPath = localStorage.getItem('lastDashboardPath');
@@ -86,7 +105,7 @@ const AppCore = () => {
     }
 
     setAppLoading(false);
-  }, []);
+  }, []); // Dependencia vacía intencional para que solo corra una vez
 
   if (appLoading) {
     return (
@@ -108,7 +127,12 @@ const AppCore = () => {
               isAuthenticated={isAuthenticated}
               currentUser={currentUser}
             >
-              <MainLayout currentUser={currentUser} onLogout={handleLogout} />
+              {/* 🔑 6. PASA LA PROP AL MAINLAYOUT (QUE USA EL NAVBAR INTERNO) */}
+              <MainLayout 
+                currentUser={currentUser} 
+                onLogout={handleLogout}
+                onOpenLoginModal={handleOpenLoginModal} 
+              />
             </ProtectedDashboardRoute>
           }
         >
@@ -123,6 +147,7 @@ const AppCore = () => {
               currentUser={currentUser}
               onLoginSuccess={handleLoginSuccess}
               onLogout={handleLogout}
+              onOpenLoginModal={handleOpenLoginModal} // 🔑 7. PASA LA PROP AQUÍ
             />
           }
         />
@@ -135,6 +160,7 @@ const AppCore = () => {
               currentUser={currentUser}
               onLoginSuccess={handleLoginSuccess}
               onLogout={handleLogout}
+              onOpenLoginModal={handleOpenLoginModal} // 🔑 7. PASA LA PROP AQUÍ
             />
           }
         />
@@ -147,10 +173,50 @@ const AppCore = () => {
               currentUser={currentUser}
               onLoginSuccess={handleLoginSuccess}
               onLogout={handleLogout}
+              onOpenLoginModal={handleOpenLoginModal} // 🔑 7. PASA LA PROP AQUÍ
             />
           }
         />
       </Routes>
+
+      {/* 🔑 8. RENDERIZA EL MODAL AQUÍ, EN EL NIVEL SUPERIOR */}
+      <Modal open={openModal} onClose={handleCloseLoginModal}>
+        <Fade in={openModal}>
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: { xs: '90%', sm: 400 },
+                    bgcolor: 'background.paper',
+                    boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+                    borderRadius: 3,
+                    p: 4
+                }}
+            >
+                <IconButton
+                    onClick={handleCloseLoginModal}
+                    sx={{ position: 'absolute', right: 8, top: 8 }}
+                >
+                    <Close />
+                </IconButton>
+                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+                        <Login />
+                    </Avatar>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                        Acceder al Sistema
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Para empleados y clientes registrados
+                    </Typography>
+                </Box>
+                {/* Pasa la función de login de AppCore a LoginMUI */}
+                <LoginMUI onLoginSuccess={handleLoginSuccess} />
+            </Box>
+        </Fade>
+      </Modal>
     </>
   );
 };

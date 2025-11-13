@@ -11,14 +11,13 @@ import {
     HeartHandshake, Stethoscope, Shield, Bone, PawPrint, Heart, Syringe
 } from 'lucide-react'; 
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // 🔑 1. IMPORTA useNavigate
 
 // Componentes Separados (Importados de tu estructura)
 import PublicNavbar from '../components/public/PublicNavbar'; // Asegúrate de que esta ruta sea correcta
 import PublicFooter from '../components/public/PublicFooter'; // Asegúrate de que esta ruta sea correcta
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
-// 🔑 NOTA: Reemplaza con el endpoint real para obtener UNA mascota por ID
 const PET_DETAIL_ENDPOINT = '/mascotas/'; 
 
 // TEMA PERSONALIZADO (Copiado de LandingPage para coherencia)
@@ -57,7 +56,6 @@ const calcularEdad = (meses) => {
 const getImageUrl = (base64String, index) => {
     if (!base64String) return '/placeholder-pet.jpg'; // Imagen de respaldo
     
-    // Asumimos que los datos ya están limpios, pero si necesitas el mismo prefijo:
     const prefix = 'data:image/jpeg;base64,'; 
     if (base64String && base64String.startsWith(prefix)) {
         return base64String;
@@ -66,8 +64,10 @@ const getImageUrl = (base64String, index) => {
 };
 
 // --- COMPONENTE PRINCIPAL ---
-const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
+// 🔑 2. RECIBE 'onOpenLoginModal' EN LOS PROPS
+const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
     const { petId } = useParams();
+    const navigate = useNavigate(); // 🔑 1. INICIALIZA useNavigate
     
     const [mascota, setMascota] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -84,45 +84,11 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
         const fetchMascota = async () => {
             try {
                 setLoading(true);
-                // 🔑 Llamar al endpoint de detalle
                 const response = await fetch(`${API_URL_BACKEND}${PET_DETAIL_ENDPOINT}${petId}`); 
-                
-                // Simulación de respuesta de fetch (reemplazar con tu lógica de fetch real)
-                if (!response.ok) {
-                    // throw new Error(`Error al cargar la mascota con ID ${petId}`);
-                    // SIMULACIÓN DE DATOS TEMPORALES si el fetch falla o no existe el endpoint de detalle
-                    const dummyData = {
-                        id_mascota: petId,
-                        nombre: 'Maximus Aurelius',
-                        especie: 'perro',
-                        raza: 'Golden Retriever Mestizo',
-                        sexo: 'macho',
-                        edad_en_meses: 30, // 2 años y 6 meses
-                        descripcion: 'Maximus es un perro noble y cariñoso, rescatado de una situación difícil. Le encanta jugar a la pelota, pasear por el parque y recibir caricias en la barriga. Es ideal para una familia con niños mayores o una pareja activa. Es muy sociable con otros perros y se adapta rápido a nuevos entornos. Aunque es grande, es un "perro faldero" en el corazón. Necesita un hogar con espacio para correr.',
-                        estado_adopcion: 'disponible',
-                        comportamiento: 'Juguetón, fiel, protector, requiere socialización inicial con extraños.',
-                        peso_kg: 28.5,
-                        vacunado: true,
-                        esterilizado: true,
-                        desparasitado: true,
-                        microchip: true,
-                        requisitos: ['Jardín o patio cercado', 'Experiencia previa con perros grandes', 'Visitas de seguimiento'],
-                        imagenes_base64: [
-                            'iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5pDpnAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAhdEVYI.... (STRING BASE64 LARGO REAL 1)',
-                            'iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5pDpnAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAhdEVnI.... (STRING BASE64 LARGO REAL 2)',
-                            // Agrega más strings Base64 simulados si lo deseas
-                        ]
-                    };
-                    setMascota(dummyData);
-                    setMainImage(getImageUrl(dummyData.imagenes_base64[0]));
-                    console.warn("Usando datos de mascota simulados. Verifica el PET_DETAIL_ENDPOINT.");
-                } else {
-                    const data = await response.json();
-                    setMascota(data);
-                    // Establecer la primera imagen como principal al cargar
-                    setMainImage(getImageUrl(data.imagenes_base64?.[0]));
-                }
-                setError(null);
+                const data = await response.json();
+                setMascota(data);
+                setMainImage(getImageUrl(data.imagenes_base64?.[0]));
+                console.log('Mascota data fetched:', data);
             } catch (err) {
                 setError(err.message);
                 console.error('Error fetching pet detail:', err);
@@ -132,14 +98,37 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
         };
 
         fetchMascota();
-    }, [petId]); // Dependencia del ID de la mascota
+    }, [petId]);
+
+    // 🔑 3. CREA LA FUNCIÓN HANDLER PARA EL BOTÓN
+    const handleAdoptionClick = () => {
+        if (isAuthenticated) {
+            // Usuario LOGUEADO: Navegar a la página de solicitud
+            // (Asegúrate que esta ruta exista en tu DashboardRoutes)
+            navigate(`/dashboard/solicitar-adopcion/${petId}`);
+        } else {
+            // Usuario NO LOGUEADO: Abrir el modal de login
+            if (onOpenLoginModal) {
+                onOpenLoginModal();
+            } else {
+                console.error("La prop 'onOpenLoginModal' no fue proporcionada a PetDetailPage.");
+            }
+        }
+    };
 
     // Manejo de estados de carga y error
     if (loading) {
         return (
             <ThemeProvider theme={customTheme}>
                 <CssBaseline />
-                <PublicNavbar isAuthenticated={isAuthenticated} currentUser={currentUser} onLoginSuccess={onLoginSuccess} onLogout={onLogout} />
+                {/* 🔑 2. PASA LA PROP AL NAVBAR */}
+                <PublicNavbar 
+                    isAuthenticated={isAuthenticated} 
+                    currentUser={currentUser} 
+                    onLoginSuccess={onLoginSuccess} 
+                    onLogout={onLogout}
+                    onOpenLoginModal={onOpenLoginModal}
+                />
                 <Container maxWidth="lg" sx={{ py: 10, textAlign: 'center' }}>
                     <CircularProgress color="primary" />
                     <Typography variant="h6" sx={{ mt: 2 }}>Cargando información de la mascota...</Typography>
@@ -153,7 +142,14 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
         return (
             <ThemeProvider theme={customTheme}>
                 <CssBaseline />
-                <PublicNavbar isAuthenticated={isAuthenticated} currentUser={currentUser} onLoginSuccess={onLoginSuccess} onLogout={onLogout} />
+                {/* 🔑 2. PASA LA PROP AL NAVBAR */}
+                <PublicNavbar 
+                    isAuthenticated={isAuthenticated} 
+                    currentUser={currentUser} 
+                    onLoginSuccess={onLoginSuccess} 
+                    onLogout={onLogout}
+                    onOpenLoginModal={onOpenLoginModal}
+                />
                 <Container maxWidth="lg" sx={{ py: 10, textAlign: 'center' }}>
                     <Alert severity="error">
                         {error || "Mascota no encontrada. Por favor, verifica el ID."}
@@ -196,13 +192,20 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
     return (
         <ThemeProvider theme={customTheme}>
             <CssBaseline />
-            <PublicNavbar isAuthenticated={isAuthenticated} currentUser={currentUser} onLoginSuccess={onLoginSuccess} onLogout={onLogout} />
+             {/* 🔑 2. PASA LA PROP AL NAVBAR */}
+            <PublicNavbar 
+                isAuthenticated={isAuthenticated} 
+                currentUser={currentUser} 
+                onLoginSuccess={onLoginSuccess} 
+                onLogout={onLogout}
+                onOpenLoginModal={onOpenLoginModal}
+            />
 
             <Container maxWidth="lg" sx={{ py: { xs: 5, md: 10 }, bgcolor: 'background.default' }}>
                 <Card sx={{ borderRadius: 4, boxShadow: 6, p: { xs: 2, md: 5 } }}>
                     <Grid container spacing={5}>
                         
-                        {/* 🐶 Galería de Imágenes y Nombre Principal */}
+                        {/* 🐶 Galería de Imágenes y Nombre Principal (Sin cambios) */}
                         <Grid item xs={12} md={6}>
                             <Typography variant="h3" sx={{ fontWeight: 800, mb: 1, color: 'primary.main' }}>
                                 {mascota.nombre}
@@ -210,8 +213,6 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                             <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
                                 ¡Conoce a tu futuro mejor amigo!
                             </Typography>
-
-                            {/* Imagen Principal */}
                             <CardMedia
                                 component="img"
                                 height="450"
@@ -219,8 +220,6 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                 alt={mascota.nombre}
                                 sx={{ objectFit: 'cover', borderRadius: 3, mb: 2, boxShadow: 3 }}
                             />
-
-                            {/* Miniaturas de Galería */}
                             <ImageList cols={4} rowHeight={100} gap={8}>
                                 {mascota.imagenes_base64 && mascota.imagenes_base64.map((base64, index) => (
                                     <ImageListItem 
@@ -248,7 +247,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                         {/* 📋 Información Completa y Botón de Adopción */}
                         <Grid item xs={12} md={6}>
                             <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 3, mb: 4 }}>
-                                {/* Chips de Datos Clave */}
+                                {/* Chips de Datos Clave (Sin cambios) */}
                                 <Stack direction="row" spacing={1.5} flexWrap="wrap" mb={2}>
                                     <Chip 
                                         icon={mascota.sexo === 'macho' ? <Male /> : <Female />} 
@@ -278,13 +277,14 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                     )}
                                 </Stack>
                                 
-                                {/* Botón de CTA Principal */}
+                                {/* 🔑 4. ASIGNA EL onClick AL BOTÓN */}
                                 <Button 
                                     variant="contained" 
                                     color="primary"
                                     fullWidth
                                     size="large"
                                     startIcon={<Favorite />}
+                                    onClick={handleAdoptionClick} 
                                     sx={{ 
                                         py: 1.5, 
                                         borderRadius: 2, 
@@ -297,7 +297,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                 </Button>
                             </Box>
 
-                            {/* Descripción Completa */}
+                            {/* Descripción Completa (Sin cambios) */}
                             <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
                                 Sobre {mascota.nombre}
                             </Typography>
@@ -305,7 +305,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                 {mascota.descripcion}
                             </Typography>
 
-                            {/* Características Adicionales */}
+                            {/* Características Adicionales (Sin cambios) */}
                             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
                                 Personalidad y Comportamiento
                             </Typography>
@@ -313,7 +313,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                 {mascota.comportamiento || 'Información de comportamiento no disponible.'}
                             </Typography>
 
-                            {/* Requisitos (Opcional) */}
+                            {/* Requisitos (Opcional) (Sin cambios) */}
                             {mascota.requisitos && mascota.requisitos.length > 0 && (
                                 <Box mb={4}>
                                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
@@ -334,7 +334,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
 
                         </Grid>
                         
-                        {/* 💉 Sección de Salud y Cuidados */}
+                        {/* 💉 Sección de Salud y Cuidados (Sin cambios) */}
                         <Grid item xs={12}>
                             <Box sx={{ mt: 5, pt: 3, borderTop: '2px solid #e0e0e0' }}>
                                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, color: 'primary.main', textAlign: 'center' }}>
@@ -347,16 +347,9 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout 
                                     <Grid item xs={12} sm={6} md={3}>
                                         <HealthFeatureCard label="Esterilizado/a" isChecked={mascota.esterilizado} icon={LocalHospital} />
                                     </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
-                                        <HealthFeatureCard label="Desparasitado/a" isChecked={mascota.desparasitado} icon={LocalHospital} />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6} md={3}>
-                                        <HealthFeatureCard label="Microchip Implantado" isChecked={mascota.microchip} icon={Shield} />
-                                    </Grid>
                                 </Grid>
                             </Box>
                         </Grid>
-
                     </Grid>
                 </Card>
             </Container>
