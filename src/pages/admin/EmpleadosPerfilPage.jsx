@@ -432,7 +432,6 @@ const PerfilUsuarioPage = () => {
                         )}
                     </Box>
 
-                    {/* User Info (Sin cambios) */}
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', md: 'left' } }}>
                         <Typography variant="h3" fontWeight={700} gutterBottom>
                             {userData.nombre}

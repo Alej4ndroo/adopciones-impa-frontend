@@ -88,7 +88,6 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                 const data = await response.json();
                 setMascota(data);
                 setMainImage(getImageUrl(data.imagenes_base64?.[0]));
-                console.log('Mascota data fetched:', data);
             } catch (err) {
                 setError(err.message);
                 console.error('Error fetching pet detail:', err);

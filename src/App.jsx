@@ -3,13 +3,14 @@ import axios from 'axios';
 import { 
     Box, CircularProgress, Typography, CssBaseline,
     // 🔑 1. IMPORTA LOS COMPONENTES DEL MODAL
-    Modal, Fade, IconButton, Avatar 
+    Modal, Fade, IconButton 
+    // 'Avatar' ya no se usa aquí
 } from '@mui/material';
-import { Login, Close } from '@mui/icons-material'; // 🔑 Importa iconos del modal
+import { Close } from '@mui/icons-material'; // 'Login' (icon) ya no se usa aquí
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 // 🔑 2. IMPORTA EL COMPONENTE DE LOGIN
-import LoginMUI from './components/auth/LoginMUI'; // Ajusta esta ruta si es necesario
+import AuthModalContent from './components/auth/AuthModalContent';
 
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
@@ -188,32 +189,33 @@ const AppCore = () => {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: { xs: '90%', sm: 400 },
+                    width: { xs: '90%', sm: 450 }, // Ancho ajustado
                     bgcolor: 'background.paper',
-                    boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
-                    borderRadius: 3,
-                    p: 4
+                    boxShadow: 24, // Sombra predefinida de MUI
+                    borderRadius: 4, // Bordes más redondeados
+                    p: 4,
+                    outline: 'none' // Quita el borde azul al hacer click
                 }}
             >
+                {/* Botón de cerrar flotante */}
                 <IconButton
                     onClick={handleCloseLoginModal}
-                    sx={{ position: 'absolute', right: 8, top: 8 }}
+                    sx={{ 
+                        position: 'absolute', 
+                        right: 16, 
+                        top: 16,
+                        color: 'text.secondary'
+                    }}
                 >
                     <Close />
                 </IconButton>
-                <Box sx={{ textAlign: 'center', mb: 3 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                        <Login />
-                    </Avatar>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                        Acceder al Sistema
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Para empleados y clientes registrados
-                    </Typography>
-                </Box>
-                {/* Pasa la función de login de AppCore a LoginMUI */}
-                <LoginMUI onLoginSuccess={handleLoginSuccess} />
+
+                {/* ⬇️ ESTA ES LA LÍNEA NUEVA ⬇️ */}
+                <AuthModalContent 
+                    onLoginSuccess={handleLoginSuccess} 
+                    onClose={handleCloseLoginModal}
+                />
+                
             </Box>
         </Fade>
       </Modal>
