@@ -102,9 +102,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
     // 🔑 3. CREA LA FUNCIÓN HANDLER PARA EL BOTÓN
     const handleAdoptionClick = () => {
         if (isAuthenticated) {
-            // Usuario LOGUEADO: Navegar a la página de solicitud
-            // (Asegúrate que esta ruta exista en tu DashboardRoutes)
-            navigate(`/dashboard/solicitar-adopcion/${petId}`);
+            navigate(`/solicitar-adopcion/${petId}`);
         } else {
             // Usuario NO LOGUEADO: Abrir el modal de login
             if (onOpenLoginModal) {

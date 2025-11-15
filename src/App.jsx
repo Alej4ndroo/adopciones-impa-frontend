@@ -16,6 +16,7 @@ import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
 import PerfilPage from './pages/PerfilPage';
 import PetDetailPage from './pages/PetDetailPage';
+import AdoptionRequestPage from './pages/AdoptionRequestPage';
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
 
 const canSeeDashboard = (user) => {
@@ -149,6 +150,19 @@ const AppCore = () => {
               onLoginSuccess={handleLoginSuccess}
               onLogout={handleLogout}
               onOpenLoginModal={handleOpenLoginModal} // 🔑 7. PASA LA PROP AQUÍ
+            />
+          }
+        />
+
+        <Route
+          path="/solicitar-adopcion/:petId"
+          element={
+            <AdoptionRequestPage
+              isAuthenticated={isAuthenticated}
+              currentUser={currentUser}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
+              onOpenLoginModal={handleOpenLoginModal}
             />
           }
         />
