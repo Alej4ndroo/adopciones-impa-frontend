@@ -522,7 +522,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                     <Button
                         variant="contained" 
                         size="large"
-                        sx={{ 
+                        sx={{  
                             bgcolor: 'white', 
                             color: 'primary.main', 
                             px: 5, 

@@ -5,350 +5,732 @@ import axios from 'axios';
 import {
     Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Box, CircularProgress, Alert, Chip,
-    Drawer, IconButton, List, ListItem, ListItemText, useTheme, Divider,
-    Button, Grid, Stack, alpha, Card, useMediaQuery, Tooltip, Avatar
+    IconButton, useTheme, Button, Stack, alpha, Avatar,
+    Collapse, TextField, InputAdornment, Tooltip, Grid, Card,
+    useMediaQuery, Divider
 } from '@mui/material';
 import {
     Person as PersonIcon,
-    Visibility as VisibilityIcon,
-    Close as CloseIcon,
+    KeyboardArrowDown as ArrowDownIcon,
+    KeyboardArrowUp as ArrowUpIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
     Phone as PhoneIcon,
     Email as EmailIcon,
     LocationOn as LocationOnIcon,
-    Edit as EditIcon,
     Badge as BadgeIcon,
     School as SchoolIcon,
-    WorkOutline as WorkOutlineIcon
+    CalendarToday as CalendarIcon,
+    Search as SearchIcon,
+    VerifiedUser as VerifiedIcon,
+    Warning as WarningIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
 
-// --- Componente para mostrar el detalle completo (Drawer mejorado) ---
-const EmployeeDetailDrawer = ({ empleado, open, onClose, isManagementView }) => {
+// --- Componente de tarjeta para móviles ---
+const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
+    const [open, setOpen] = useState(false);
     const theme = useTheme();
+    const navigate = useNavigate();
 
-    if (!empleado) return null;
-
-    const fullAddress = empleado.usuarios.direccion
-        ? `${empleado.usuarios.direccion.calle || ''} ${empleado.usuarios.direccion.numero_exterior || ''}, ${empleado.usuarios.direccion.colonia || ''}, ${empleado.usuarios.direccion.ciudad || ''}, C.P. ${empleado.usuarios.direccion.codigo_postal || ''}`.trim()
+    const fullAddress = empleado.direccion?.calle
+        ? `${empleado.direccion.calle || ''} ${empleado.direccion.numero_exterior || ''}, ${empleado.direccion.colonia || ''}, ${empleado.direccion.ciudad || ''}, ${empleado.direccion.estado || ''}, C.P. ${empleado.direccion.codigo_postal || ''}`.trim()
         : 'Dirección no registrada';
 
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const handleEdit = (e) => {
+        e.stopPropagation();
+        navigate(`/admin/empleados/editar/${empleado.id_empleado}`);
+    };
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`¿Estás seguro de eliminar a ${usuario?.nombre}?`)) {
+            onDelete(empleado.id_empleado);
+        }
+    };
+
+    const handleVerify = (e) => {
+        e.stopPropagation();
+        if (onVerify) {
+            onVerify(empleado.id_empleado);
+        }
+    };
+
     return (
-        <Drawer
-            anchor="right"
-            open={open}
-            onClose={onClose}
+        <Card
+            elevation={2}
             sx={{
-                '& .MuiDrawer-paper': {
-                    width: { xs: '100%', sm: 480 },
-                    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`
-                },
+                borderRadius: 3,
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                border: open ? `2px solid #1976d2` : '2px solid transparent'
             }}
         >
-            {/* Header del Drawer */}
+            {/* Header de la tarjeta - clickeable */}
             <Box
+                onClick={() => setOpen(!open)}
                 sx={{
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    color: 'white',
-                    p: 3,
-                    position: 'relative'
+                    p: 2,
+                    cursor: 'pointer',
+                    bgcolor: open ? alpha('#1976d2', 0.05) : 'white',
+                    '&:active': {
+                        bgcolor: alpha('#1976d2', 0.1)
+                    }
                 }}
             >
-                <IconButton
-                    onClick={onClose}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: 'white',
-                        bgcolor: alpha('#000', 0.2),
-                        '&:hover': { bgcolor: alpha('#000', 0.4) }
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="center">
                     <Avatar
+                        src={usuario?.foto_perfil_base64 || undefined}
                         sx={{
-                            width: 72,
-                            height: 72,
-                            bgcolor: alpha('#fff', 0.3),
-                            backdropFilter: 'blur(10px)',
-                            fontSize: 32,
-                            fontWeight: 700
+                            bgcolor: usuario?.activo ? '#1976d2' : theme.palette.grey[400],
+                            width: 56,
+                            height: 56,
+                            fontSize: 20,
+                            fontWeight: 700,
+                            border: `3px solid ${usuario?.activo ? '#1976d2' : theme.palette.grey[400]}`
                         }}
                     >
-                        {empleado.usuarios.nombre.charAt(0).toUpperCase()}
+                        {!usuario?.foto_perfil_base64 && usuario?.nombre?.charAt(0).toUpperCase()}
                     </Avatar>
-                    <Box>
-                        <Typography variant="h5" fontWeight={700}>
-                            {empleado.usuarios.nombre}
+                    
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="h6" fontWeight={600} noWrap>
+                                {usuario?.nombre}
+                            </Typography>
+                            <Chip
+                                label={usuario?.activo ? 'Activo' : 'Inactivo'}
+                                size="small"
+                                color={usuario?.activo ? 'success' : 'default'}
+                                sx={{ fontWeight: 600 }}
+                            />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                            {empleado.numero_empleado}
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            No. Empleado: {empleado.numero_empleado || 'N/A'}
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                            {usuario?.correo_electronico}
                         </Typography>
                     </Box>
+
+                    <IconButton
+                        sx={{
+                            color: '#1976d2',
+                            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.3s ease'
+                        }}
+                    >
+                        <ArrowDownIcon />
+                    </IconButton>
                 </Stack>
             </Box>
 
-            {/* Contenido del Drawer */}
-            <Box sx={{ p: 3 }}>
-                {/* Sección: Información de Contacto */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 3,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper'
-                    }}
-                >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }}
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
-                            Contacto
+            {/* Contenido expandible */}
+            <Collapse in={open} timeout="auto" unmountOnExit>
+                <Box sx={{ p: 2, bgcolor: alpha('#1976d2', 0.02) }}>
+                    {/* Información de contacto */}
+                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha('#1976d2', 0.2)}` }}>
+                        <Typography variant="subtitle2" fontWeight={600} color="#1976d2" sx={{ mb: 1.5 }}>
+                            Información de Contacto
                         </Typography>
-                    </Stack>
+                        <Stack spacing={1.5}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <EmailIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Email</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{usuario?.correo_electronico}</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <PhoneIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Teléfono</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{empleado.telefono || usuario?.telefono || 'No registrado'}</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <LocationOnIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Dirección</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{fullAddress}</Typography>
+                                </Box>
+                            </Box>
+                        </Stack>
+                    </Card>
 
-                    <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <EmailIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Correo Electrónico
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.usuarios.correo_electronico}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <PhoneIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Teléfono
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.telefono || 'No registrado'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <LocationOnIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Dirección
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {fullAddress}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Stack>
-                </Card>
-
-                {/* Sección: Información Profesional */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 3,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper'
-                    }}
-                >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }}
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
+                    {/* Información profesional */}
+                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha('#0d47a1', 0.2)}` }}>
+                        <Typography variant="subtitle2" fontWeight={600} color="#0d47a1" sx={{ mb: 1.5 }}>
                             Información Profesional
                         </Typography>
-                    </Stack>
-
-                    <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <SchoolIcon sx={{ fontSize: 20, color: theme.palette.secondary.main }} />
+                        <Stack spacing={1.5}>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">Licenciatura</Typography>
+                                <Typography variant="body2" fontWeight={500}>{empleado.licenciatura || 'No especificada'}</Typography>
                             </Box>
                             <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Licenciatura
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.licenciatura || 'No especificada'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <BadgeIcon sx={{ fontSize: 20, color: theme.palette.secondary.main }} />
+                                <Typography variant="caption" color="text.secondary">Cédula Profesional</Typography>
+                                <Typography variant="body2" fontWeight={500}>{empleado.cedula_profesional || 'No registrada'}</Typography>
                             </Box>
                             <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Cédula Profesional
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.cedula_profesional || 'No registrada'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <WorkOutlineIcon sx={{ fontSize: 20, color: theme.palette.secondary.main }} />
+                                <Typography variant="caption" color="text.secondary">Especialidad</Typography>
+                                <Typography variant="body2" fontWeight={500}>{empleado.especialidad || 'Sin especialidad'}</Typography>
                             </Box>
                             <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Especialidad
+                                <Typography variant="caption" color="text.secondary">Fecha de Contratación</Typography>
+                                <Typography variant="body2" fontWeight={500}>{formatDate(empleado.fecha_contratacion)}</Typography>
+                            </Box>
+                        </Stack>
+                    </Card>
+
+                    {/* Estado de documentos */}
+                    <Card
+                        elevation={0}
+                        sx={{
+                            p: 2,
+                            mb: 2,
+                            border: `1px solid ${alpha(
+                                empleado.documentos_verificados ? theme.palette.success.main : theme.palette.warning.main,
+                                0.3
+                            )}`,
+                            bgcolor: alpha(
+                                empleado.documentos_verificados ? theme.palette.success.main : theme.palette.warning.main,
+                                0.05
+                            )
+                        }}
+                    >
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: empleado.documentos_verificados ? 0 : 1.5 }}>
+                            {empleado.documentos_verificados ? (
+                                <VerifiedIcon sx={{ fontSize: 28, color: theme.palette.success.main }} />
+                            ) : (
+                                <WarningIcon sx={{ fontSize: 28, color: theme.palette.warning.main }} />
+                            )}
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={600}>
+                                    {empleado.documentos_verificados ? 'Documentos Verificados' : 'Documentos Pendientes'}
                                 </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.especialidad || 'Sin especialidad'}
+                                <Typography variant="caption" color="text.secondary">
+                                    {empleado.documentos_verificados
+                                        ? 'Documentación revisada y aprobada'
+                                        : 'Requiere verificación'}
                                 </Typography>
                             </Box>
-                        </Box>
-                    </Stack>
-                </Card>
+                        </Stack>
+                        {!empleado.documentos_verificados && (
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                size="small"
+                                startIcon={<VerifiedIcon />}
+                                onClick={handleVerify}
+                                sx={{
+                                    bgcolor: theme.palette.warning.main,
+                                    '&:hover': { bgcolor: theme.palette.warning.dark }
+                                }}
+                            >
+                                Verificar Documentos
+                            </Button>
+                        )}
+                    </Card>
 
-                {/* Sección: Roles */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 3,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper'
-                    }}
-                >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }}
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
-                            Roles Asignados
-                        </Typography>
-                    </Stack>
-
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {empleado.usuarios.roles && empleado.usuarios.roles.length > 0
-                            ? empleado.usuarios.roles.map((rol, index) => (
-                                <Chip
-                                    key={index}
-                                    label={rol.nombre || rol}
-                                    size="medium"
-                                    sx={{
-                                        fontWeight: 600,
-                                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                                        color: 'white',
-                                        '& .MuiChip-label': { px: 2 }
-                                    }}
-                                />
-                            ))
-                            : <Chip label="Sin Roles Asignados" size="medium" variant="outlined" />
-                        }
-                    </Box>
-                </Card>
-
-                {/* Botones de Acción */}
-                {isManagementView && (
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    {/* Botones de acción */}
+                    <Stack spacing={1.5}>
                         <Button
                             fullWidth
                             variant="contained"
-                            size="large"
                             startIcon={<EditIcon />}
+                            onClick={handleEdit}
                             sx={{
-                                borderRadius: 2,
-                                py: 1.5,
-                                fontWeight: 600,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                                boxShadow: theme.shadows[4],
-                                '&:hover': {
-                                    boxShadow: theme.shadows[8],
-                                    transform: 'translateY(-2px)'
-                                },
-                                transition: 'all 0.3s ease'
+                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                fontWeight: 600
                             }}
                         >
                             Editar Empleado
                         </Button>
-                    </Box>
-                )}
-            </Box>
-        </Drawer>
+                        <Button
+                            fullWidth
+                            variant="outlined"
+                            startIcon={<DeleteIcon />}
+                            color="error"
+                            onClick={handleDelete}
+                            sx={{ fontWeight: 600 }}
+                        >
+                            Eliminar
+                        </Button>
+                    </Stack>
+                </Box>
+            </Collapse>
+        </Card>
+    );
+};
+
+// --- Componente de fila expandible ---
+const EmployeeRow = ({ empleado, onEdit, onDelete, onVerify }) => {
+    const [open, setOpen] = useState(false);
+    const theme = useTheme();
+    const navigate = useNavigate();
+
+    const fullAddress = empleado.direccion?.calle
+        ? `${empleado.direccion.calle || ''} ${empleado.direccion.numero_exterior || ''}, ${empleado.direccion.colonia || ''}, ${empleado.direccion.ciudad || ''}, ${empleado.direccion.estado || ''}, C.P. ${empleado.direccion.codigo_postal || ''}`.trim()
+        : 'Dirección no registrada';
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const handleEdit = (e) => {
+        e.stopPropagation();
+        navigate(`/admin/empleados/editar/${empleado.id_empleado}`);
+    };
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`¿Estás seguro de eliminar a ${empleado.usuarios?.nombre || empleado.usuario?.nombre}?`)) {
+            onDelete(empleado.id_empleado);
+        }
+    };
+
+    const handleVerify = (e) => {
+        e.stopPropagation();
+        if (onVerify) {
+            onVerify(empleado.id_empleado);
+        }
+    };
+
+    const toggleRow = () => {
+        setOpen(!open);
+    };
+
+    // Normalizar acceso a datos (tu API puede devolver usuarios o usuario)
+    const usuario = empleado.usuarios || empleado.usuario;
+    const direccion = empleado.direccion;
+
+    return (
+        <>
+            <TableRow
+                hover
+                onClick={toggleRow}
+                sx={{
+                    cursor: 'pointer',
+                    bgcolor: open ? alpha('#1976d2', 0.05) : 'transparent',
+                    '&:hover': {
+                        bgcolor: alpha('#1976d2', 0.08)
+                    },
+                    transition: 'all 0.2s ease'
+                }}
+            >
+                <TableCell sx={{ width: 50 }}>
+                    <IconButton
+                        size="small"
+                        sx={{
+                            color: '#1976d2',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        {open ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                    </IconButton>
+                </TableCell>
+                <TableCell>
+                    <Chip
+                        label={empleado.numero_empleado}
+                        size="small"
+                        sx={{
+                            fontWeight: 700,
+                            bgcolor: alpha('#1976d2', 0.1),
+                            color: '#1976d2'
+                        }}
+                    />
+                </TableCell>
+                <TableCell sx={{ width: 60 }}>
+                    <Avatar
+                        src={usuario?.foto_perfil_base64 || undefined}
+                        sx={{
+                            bgcolor: usuario?.activo ? '#1976d2' : theme.palette.grey[400],
+                            width: 45,
+                            height: 45,
+                            fontSize: 18,
+                            fontWeight: 700,
+                            border: `2px solid ${usuario?.activo ? '#1976d2' : theme.palette.grey[400]}`
+                        }}
+                    >
+                        {!usuario?.foto_perfil_base64 && usuario?.nombre?.charAt(0).toUpperCase()}
+                    </Avatar>
+                </TableCell>
+                <TableCell>
+                    <Typography fontWeight={600} sx={{ color: '#333' }}>
+                        {usuario?.nombre}
+                    </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+                        {usuario?.correo_electronico}
+                    </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {empleado.telefono || usuario?.telefono || 'No registrado'}
+                    </Typography>
+                </TableCell>
+                <TableCell align="center">
+                    <Chip
+                        label={usuario?.activo ? 'Activo' : 'Inactivo'}
+                        size="small"
+                        color={usuario?.activo ? 'success' : 'default'}
+                        sx={{ fontWeight: 600 }}
+                    />
+                </TableCell>
+            </TableRow>
+
+            {/* Fila expandible con información detallada */}
+            <TableRow>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                    <Collapse in={open} timeout="auto" unmountOnExit>
+                        <Box sx={{ 
+                            py: { xs: 2, md: 3 }, 
+                            px: { xs: 1, md: 2 },
+                            bgcolor: alpha('#1976d2', 0.02),
+                            borderRadius: 2,
+                            my: 1
+                        }}>
+                            <Grid container spacing={{ xs: 2, md: 3 }}>
+                                {/* Información de Contacto */}
+                                <Grid item xs={12} md={6}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            height: '100%',
+                                            border: `1px solid ${alpha('#1976d2', 0.2)}`,
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 4,
+                                                    height: 20,
+                                                    borderRadius: 2,
+                                                    bgcolor: '#1976d2'
+                                                }}
+                                            />
+                                            <Typography variant="h6" fontWeight={600} sx={{ color: '#1976d2' }}>
+                                                Información de Contacto
+                                            </Typography>
+                                        </Stack>
+
+                                        <Stack spacing={2}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <EmailIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Email
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {usuario?.correo_electronico}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <PhoneIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Teléfono
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {empleado.telefono || usuario?.telefono || 'No registrado'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <LocationOnIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Dirección
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {fullAddress}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Stack>
+                                    </Card>
+                                </Grid>
+
+                                {/* Información Profesional */}
+                                <Grid item xs={12} md={6}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            height: '100%',
+                                            border: `1px solid ${alpha('#0d47a1', 0.2)}`,
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 4,
+                                                    height: 20,
+                                                    borderRadius: 2,
+                                                    bgcolor: '#0d47a1'
+                                                }}
+                                            />
+                                            <Typography variant="h6" fontWeight={600} sx={{ color: '#0d47a1' }}>
+                                                Información Profesional
+                                            </Typography>
+                                        </Stack>
+
+                                        <Stack spacing={2}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <SchoolIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Licenciatura
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {empleado.licenciatura || 'No especificada'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <BadgeIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Cédula Profesional
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {empleado.cedula_profesional || 'No registrada'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <SchoolIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Especialidad
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {empleado.especialidad || 'Sin especialidad'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <CalendarIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Fecha de Contratación
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {formatDate(empleado.fecha_contratacion)}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Stack>
+                                    </Card>
+                                </Grid>
+
+                                {/* Estado de Documentos */}
+                                <Grid item xs={12}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            border: `1px solid ${alpha(
+                                                empleado.documentos_verificados 
+                                                    ? theme.palette.success.main 
+                                                    : theme.palette.warning.main, 
+                                                0.2
+                                            )}`,
+                                            borderRadius: 2,
+                                            bgcolor: alpha(
+                                                empleado.documentos_verificados 
+                                                    ? theme.palette.success.main 
+                                                    : theme.palette.warning.main, 
+                                                0.05
+                                            )
+                                        }}
+                                    >
+                                        <Stack 
+                                            direction={{ xs: 'column', sm: 'row' }} 
+                                            justifyContent="space-between" 
+                                            alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                            spacing={2}
+                                        >
+                                            <Stack direction="row" spacing={2} alignItems="center">
+                                                {empleado.documentos_verificados ? (
+                                                    <VerifiedIcon sx={{ fontSize: 32, color: theme.palette.success.main }} />
+                                                ) : (
+                                                    <WarningIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
+                                                )}
+                                                <Box>
+                                                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                                                        {empleado.documentos_verificados 
+                                                            ? 'Documentos Verificados' 
+                                                            : 'Documentos Pendientes de Verificación'}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                                                        {empleado.documentos_verificados 
+                                                            ? 'Toda la documentación ha sido revisada y aprobada' 
+                                                            : 'Se requiere verificación de los documentos subidos'}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            {!empleado.documentos_verificados && (
+                                                <Button
+                                                    fullWidth={{ xs: true, sm: false }}
+                                                    variant="contained"
+                                                    size="small"
+                                                    startIcon={<VerifiedIcon />}
+                                                    onClick={handleVerify}
+                                                    sx={{
+                                                        bgcolor: theme.palette.warning.main,
+                                                        '&:hover': { bgcolor: theme.palette.warning.dark }
+                                                    }}
+                                                >
+                                                    Verificar
+                                                </Button>
+                                            )}
+                                        </Stack>
+                                    </Card>
+                                </Grid>
+
+                                {/* Botones de Acción */}
+                                <Grid item xs={12}>
+                                    <Divider sx={{ my: 1 }} />
+                                    <Stack 
+                                        direction={{ xs: 'column', sm: 'row' }} 
+                                        spacing={2} 
+                                        justifyContent="flex-end" 
+                                        sx={{ mt: 2 }}
+                                    >
+                                        <Button
+                                            fullWidth={{ xs: true, sm: false }}
+                                            variant="outlined"
+                                            startIcon={<DeleteIcon />}
+                                            color="error"
+                                            onClick={handleDelete}
+                                            sx={{
+                                                borderRadius: 2,
+                                                fontWeight: 600,
+                                                px: 3
+                                            }}
+                                        >
+                                            Eliminar
+                                        </Button>
+                                        <Button
+                                            fullWidth={{ xs: true, sm: false }}
+                                            variant="contained"
+                                            startIcon={<EditIcon />}
+                                            onClick={handleEdit}
+                                            sx={{
+                                                borderRadius: 2,
+                                                fontWeight: 600,
+                                                px: 3,
+                                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                                boxShadow: theme.shadows[4],
+                                                '&:hover': {
+                                                    boxShadow: theme.shadows[8],
+                                                    transform: 'translateY(-2px)'
+                                                },
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        >
+                                            Editar Empleado
+                                        </Button>
+                                    </Stack>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Collapse>
+                </TableCell>
+            </TableRow>
+        </>
     );
 };
 
@@ -356,10 +738,10 @@ const EmployeeDetailDrawer = ({ empleado, open, onClose, isManagementView }) => 
 
 const EmpleadosListarPage = ({ isManagementView = false }) => {
     const [empleados, setEmpleados] = useState([]);
+    const [filteredEmpleados, setFilteredEmpleados] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [openDrawer, setOpenDrawer] = useState(false);
-    const [selectedEmpleado, setSelectedEmpleado] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -390,6 +772,7 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
             }
 
             setEmpleados(receivedEmpleados);
+            setFilteredEmpleados(receivedEmpleados);
         } catch (err) {
             if (err.response) {
                 setError(
@@ -405,16 +788,39 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
         }
     };
 
-    useEffect(() => { fetchEmpleados(); }, []);
+    useEffect(() => { 
+        fetchEmpleados(); 
+    }, []);
 
-    const handleOpenDrawer = (empleado) => {
-        setSelectedEmpleado(empleado);
-        setOpenDrawer(true);
+    // Filtro de búsqueda
+    useEffect(() => {
+        if (searchTerm.trim() === '') {
+            setFilteredEmpleados(empleados);
+        } else {
+            const filtered = empleados.filter(emp => {
+                const usuario = emp.usuarios || emp.usuario;
+                return (
+                    usuario?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    emp.numero_empleado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    usuario?.correo_electronico?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            });
+            setFilteredEmpleados(filtered);
+        }
+    }, [searchTerm, empleados]);
+
+    const handleDelete = async (idEmpleado) => {
+        // Aquí implementarías la lógica de eliminación
+        console.log('Eliminar empleado:', idEmpleado);
+        // Después de eliminar, vuelve a cargar la lista
+        fetchEmpleados();
     };
 
-    const handleCloseDrawer = () => {
-        setOpenDrawer(false);
-        setSelectedEmpleado(null);
+    const handleVerify = async (idEmpleado) => {
+        // Aquí implementarías la lógica de verificación de documentos
+        console.log('Verificar documentos del empleado:', idEmpleado);
+        // Después de verificar, vuelve a cargar la lista
+        fetchEmpleados();
     };
 
     if (loading) {
@@ -435,139 +841,70 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
         );
     }
 
-    // Vista de tarjetas para móviles
-    const MobileCardView = () => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {empleados.map(empleado => (
-                <Card
-                    key={empleado.numero_empleado || empleado.id}
-                    elevation={2}
-                    sx={{
-                        p: 2,
-                        borderRadius: 3,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: theme.shadows[8]
-                        }
-                    }}
-                >
-                    <Stack spacing={2}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>
-                                <Avatar
-                                    sx={{
-                                        bgcolor: theme.palette.primary.main,
-                                        width: 48,
-                                        height: 48,
-                                        fontWeight: 700
-                                    }}
-                                >
-                                    {empleado.usuarios.nombre.charAt(0).toUpperCase()}
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" fontWeight={600}>
-                                        {empleado.usuarios.nombre}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        No. {empleado.numero_empleado || empleado.id}
-                                    </Typography>
-                                </Box>
-                            </Stack>
-                            <Tooltip title="Ver detalles">
-                                <IconButton
-                                    onClick={() => handleOpenDrawer(empleado)}
-                                    sx={{
-                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
-                                    }}
-                                >
-                                    <VisibilityIcon />
-                                </IconButton>
-                            </Tooltip>
-                        </Stack>
-
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr',
-                            gap: 1.5,
-                            pt: 1
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <EmailIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    {empleado.usuarios.correo_electronico}
-                                </Typography>
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Especialidad
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {empleado.especialidad || 'Sin especialidad'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        {empleado.usuarios.roles && empleado.usuarios.roles.length > 0 && (
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pt: 1 }}>
-                                {empleado.usuarios.roles.slice(0, 2).map((rol, index) => (
-                                    <Chip
-                                        key={index}
-                                        label={rol.nombre || rol}
-                                        size="small"
-                                        sx={{ fontWeight: 600 }}
-                                        color="primary"
-                                    />
-                                ))}
-                                {empleado.usuarios.roles.length > 2 && (
-                                    <Chip
-                                        label={`+${empleado.usuarios.roles.length - 2}`}
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                )}
-                            </Box>
-                        )}
-                    </Stack>
-                </Card>
-            ))}
-        </Box>
-    );
-
     return (
         <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
-            {/* Header Mejorado */}
+            {/* Header */}
             <Paper
                 elevation={0}
                 sx={{
-                    p: { xs: 2, sm: 3 },
-                    mb: 4,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    p: 3,
+                    mb: 3,
+                    background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
                     borderRadius: 3,
                     color: 'white'
                 }}
             >
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <Box
+                <Stack 
+                    direction={{ xs: 'column', sm: 'row' }} 
+                    justifyContent="space-between" 
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    spacing={2}
+                >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Box
+                            sx={{
+                                bgcolor: alpha('#fff', 0.2),
+                                backdropFilter: 'blur(10px)',
+                                p: 2,
+                                borderRadius: 2,
+                                display: 'flex'
+                            }}
+                        >
+                            <PersonIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Box>
+                            <Typography variant={isMobile ? "h5" : "h4"} fontWeight={700}>
+                                Lista de Empleados
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                {filteredEmpleados.length} {filteredEmpleados.length === 1 ? 'empleado' : 'empleados'}
+                            </Typography>
+                        </Box>
+                    </Stack>
+
+                    {/* Buscador */}
+                    <TextField
+                        placeholder="Buscar por nombre o número..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        size="small"
                         sx={{
-                            bgcolor: alpha('#fff', 0.2),
-                            backdropFilter: 'blur(10px)',
-                            p: { xs: 1.5, sm: 2 },
+                            minWidth: { xs: '100%', sm: 300 },
+                            bgcolor: 'white',
                             borderRadius: 2,
-                            display: 'flex'
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                                fontWeight: 500
+                            }
                         }}
-                    >
-                        <PersonIcon sx={{ fontSize: { xs: 32, sm: 40 } }} />
-                    </Box>
-                    <Box>
-                        <Typography variant={isMobile ? "h5" : "h4"} fontWeight={700} gutterBottom>
-                            Lista de Empleados
-                        </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            {empleados.length} {empleados.length === 1 ? 'empleado registrado' : 'empleados registrados'}
-                        </Typography>
-                    </Box>
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
                 </Stack>
             </Paper>
 
@@ -582,28 +919,45 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                 </Alert>
             )}
 
-            {/* Contenido principal */}
-            {empleados.length === 0 ? (
+            {/* Tabla o Tarjetas según el dispositivo */}
+            {filteredEmpleados.length === 0 ? (
                 <Paper
                     elevation={2}
                     sx={{
                         p: 6,
                         textAlign: 'center',
                         borderRadius: 3,
-                        bgcolor: alpha(theme.palette.primary.main, 0.02)
+                        bgcolor: alpha('#1976d2', 0.02)
                     }}
                 >
                     <PersonIcon sx={{ fontSize: 80, color: theme.palette.grey[400], mb: 2 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No hay empleados registrados
+                        No se encontraron empleados
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Los empleados que registres aparecerán aquí
+                        {searchTerm 
+                            ? 'Intenta con otros términos de búsqueda' 
+                            : 'Los empleados que registres aparecerán aquí'}
                     </Typography>
                 </Paper>
             ) : isMobile ? (
-                <MobileCardView />
+                // Vista de tarjetas para móviles
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {filteredEmpleados.map((empleado) => {
+                        const usuario = empleado.usuarios || empleado.usuario;
+                        return (
+                            <MobileEmployeeCard
+                                key={empleado.id_empleado}
+                                empleado={empleado}
+                                usuario={usuario}
+                                onDelete={handleDelete}
+                                onVerify={handleVerify}
+                            />
+                        );
+                    })}
+                </Box>
             ) : (
+                // Vista de tabla para desktop/tablet
                 <TableContainer
                     component={Paper}
                     elevation={3}
@@ -612,125 +966,42 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                         overflow: 'hidden'
                     }}
                 >
-                    <Table stickyHeader>
+                    <Table>
                         <TableHead>
                             <TableRow
                                 sx={{
                                     '& th': {
                                         fontWeight: 700,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                        color: theme.palette.primary.main,
-                                        borderBottom: `2px solid ${theme.palette.primary.main}`,
-                                        py: 2
+                                        bgcolor: alpha('#1976d2', 0.08),
+                                        color: '#1976d2',
+                                        borderBottom: `2px solid #1976d2`,
+                                        py: 2,
+                                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
                                     }
                                 }}
                             >
+                                <TableCell sx={{ width: 50 }} />
                                 <TableCell>No. Empleado</TableCell>
-                                <TableCell>Nombre Completo</TableCell>
-                                {!isTablet && <TableCell>Correo</TableCell>}
-                                <TableCell>Especialidad</TableCell>
-                                <TableCell>Roles</TableCell>
-                                <TableCell align="center">Acciones</TableCell>
+                                <TableCell>Foto</TableCell>
+                                <TableCell>Nombre</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Correo Electrónico</TableCell>
+                                <TableCell>Teléfono</TableCell>
+                                <TableCell align="center">Estado</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {empleados.map((empleado, index) => (
-                                <TableRow
-                                    key={empleado.numero_empleado || empleado.id}
-                                    hover
-                                    sx={{
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            bgcolor: alpha(theme.palette.primary.main, 0.04),
-                                            transform: 'scale(1.01)'
-                                        },
-                                        bgcolor: index % 2 === 0 ? 'transparent' : alpha(theme.palette.primary.main, 0.02)
-                                    }}
-                                >
-                                    <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                                        #{empleado.numero_empleado || empleado.id}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Stack direction="row" spacing={1.5} alignItems="center">
-                                            <Avatar
-                                                sx={{
-                                                    bgcolor: theme.palette.primary.main,
-                                                    width: 36,
-                                                    height: 36,
-                                                    fontSize: 16,
-                                                    fontWeight: 700
-                                                }}
-                                            >
-                                                {empleado.usuarios.nombre.charAt(0).toUpperCase()}
-                                            </Avatar>
-                                            <Typography fontWeight={600}>
-                                                {empleado.usuarios.nombre}
-                                            </Typography>
-                                        </Stack>
-                                    </TableCell>
-                                    {!isTablet && (
-                                        <TableCell sx={{ color: 'text.secondary' }}>
-                                            {empleado.usuarios.correo_electronico}
-                                        </TableCell>
-                                    )}
-                                    <TableCell>
-                                        <Chip
-                                            label={empleado.especialidad || 'Sin especialidad'}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ fontWeight: 500 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {empleado.usuarios.roles && empleado.usuarios.roles.length > 0
-                                                ? empleado.usuarios.roles.slice(0, 2).map((rol, idx) => (
-                                                    <Chip
-                                                        key={idx}
-                                                        label={rol.nombre || rol}
-                                                        size="small"
-                                                        color="primary"
-                                                        sx={{ fontWeight: 600 }}
-                                                    />
-                                                ))
-                                                : <Chip label="Sin roles" size="small" variant="outlined" />
-                                            }
-                                            {empleado.usuarios.roles && empleado.usuarios.roles.length > 2 && (
-                                                <Chip
-                                                    label={`+${empleado.usuarios.roles.length - 2}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
-                                            )}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Tooltip title="Ver detalles">
-                                            <IconButton
-                                                onClick={() => handleOpenDrawer(empleado)}
-                                                sx={{
-                                                    color: theme.palette.primary.main,
-                                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-                                                }}
-                                            >
-                                                <VisibilityIcon />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </TableCell>
-                                </TableRow>
+                            {filteredEmpleados.map((empleado) => (
+                                <EmployeeRow
+                                    key={empleado.id_empleado}
+                                    empleado={empleado}
+                                    onDelete={handleDelete}
+                                    onVerify={handleVerify}
+                                />
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
             )}
-
-            {/* Drawer de Detalles */}
-            <EmployeeDetailDrawer
-                empleado={selectedEmpleado}
-                open={openDrawer}
-                onClose={handleCloseDrawer}
-                isManagementView={isManagementView}
-            />
         </Box>
     );
 };

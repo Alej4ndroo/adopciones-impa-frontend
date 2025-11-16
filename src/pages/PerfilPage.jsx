@@ -67,7 +67,7 @@ const apiUpdateUser = async (userId, data) => {
 // -------------------------------------------------------------------
 
 
-const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) => {
+const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout }) => {
     const theme = useTheme();
     
     // 🔥 CAMBIO PRINCIPAL: Un solo estado para el usuario (como EmpleadosPerfilPage)
@@ -219,10 +219,11 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                 
                 // 🔥 Actualiza también el localStorage y currentUser del padre
                 localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
-                if (onLoginSuccess) {
+
+                if (onProfileUpdate) {
                     // Reconstruye el payload completo con el token existente
                     const token = localStorage.getItem('authToken');
-                    onLoginSuccess({ token, user: usuarioActualizado });
+                    onProfileUpdate(usuarioActualizado);
                 }
 
                 setSuccessMessage('Foto actualizada correctamente');
@@ -262,10 +263,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             
             // 🔥 Actualiza también el localStorage y currentUser del padre
             localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
-            if (onLoginSuccess) {
+            if (onProfileUpdate) {
                 // Reconstruye el payload completo con el token existente
                 const token = localStorage.getItem('authToken');
-                onLoginSuccess({ token, user: usuarioActualizado });
+                onProfileUpdate(usuarioActualizado);
             }
             
             setSuccessMessage('Perfil actualizado correctamente');
@@ -298,10 +299,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             
             // 🔥 Actualiza también el localStorage y currentUser del padre
             localStorage.setItem('userData', JSON.stringify(usuarioActualizado));
-            if (onLoginSuccess) {
+            if (onProfileUpdate) {
                 // Reconstruye el payload completo con el token existente
                 const token = localStorage.getItem('authToken');
-                onLoginSuccess({ token, user: usuarioActualizado });
+                onProfileUpdate(usuarioActualizado);
             }
 
             setSuccessMessage('Dirección actualizada correctamente');
@@ -330,7 +331,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
                 <PublicNavbar
                     isAuthenticated={isAuthenticated}
                     currentUser={currentUser}
-                    onLoginSuccess={onLoginSuccess}
+                    onProfileUpdate={onProfileUpdate}
                     onLogout={onLogout}
                 />
                 <Box sx={{
@@ -355,7 +356,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout }) 
             <PublicNavbar
                 isAuthenticated={isAuthenticated}
                 currentUser={currentUser}
-                onLoginSuccess={onLoginSuccess}
+                onProfileUpdate={onProfileUpdate}
                 onLogout={onLogout}
             />
 

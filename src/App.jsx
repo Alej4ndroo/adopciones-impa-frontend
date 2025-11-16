@@ -82,6 +82,21 @@ const AppCore = () => {
     }
   };
 
+  const handleProfileUpdate = (updatedUser) => {
+    if (!updatedUser) {
+      console.warn("[Auth] handleProfileUpdate fue llamado sin un usuario.");
+      return;
+    }
+
+    console.log("[Auth] Actualizando currentUser global:", updatedUser);
+
+    // 1. Actualiza el estado de React
+    setCurrentUser(updatedUser);
+    
+    // 2. Actualiza el localStorage para que coincida
+    localStorage.setItem('userData', JSON.stringify(updatedUser));
+  };
+
   useEffect(() => {
     if (initialCheckDone.current) return;
     initialCheckDone.current = true;
@@ -173,7 +188,7 @@ const AppCore = () => {
             <PerfilPage
               isAuthenticated={isAuthenticated}
               currentUser={currentUser}
-              onLoginSuccess={handleLoginSuccess}
+              onProfileUpdate={handleProfileUpdate}
               onLogout={handleLogout}
               onOpenLoginModal={handleOpenLoginModal} // 🔑 7. PASA LA PROP AQUÍ
             />

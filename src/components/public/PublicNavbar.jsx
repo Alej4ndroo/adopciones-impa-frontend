@@ -1,4 +1,3 @@
-// src/components/layout/PublicNavbar.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     AppBar, Toolbar, Typography, Button, Box, Avatar, Fade, 
@@ -8,7 +7,11 @@ import { Login, Close, Logout, Notifications, AccountCircle } from '@mui/icons-m
 import { useNavigate } from 'react-router-dom';
 import IMPALogo from '../../assets/img/logo_impa_azul.png'; 
 
+// ⚙️ 1. Añadimos la variable de entorno para la URL de la API
+const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
+
 const stringToColor = (string) => {
+// ... (tu función stringToColor sin cambios) ...
     let hash = 0;
     let i;
 
@@ -28,7 +31,8 @@ const stringToColor = (string) => {
     return color;
 };
 
-const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
+// ⚙️ 2. 'onOpenLoginModal' añadido de nuevo
+const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal }) => {
     const [anchorElMenu, setAnchorElMenu] = useState(null); // Menú de Perfil
     const [anchorElNotif, setAnchorElNotif] = useState(null); // Menú de Notificaciones
 
@@ -66,6 +70,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
     };
 
     const getInitials = (name) => {
+    // ... (tu función getInitials sin cambios) ...
         if (!name) return 'U';
         return name.split(' ')
             .map(n => n[0])
@@ -74,58 +79,84 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
             .substring(0, 2);
     };
 
-    // --- Lógica de Notificaciones (FETCH) ---
-    // Usamos useCallback para que la función sea estable
-    const fetchNotifications = useCallback(async () => {
+    // -----------------------------------------------------------------
+    // ⚙️ 3. Lógica de Notificaciones (FETCH) ACTUALIZADA
+    // -----------------------------------------------------------------
+    const fetchNotifications = useCallback(async (showSpinner = false) => {
         if (!isAuthenticated) return;
 
-        setLoadingNotif(true);
-        // NOTA: Reemplaza 'http://localhost:3000' por tu base URL real
-        // y añade la lógica de autenticación (ej: token en headers)
+        // Solo muestra el spinner si se lo pedimos (al hacer clic)
+        if (showSpinner) {
+            setLoadingNotif(true);
+        }
+
+        // ⚙️ 3a. Obtenemos el token para la autenticación
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.error("No se encontró token. No se pueden cargar notificaciones.");
+            return; 
+        }
+
         try {
-            const response = await fetch('/notificaciones', { 
+            // ⚙️ 3b. Usamos la URL real y el token
+            const response = await fetch(`${VITE_API_URL_BACKEND}/notificaciones`, { 
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${tokenDeUsuario}` // Si usas JWT
+                    'Authorization': `Bearer ${token}` // <-- ¡AUTENTICACIÓN!
                 },
             });
             
-            // Simulación de delay y respuesta para entorno de prueba
-            await new Promise(resolve => setTimeout(resolve, 500)); 
-
             if (!response.ok) {
                 // Manejo de error de la API
-                throw new Error('Error al cargar notificaciones');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Error al cargar notificaciones');
             }
 
-            // Aquí asumo que tu API devuelve un JSON como este:
-            // [{ id: 1, mensaje: 'Nuevo reporte creado' }, ...]
-            // const data = await response.json(); 
-            // setNotifications(data); // Usa esto con tu API real
-
-            // **Datos simulados para demostración:**
-            setNotifications([
-                { id: 1, mensaje: 'Tienes 2 nuevas solicitudes de adopción.' },
-                { id: 2, mensaje: 'El reporte #123 ha sido actualizado.' },
-                { id: 3, mensaje: 'Reunión de equipo a las 10:00 AM.' },
-            ]);
+            // ⚙️ 3d. Usamos los datos reales de la API
+            const data = await response.json(); 
+            setNotifications(data); // <-- ¡DATOS REALES!
 
         } catch (error) {
             console.error("Fallo al obtener notificaciones:", error);
-            // setNotifications([]); // Limpia o maneja el error visualmente
+            setNotifications([]); // Limpia en caso de error
         } finally {
-            setLoadingNotif(false);
+            // ⚙️ 3e. Solo quitamos el spinner si se mostró
+            if (showSpinner) {
+                setLoadingNotif(false);
+            }
         }
     }, [isAuthenticated]);
 
-    // Lógica para abrir/cerrar el menú de notificaciones y hacer fetch al abrir
+
+    // -----------------------------------------------------------------
+    // ⚙️ 4. NUEVO: useEffect para carga inicial y Polling (auto-refresco)
+    // -----------------------------------------------------------------
+    useEffect(() => {
+        if (isAuthenticated) {
+            // 1. Cargar notificaciones inmediatamente al montar/autenticar
+            fetchNotifications(false); // false = no mostrar spinner
+
+            // 2. Establecer un intervalo para refrescar cada 30 segundos
+            const intervalId = setInterval(() => {
+                fetchNotifications(false); // Carga en segundo plano
+            }, 30000); // 30000 ms = 30 segundos
+
+            // 3. Limpiar el intervalo cuando el componente se desmonte
+            //    o cuando el usuario cierre sesión (isAuthenticated cambie).
+            return () => clearInterval(intervalId);
+        } else {
+            // Si el usuario cierra sesión, limpia las notificaciones
+            setNotifications([]);
+        }
+    }, [isAuthenticated, fetchNotifications]);
+
+
+    // ⚙️ 5. Lógica de clic actualizada
     const handleNotifOpen = (event) => {
         setAnchorElNotif(event.currentTarget);
-        // Cargar notificaciones solo si están vacías o al abrir
-        if (notifications.length === 0 && isAuthenticated) {
-             fetchNotifications();
-        }
+        // Carga las notificaciones y MUESTRA el spinner al hacer clic
+        fetchNotifications(true);
     };
 
     const handleNotifClose = () => {
@@ -146,7 +177,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
             >
                 <Toolbar sx={{ px: { xs: 2, sm: 3 }, py: 1 }}> 
                     
-                    {/* 🎯 Logo clickeable */}
+                    {/* ... (Logo y Título sin cambios) ... */}
                     <Box 
                         sx={{ 
                             display: 'flex', 
@@ -175,7 +206,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                             INSTITUTO MORELIANO DE PROTECCIÓN ANIMAL
                         </Typography>
                         
-                        {/* 2. Texto para Móvil (sólo xs) */}
                         <Typography 
                             variant="h4"
                             component="h1" 
@@ -191,7 +221,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                         </Typography>
                     </Box>
                     
-                    {/* Espaciador */}
                     <Box sx={{ flexGrow: 1 }} /> 
                     
                     {/* Controles de usuario */}
@@ -205,6 +234,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                                 onClick={handleNotifOpen}
                                 sx={{ mr: 1.5, color: 'text.secondary' }}
                             >
+                                {/* ⚙️ 6. Este contador ahora se actualiza solo */}
                                 <Badge 
                                     badgeContent={badgeContent} 
                                     color="error"
@@ -238,13 +268,18 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                                     </Box>
                                 ) : notifications.length > 0 ? (
                                     notifications.map((notif) => (
+                                        // ⚙️ 7. Renderiza usando los campos de tu BD
                                         <MenuItem 
-                                            key={notif.id} 
-                                            onClick={handleNotifClose} // Al hacer clic, cierras el menú (y puedes marcar como leído)
-                                            sx={{ whiteSpace: 'normal' }}
+                                            key={notif.id_notificacion} // <-- Confirmado
+                                            onClick={handleNotifClose} 
+                                            sx={{ whiteSpace: 'normal', display: 'block', py: 1.5, px: 2 }}
                                         >
-                                            <Typography variant="body2">
-                                                {notif.mensaje}
+                                            {/* Opcional: puedes añadir el 'titulo' */}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                {notif.titulo}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                                {notif.mensaje} {/* <-- Confirmado */}
                                             </Typography>
                                         </MenuItem>
                                     ))
@@ -257,7 +292,9 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                                 )}
                             </Menu>
                                 
-                            {/* Avatar / Icono de Perfil */}
+                            {/* ------------------------------------------------- */}
+                            {/* ⚙️ 8. AVATAR (Confirmado) */}
+                            {/* ------------------------------------------------- */}
                             <IconButton
                                 onClick={handleMenuOpen}
                                 size="large"
@@ -270,15 +307,15 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                             >
                                 <Avatar
                                     alt={currentUser?.nombre}
-                                    src={currentUser?.fotoPerfil || ''}
+                                    src={currentUser?.foto_perfil_base64 ? `data:image/jpeg;base64,${currentUser.foto_perfil_base64}` : undefined}
                                     sx={{
-                                        bgcolor: currentUser?.fotoPerfil ? 'transparent' : stringToColor(currentUser?.nombre || 'usuario'),
+                                        bgcolor: currentUser?.foto_perfil_base64 ? 'transparent' : stringToColor(currentUser?.nombre || 'usuario'),
                                         width: 40,
                                         height: 40,
-                                        color: currentUser?.fotoPerfil ? 'inherit' : '#ffffff',
+                                        color: currentUser?.foto_perfil_base64 ? 'inherit' : '#ffffff',
                                     }}
                                 >
-                                    {!currentUser?.fotoPerfil && (
+                                    {!currentUser?.foto_perfil_base64 && (
                                         getInitials(currentUser?.nombre)
                                     )}
                                 </Avatar>
@@ -299,15 +336,11 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                                         Hola, {currentUser?.nombre || 'Usuario'}
                                     </Typography>
                                 </MenuItem>
-
-                                {/* --- MODIFICACIÓN AQUÍ --- */}
                                 <Divider sx={{ my: 0.5 }} /> 
                                 <MenuItem onClick={handleProfileClick}>
                                     <AccountCircle fontSize="small" sx={{ mr: 1 }} />
                                     Mi Perfil
                                 </MenuItem>
-                                {/* --- FIN DE LA MODIFICACIÓN --- */}
-
                                 <MenuItem onClick={handleLogoutClick}>
                                     <Logout fontSize="small" sx={{ mr: 1 }} />
                                     Cerrar Sesión
@@ -315,6 +348,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, 
                             </Menu>
                         </Box>
                     ) : (
+                        // Botón de Login
                         <Button 
                             variant="contained" 
                             startIcon={<Login />} 
