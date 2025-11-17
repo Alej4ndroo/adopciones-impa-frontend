@@ -301,34 +301,6 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.8 }}>
                                 {mascota.descripcion}
                             </Typography>
-
-                            {/* Características Adicionales (Sin cambios) */}
-                            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-                                Personalidad y Comportamiento
-                            </Typography>
-                            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontStyle: 'italic' }}>
-                                {mascota.comportamiento || 'Información de comportamiento no disponible.'}
-                            </Typography>
-
-                            {/* Requisitos (Opcional) (Sin cambios) */}
-                            {mascota.requisitos && mascota.requisitos.length > 0 && (
-                                <Box mb={4}>
-                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
-                                        <Info sx={{ mr: 1, verticalAlign: 'middle' }} /> Requisitos de Adopción
-                                    </Typography>
-                                    <Stack component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-                                        {mascota.requisitos.map((req, index) => (
-                                            <li key={index} style={{ marginBottom: '8px' }}>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    <CheckCircle color="primary" sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
-                                                    {req}
-                                                </Typography>
-                                            </li>
-                                        ))}
-                                    </Stack>
-                                </Box>
-                            )}
-
                         </Grid>
                         
                         {/* 💉 Sección de Salud y Cuidados (Sin cambios) */}

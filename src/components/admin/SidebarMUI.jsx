@@ -35,13 +35,8 @@ const routeMap = {
     'Ver Consultas': '/dashboard/consultas/ver',
     'Crear Consulta': '/dashboard/consultas/crear',
     'Editar Consulta': '/dashboard/consultas/editar',
-    'Ver Expedientes': '/dashboard/expedientes/ver',
-    'Crear Expediente': '/dashboard/expedientes/crear',
-    'Editar Expediente': '/dashboard/expedientes/editar',
     'Ver Documentos': '/dashboard/documentos/ver',
     'Verificar Documento': '/dashboard/documentos/verificar',
-    'Ver Notificacion': '/dashboard/notificaciones/ver',
-    'Crear Notificacion': '/dashboard/notificaciones/crear',
 };
 
 const getIconAndColorForSubmenu = (name) => {
@@ -93,16 +88,10 @@ const menuItems = [
       { name: 'Crear Consulta', requiredPermissions: ['crear_consulta'] },
       { name: 'Editar Consulta', requiredPermissions: ['editar_consulta'] },
     ] },
-    { name: 'Expedientes', icon: FileText, requiredPermissions: ['ver_expediente'], subMenu: [
-      { name: 'Ver Expedientes', requiredPermissions: ['ver_expediente'] },
-      { name: 'Crear Expediente', requiredPermissions: ['crear_expediente'] },
-      { name: 'Editar Expediente', requiredPermissions: ['editar_expediente'] },
-    ] },
     { name: 'Documentos', icon: BookOpen, requiredPermissions: ['ver_documento'], subMenu: [
       { name: 'Ver Documentos', requiredPermissions: ['ver_documento'] },
       { name: 'Verificar Documento', requiredPermissions: ['verificar_documento', 'rechazar_documento'] },
     ] },
-    { name: 'Notificaciones', icon: Smile, requiredPermissions: ['ver_notificacion', 'crear_notificacion'] },
 ];
 
 // --- (Fin de la lógica que no cambia) ---

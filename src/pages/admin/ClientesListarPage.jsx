@@ -2,308 +2,549 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
-    Typography, Paper, Table, TableBody, TableCell, TableContainer, 
-    TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
-    Stack, alpha, Card, IconButton, Tooltip, Avatar, useMediaQuery,
-    Drawer, Divider, Button
+import {
+    Typography, Paper, Table, TableBody, TableCell, TableContainer,
+    TableHead, TableRow, Box, CircularProgress, Alert, Chip,
+    IconButton, useTheme, Button, Stack, alpha, Avatar,
+    Collapse, TextField, InputAdornment, Tooltip, Grid, Card,
+    useMediaQuery, Divider
 } from '@mui/material';
-import { 
+import {
     Person as PersonIcon,
-    Visibility as VisibilityIcon,
+    KeyboardArrowDown as ArrowDownIcon,
+    KeyboardArrowUp as ArrowUpIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    Close as CloseIcon,
     Phone as PhoneIcon,
     Email as EmailIcon,
     LocationOn as LocationOnIcon,
     Badge as BadgeIcon,
-    CalendarToday as CalendarTodayIcon
+    CalendarToday as CalendarIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
-const CLIENTES_ENDPOINT = '/usuarios/listar';
+const CLIENTES_ENDPOINT = '/usuarios/listar-clientes';
 
-// --- Componente para mostrar el detalle completo (Drawer mejorado) ---
-const ClienteDetailDrawer = ({ cliente, open, onClose, isManagementView }) => {
+// --- Componente de tarjeta para móviles ---
+const MobileClientCard = ({ cliente, onDelete }) => {
+    const [open, setOpen] = useState(false);
     const theme = useTheme();
+    const navigate = useNavigate();
 
-    if (!cliente) return null;
-
-    const fullAddress = cliente.usuarios.direccion
-        ? `${cliente.usuarios.direccion.calle || ''} ${cliente.usuarios.direccion.numero_exterior || ''}, ${cliente.usuarios.direccion.colonia || ''}, ${cliente.usuarios.direccion.ciudad || ''}, C.P. ${cliente.usuarios.direccion.codigo_postal || ''}`.trim()
+    const fullAddress = cliente.direccion?.calle
+        ? `${cliente.direccion.calle || ''} ${cliente.direccion.numero_exterior || ''}, ${cliente.direccion.colonia || ''}, ${cliente.direccion.ciudad || ''}, ${cliente.direccion.estado || ''}, C.P. ${cliente.direccion.codigo_postal || ''}`.trim()
         : 'Dirección no registrada';
 
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const handleEdit = (e) => {
+        e.stopPropagation();
+        navigate(`/admin/clientes/editar/${cliente.id_usuario}`);
+    };
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`¿Estás seguro de eliminar a ${cliente.nombre}?`)) {
+            onDelete(cliente.id_usuario);
+        }
+    };
+
     return (
-        <Drawer
-            anchor="right"
-            open={open}
-            onClose={onClose}
+        <Card
+            elevation={2}
             sx={{
-                '& .MuiDrawer-paper': {
-                    width: { xs: '100%', sm: 480 },
-                    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`
-                },
+                borderRadius: 3,
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                border: open ? `2px solid #1976d2` : '2px solid transparent'
             }}
         >
-            {/* Header del Drawer */}
+            {/* Header de la tarjeta - clickeable */}
             <Box
+                onClick={() => setOpen(!open)}
                 sx={{
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    color: 'white',
-                    p: 3,
-                    position: 'relative'
+                    p: 2,
+                    cursor: 'pointer',
+                    bgcolor: open ? alpha('#1976d2', 0.05) : 'white',
+                    '&:active': {
+                        bgcolor: alpha('#1976d2', 0.1)
+                    }
                 }}
             >
-                <IconButton
-                    onClick={onClose}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: 'white',
-                        bgcolor: alpha('#000', 0.2),
-                        '&:hover': { bgcolor: alpha('#000', 0.4) }
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="center">
                     <Avatar
+                        src={cliente.foto_perfil_base64 || undefined}
                         sx={{
-                            width: 72,
-                            height: 72,
-                            bgcolor: alpha('#fff', 0.3),
-                            backdropFilter: 'blur(10px)',
-                            fontSize: 32,
-                            fontWeight: 700
+                            bgcolor: cliente.activo ? '#1976d2' : theme.palette.grey[400],
+                            width: 56,
+                            height: 56,
+                            fontSize: 20,
+                            fontWeight: 700,
+                            border: `3px solid ${cliente.activo ? '#1976d2' : theme.palette.grey[400]}`
                         }}
                     >
-                        {cliente.usuarios.nombre.charAt(0).toUpperCase()}
+                        {!cliente.foto_perfil_base64 && cliente.nombre?.charAt(0).toUpperCase()}
                     </Avatar>
-                    <Box>
-                        <Typography variant="h5" fontWeight={700}>
-                            {cliente.usuarios.nombre}
+                    
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="h6" fontWeight={600} noWrap>
+                                {cliente.nombre}
+                            </Typography>
+                            <Chip
+                                label={cliente.activo ? 'Activo' : 'Inactivo'}
+                                size="small"
+                                color={cliente.activo ? 'success' : 'default'}
+                                sx={{ fontWeight: 600 }}
+                            />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                            Cliente #{cliente.id_usuario}
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            Cliente #{cliente.id_persona || cliente.id}
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                            {cliente.correo_electronico}
                         </Typography>
                     </Box>
+
+                    <IconButton
+                        sx={{
+                            color: '#1976d2',
+                            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.3s ease'
+                        }}
+                    >
+                        <ArrowDownIcon />
+                    </IconButton>
                 </Stack>
             </Box>
 
-            {/* Contenido del Drawer */}
-            <Box sx={{ p: 3 }}>
-                {/* Sección: Información de Contacto */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 3,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper'
-                    }}
-                >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }}
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
+            {/* Contenido expandible */}
+            <Collapse in={open} timeout="auto" unmountOnExit>
+                <Box sx={{ p: 2, bgcolor: alpha('#1976d2', 0.02) }}>
+                    {/* Información de contacto */}
+                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha('#1976d2', 0.2)}` }}>
+                        <Typography variant="subtitle2" fontWeight={600} color="#1976d2" sx={{ mb: 1.5 }}>
                             Información de Contacto
                         </Typography>
-                    </Stack>
+                        <Stack spacing={1.5}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <EmailIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Email</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{cliente.correo_electronico}</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <PhoneIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Teléfono</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{cliente.telefono || 'No registrado'}</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <LocationOnIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Dirección</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{fullAddress}</Typography>
+                                </Box>
+                            </Box>
+                        </Stack>
+                    </Card>
 
-                    <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <EmailIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Correo Electrónico
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {cliente.usuarios.correo_electronico}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <PhoneIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Teléfono
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {cliente.usuarios.telefono || 'No registrado'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <LocationOnIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    Dirección
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {fullAddress}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Stack>
-                </Card>
-
-                {/* Sección: Información Adicional */}
-                <Card
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 3,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper'
-                    }}
-                >
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }}
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
+                    {/* Información adicional */}
+                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha('#0d47a1', 0.2)}` }}>
+                        <Typography variant="subtitle2" fontWeight={600} color="#0d47a1" sx={{ mb: 1.5 }}>
                             Información del Cliente
                         </Typography>
-                    </Stack>
-
-                    <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                                    p: 1,
-                                    borderRadius: 2,
-                                    display: 'flex'
-                                }}
-                            >
-                                <BadgeIcon sx={{ fontSize: 20, color: theme.palette.secondary.main }} />
+                        <Stack spacing={1.5}>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">ID de Cliente</Typography>
+                                <Typography variant="body2" fontWeight={500}>#{cliente.id_usuario}</Typography>
                             </Box>
                             <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                    ID de Cliente
-                                </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    #{cliente.id_persona || cliente.id}
-                                </Typography>
+                                <Typography variant="caption" color="text.secondary">Fecha de Registro</Typography>
+                                <Typography variant="body2" fontWeight={500}>{formatDate(cliente.fecha_creacion)}</Typography>
                             </Box>
-                        </Box>
+                        </Stack>
+                    </Card>
 
-                        {cliente.fecha_registro && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box
-                                    sx={{
-                                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                                        p: 1,
-                                        borderRadius: 2,
-                                        display: 'flex'
-                                    }}
-                                >
-                                    <CalendarTodayIcon sx={{ fontSize: 20, color: theme.palette.secondary.main }} />
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                        Fecha de Registro
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {new Date(cliente.fecha_registro).toLocaleDateString('es-MX')}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-                    </Stack>
-                </Card>
-
-                {/* Botones de Acción */}
-                {isManagementView && (
-                    <Stack direction="row" spacing={2}>
+                    {/* Botones de acción */}
+                    <Stack spacing={1.5}>
                         <Button
                             fullWidth
                             variant="contained"
-                            size="large"
                             startIcon={<EditIcon />}
+                            onClick={handleEdit}
                             sx={{
-                                borderRadius: 2,
-                                py: 1.5,
-                                fontWeight: 600,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                                boxShadow: theme.shadows[4],
-                                '&:hover': {
-                                    boxShadow: theme.shadows[8],
-                                    transform: 'translateY(-2px)'
-                                },
-                                transition: 'all 0.3s ease'
+                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                fontWeight: 600
                             }}
                         >
                             Editar Cliente
                         </Button>
                         <Button
+                            fullWidth
                             variant="outlined"
-                            size="large"
                             startIcon={<DeleteIcon />}
                             color="error"
-                            sx={{
-                                borderRadius: 2,
-                                py: 1.5,
-                                fontWeight: 600,
-                                borderWidth: 2,
-                                '&:hover': {
-                                    borderWidth: 2,
-                                    transform: 'translateY(-2px)'
-                                },
-                                transition: 'all 0.3s ease'
-                            }}
+                            onClick={handleDelete}
+                            sx={{ fontWeight: 600 }}
                         >
                             Eliminar
                         </Button>
                     </Stack>
-                )}
-            </Box>
-        </Drawer>
+                </Box>
+            </Collapse>
+        </Card>
+    );
+};
+
+// --- Componente de fila expandible ---
+const ClientRow = ({ cliente, onDelete }) => {
+    const [open, setOpen] = useState(false);
+    const theme = useTheme();
+    const navigate = useNavigate();
+
+    const fullAddress = cliente.direccion?.calle
+        ? `${cliente.direccion.calle || ''} ${cliente.direccion.numero_exterior || ''}, ${cliente.direccion.colonia || ''}, ${cliente.direccion.ciudad || ''}, ${cliente.direccion.estado || ''}, C.P. ${cliente.direccion.codigo_postal || ''}`.trim()
+        : 'Dirección no registrada';
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const handleEdit = (e) => {
+        e.stopPropagation();
+        navigate(`/admin/clientes/editar/${cliente.id_usuario}`);
+    };
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`¿Estás seguro de eliminar a ${cliente.nombre}?`)) {
+            onDelete(cliente.id_usuario);
+        }
+    };
+
+    const toggleRow = () => {
+        setOpen(!open);
+    };
+
+    return (
+        <>
+            <TableRow
+                hover
+                onClick={toggleRow}
+                sx={{
+                    cursor: 'pointer',
+                    bgcolor: open ? alpha('#1976d2', 0.05) : 'transparent',
+                    '&:hover': {
+                        bgcolor: alpha('#1976d2', 0.08)
+                    },
+                    transition: 'all 0.2s ease'
+                }}
+            >
+                <TableCell sx={{ width: 50 }}>
+                    <IconButton
+                        size="small"
+                        sx={{
+                            color: '#1976d2',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        {open ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                    </IconButton>
+                </TableCell>
+                <TableCell>
+                    <Chip
+                        label={`#${cliente.id_usuario}`}
+                        size="small"
+                        sx={{
+                            fontWeight: 700,
+                            bgcolor: alpha('#1976d2', 0.1),
+                            color: '#1976d2'
+                        }}
+                    />
+                </TableCell>
+                <TableCell sx={{ width: 60 }}>
+                    <Avatar
+                        src={cliente.foto_perfil_base64 || undefined}
+                        sx={{
+                            bgcolor: cliente.activo ? '#1976d2' : theme.palette.grey[400],
+                            width: 45,
+                            height: 45,
+                            fontSize: 18,
+                            fontWeight: 700,
+                            border: `2px solid ${cliente.activo ? '#1976d2' : theme.palette.grey[400]}`
+                        }}
+                    >
+                        {!cliente.foto_perfil_base64 && cliente.nombre?.charAt(0).toUpperCase()}
+                    </Avatar>
+                </TableCell>
+                <TableCell>
+                    <Typography fontWeight={600} sx={{ color: '#333' }}>
+                        {cliente.nombre}
+                    </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+                        {cliente.correo_electronico}
+                    </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {cliente.telefono || 'No registrado'}
+                    </Typography>
+                </TableCell>
+                <TableCell align="center">
+                    <Chip
+                        label={cliente.activo ? 'Activo' : 'Inactivo'}
+                        size="small"
+                        color={cliente.activo ? 'success' : 'default'}
+                        sx={{ fontWeight: 600 }}
+                    />
+                </TableCell>
+            </TableRow>
+
+            {/* Fila expandible con información detallada */}
+            <TableRow>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                    <Collapse in={open} timeout="auto" unmountOnExit>
+                        <Box sx={{ 
+                            py: { xs: 2, md: 3 }, 
+                            px: { xs: 1, md: 2 },
+                            bgcolor: alpha('#1976d2', 0.02),
+                            borderRadius: 2,
+                            my: 1
+                        }}>
+                            <Grid container spacing={{ xs: 2, md: 3 }}>
+                                {/* Información de Contacto */}
+                                <Grid item xs={12} md={6}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            height: '100%',
+                                            border: `1px solid ${alpha('#1976d2', 0.2)}`,
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 4,
+                                                    height: 20,
+                                                    borderRadius: 2,
+                                                    bgcolor: '#1976d2'
+                                                }}
+                                            />
+                                            <Typography variant="h6" fontWeight={600} sx={{ color: '#1976d2' }}>
+                                                Información de Contacto
+                                            </Typography>
+                                        </Stack>
+
+                                        <Stack spacing={2}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <EmailIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Email
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {cliente.correo_electronico}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <PhoneIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Teléfono
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {cliente.telefono || 'No registrado'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#1976d2', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <LocationOnIcon sx={{ fontSize: 18, color: '#1976d2' }} />
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Dirección
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {fullAddress}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Stack>
+                                    </Card>
+                                </Grid>
+
+                                {/* Información del Cliente */}
+                                <Grid item xs={12} md={6}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            height: '100%',
+                                            border: `1px solid ${alpha('#0d47a1', 0.2)}`,
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 4,
+                                                    height: 20,
+                                                    borderRadius: 2,
+                                                    bgcolor: '#0d47a1'
+                                                }}
+                                            />
+                                            <Typography variant="h6" fontWeight={600} sx={{ color: '#0d47a1' }}>
+                                                Información del Cliente
+                                            </Typography>
+                                        </Stack>
+
+                                        <Stack spacing={2}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <BadgeIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        ID de Cliente
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        #{cliente.id_usuario}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box
+                                                    sx={{
+                                                        bgcolor: alpha('#0d47a1', 0.1),
+                                                        p: 1,
+                                                        borderRadius: 1.5,
+                                                        display: 'flex'
+                                                    }}
+                                                >
+                                                    <CalendarIcon sx={{ fontSize: 18, color: '#0d47a1' }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Fecha de Registro
+                                                    </Typography>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {formatDate(cliente.fecha_creacion)}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Stack>
+                                    </Card>
+                                </Grid>
+
+                                {/* Botones de Acción */}
+                                <Grid item xs={12}>
+                                    <Divider sx={{ my: 1 }} />
+                                    <Stack 
+                                        direction={{ xs: 'column', sm: 'row' }} 
+                                        spacing={2} 
+                                        justifyContent="flex-end" 
+                                        sx={{ mt: 2 }}
+                                    >
+                                        <Button
+                                            fullWidth={{ xs: true, sm: false }}
+                                            variant="outlined"
+                                            startIcon={<DeleteIcon />}
+                                            color="error"
+                                            onClick={handleDelete}
+                                            sx={{
+                                                borderRadius: 2,
+                                                fontWeight: 600,
+                                                px: 3
+                                            }}
+                                        >
+                                            Eliminar
+                                        </Button>
+                                        <Button
+                                            fullWidth={{ xs: true, sm: false }}
+                                            variant="contained"
+                                            startIcon={<EditIcon />}
+                                            onClick={handleEdit}
+                                            sx={{
+                                                borderRadius: 2,
+                                                fontWeight: 600,
+                                                px: 3,
+                                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                                boxShadow: theme.shadows[4],
+                                                '&:hover': {
+                                                    boxShadow: theme.shadows[8],
+                                                    transform: 'translateY(-2px)'
+                                                },
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        >
+                                            Editar Cliente
+                                        </Button>
+                                    </Stack>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Collapse>
+                </TableCell>
+            </TableRow>
+        </>
     );
 };
 
@@ -311,18 +552,17 @@ const ClienteDetailDrawer = ({ cliente, open, onClose, isManagementView }) => {
 
 const ClientesListarPage = ({ isManagementView = false }) => {
     const [clientes, setClientes] = useState([]);
+    const [filteredClientes, setFilteredClientes] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [openDrawer, setOpenDrawer] = useState(false);
-    const [selectedCliente, setSelectedCliente] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     const fetchClientes = async () => {
         const token = localStorage.getItem('authToken');
-        
+
         if (!token) {
             setError("No autenticado. Por favor, inicie sesión.");
             setLoading(false);
@@ -334,18 +574,18 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            const receivedClientes = Array.isArray(response.data) 
-                ? response.data 
-                : Array.isArray(response.data?.clientes) 
-                    ? response.data.clientes 
+            const receivedClientes = Array.isArray(response.data)
+                ? response.data
+                : Array.isArray(response.data?.clientes)
+                    ? response.data.clientes
                     : [];
 
             if (!receivedClientes.length) {
                 setError("No se encontraron clientes en el sistema.");
             }
 
-            console.log('Clientes recibidos:', receivedClientes);
             setClientes(receivedClientes);
+            setFilteredClientes(receivedClientes);
         } catch (err) {
             if (err.response) {
                 setError(
@@ -361,24 +601,37 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         }
     };
 
-    useEffect(() => { fetchClientes(); }, []); 
+    useEffect(() => { 
+        fetchClientes(); 
+    }, []);
 
-    const handleOpenDrawer = (cliente) => {
-        setSelectedCliente(cliente);
-        setOpenDrawer(true);
-    };
+    // Filtro de búsqueda
+    useEffect(() => {
+        if (searchTerm.trim() === '') {
+            setFilteredClientes(clientes);
+        } else {
+            const filtered = clientes.filter(cliente =>
+                cliente.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                cliente.id_usuario?.toString().includes(searchTerm) ||
+                cliente.correo_electronico?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            setFilteredClientes(filtered);
+        }
+    }, [searchTerm, clientes]);
 
-    const handleCloseDrawer = () => {
-        setOpenDrawer(false);
-        setSelectedCliente(null);
+    const handleDelete = async (idCliente) => {
+        // Aquí implementarías la lógica de eliminación
+        console.log('Eliminar cliente:', idCliente);
+        // Después de eliminar, vuelve a cargar la lista
+        fetchClientes();
     };
 
     if (loading) {
         return (
-            <Box sx={{ 
-                display: 'flex', 
+            <Box sx={{
+                display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center', 
+                justifyContent: 'center',
                 alignItems: 'center',
                 minHeight: '60vh',
                 gap: 2
@@ -391,123 +644,77 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         );
     }
 
-    // Vista de tarjetas para móviles
-    const MobileCardView = () => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {clientes.map(cliente => (
-                <Card 
-                    key={cliente.id_persona || cliente.id}
-                    elevation={2}
-                    sx={{ 
-                        p: 2,
-                        borderRadius: 3,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: theme.shadows[8]
-                        }
-                    }}
-                >
-                    <Stack spacing={2}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>
-                                <Avatar
-                                    sx={{
-                                        bgcolor: theme.palette.primary.main,
-                                        width: 48,
-                                        height: 48,
-                                        fontWeight: 700
-                                    }}
-                                >
-                                    {cliente.usuarios.nombre.charAt(0).toUpperCase()}
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" fontWeight={600}>
-                                        {cliente.usuarios.nombre}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Cliente #{cliente.id_persona || cliente.id}
-                                    </Typography>
-                                </Box>
-                            </Stack>
-                            <Tooltip title="Ver detalles">
-                                <IconButton 
-                                    onClick={() => handleOpenDrawer(cliente)}
-                                    sx={{ 
-                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
-                                    }}
-                                >
-                                    <VisibilityIcon />
-                                </IconButton>
-                            </Tooltip>
-                        </Stack>
-
-                        <Box sx={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: '1fr',
-                            gap: 1.5,
-                            pt: 1
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <EmailIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    {cliente.usuarios.correo_electronico}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <PhoneIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    {cliente.usuarios.telefono || 'No registrado'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Stack>
-                </Card>
-            ))}
-        </Box>
-    );
-    
     return (
         <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
-            {/* Header Mejorado */}
-            <Paper 
+            {/* Header */}
+            <Paper
                 elevation={0}
-                sx={{ 
-                    p: { xs: 2, sm: 3 },
-                    mb: 4,
-                    background: `linear-gradient(135deg, #1E74D1 0%, #038ffaff 100%)`,
+                sx={{
+                    p: 3,
+                    mb: 3,
+                    background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
                     borderRadius: 3,
                     color: 'white'
                 }}
             >
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <Box
+                <Stack 
+                    direction={{ xs: 'column', sm: 'row' }} 
+                    justifyContent="space-between" 
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    spacing={2}
+                >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Box
+                            sx={{
+                                bgcolor: alpha('#fff', 0.2),
+                                backdropFilter: 'blur(10px)',
+                                p: 2,
+                                borderRadius: 2,
+                                display: 'flex'
+                            }}
+                        >
+                            <PersonIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Box>
+                            <Typography variant={isMobile ? "h5" : "h4"} fontWeight={700}>
+                                Lista de Clientes
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                {filteredClientes.length} {filteredClientes.length === 1 ? 'cliente' : 'clientes'}
+                            </Typography>
+                        </Box>
+                    </Stack>
+
+                    {/* Buscador */}
+                    <TextField
+                        placeholder="Buscar por nombre o ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        size="small"
                         sx={{
-                            bgcolor: alpha('#fff', 0.2),
-                            backdropFilter: 'blur(10px)',
-                            p: { xs: 1.5, sm: 2 },
+                            minWidth: { xs: '100%', sm: 300 },
+                            bgcolor: 'white',
                             borderRadius: 2,
-                            display: 'flex'
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                                fontWeight: 500
+                            }
                         }}
-                    >
-                        <PersonIcon sx={{ fontSize: { xs: 32, sm: 40 } }} />
-                    </Box>
-                    <Box>
-                        <Typography variant={isMobile ? "h5" : "h4"} fontWeight={700} gutterBottom>
-                            Lista de Clientes
-                        </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            {clientes.length} {clientes.length === 1 ? 'cliente registrado' : 'clientes registrados'}
-                        </Typography>
-                    </Box>
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
                 </Stack>
             </Paper>
 
             {/* Alertas */}
             {error && (
-                <Alert 
-                    severity="error" 
+                <Alert
+                    severity="error"
                     sx={{ mb: 3, borderRadius: 2 }}
                     onClose={() => setError(null)}
                 >
@@ -515,160 +722,83 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                 </Alert>
             )}
 
-            {/* Contenido principal */}
-            {clientes.length === 0 ? (
-                <Paper 
+            {/* Tabla o Tarjetas según el dispositivo */}
+            {filteredClientes.length === 0 ? (
+                <Paper
                     elevation={2}
-                    sx={{ 
-                        p: 6, 
+                    sx={{
+                        p: 6,
                         textAlign: 'center',
                         borderRadius: 3,
-                        bgcolor: alpha(theme.palette.primary.main, 0.02)
+                        bgcolor: alpha('#1976d2', 0.02)
                     }}
                 >
                     <PersonIcon sx={{ fontSize: 80, color: theme.palette.grey[400], mb: 2 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No hay clientes registrados
+                        No se encontraron clientes
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Los clientes que registres aparecerán aquí
+                        {searchTerm 
+                            ? 'Intenta con otros términos de búsqueda' 
+                            : 'Los clientes que registres aparecerán aquí'}
                     </Typography>
                 </Paper>
             ) : isMobile ? (
-                <MobileCardView />
+                // Vista de tarjetas para móviles
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {filteredClientes.map((cliente) => (
+                        <MobileClientCard
+                            key={cliente.id_usuario}
+                            cliente={cliente}
+                            onDelete={handleDelete}
+                        />
+                    ))}
+                </Box>
             ) : (
-                <TableContainer 
-                    component={Paper} 
+                // Vista de tabla para desktop/tablet
+                <TableContainer
+                    component={Paper}
                     elevation={3}
-                    sx={{ 
+                    sx={{
                         borderRadius: 3,
                         overflow: 'hidden'
                     }}
                 >
-                    <Table stickyHeader>
+                    <Table>
                         <TableHead>
-                            <TableRow 
-                                sx={{ 
-                                    '& th': { 
+                            <TableRow
+                                sx={{
+                                    '& th': {
                                         fontWeight: 700,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                        color: theme.palette.primary.main,
-                                        borderBottom: `2px solid ${theme.palette.primary.main}`,
-                                        py: 2
-                                    } 
+                                        bgcolor: alpha('#1976d2', 0.08),
+                                        color: '#1976d2',
+                                        borderBottom: `2px solid #1976d2`,
+                                        py: 2,
+                                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                    }
                                 }}
                             >
+                                <TableCell sx={{ width: 50 }} />
                                 <TableCell>No. Cliente</TableCell>
-                                <TableCell>Nombre Completo</TableCell>
-                                {!isTablet && <TableCell>Correo Electrónico</TableCell>}
-                                <TableCell>Teléfono</TableCell>
-                                <TableCell align="center">Acciones</TableCell>
+                                <TableCell>Foto</TableCell>
+                                <TableCell>Nombre</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Correo Electrónico</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Teléfono</TableCell>
+                                <TableCell align="center">Estado</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {clientes.map((cliente, index) => (
-                                <TableRow 
-                                    key={cliente.id_persona || cliente.id}
-                                    hover
-                                    sx={{
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            bgcolor: alpha(theme.palette.primary.main, 0.04),
-                                            transform: 'scale(1.01)'
-                                        },
-                                        bgcolor: index % 2 === 0 ? 'transparent' : alpha(theme.palette.primary.main, 0.02)
-                                    }}
-                                >
-                                    <TableCell sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                                        #{cliente.id_usuario}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Stack direction="row" spacing={1.5} alignItems="center">
-                                            <Avatar
-                                                sx={{
-                                                    bgcolor: theme.palette.primary.main,
-                                                    width: 36,
-                                                    height: 36,
-                                                    fontSize: 16,
-                                                    fontWeight: 700
-                                                }}
-                                            >
-                                                {cliente.nombre.charAt(0).toUpperCase()}
-                                            </Avatar>
-                                            <Typography fontWeight={600}>
-                                                {cliente.nombre}
-                                            </Typography>
-                                        </Stack>
-                                    </TableCell>
-                                    {!isTablet && (
-                                        <TableCell sx={{ color: 'text.secondary' }}>
-                                            {cliente.correo_electronico}
-                                        </TableCell>
-                                    )}
-                                    <TableCell>
-                                        <Stack direction="row" spacing={0.5} alignItems="center">
-                                            <PhoneIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                            <Typography variant="body2" fontWeight={500}>
-                                                {cliente.telefono || 'N/A'}
-                                            </Typography>
-                                        </Stack>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Stack direction="row" spacing={0.5} justifyContent="center">
-                                            <Tooltip title="Ver detalles">
-                                                <IconButton 
-                                                    size="small"
-                                                    onClick={() => handleOpenDrawer(cliente)}
-                                                    sx={{ 
-                                                        color: theme.palette.primary.main,
-                                                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-                                                    }}
-                                                >
-                                                    <VisibilityIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            {isManagementView && (
-                                                <>
-                                                    <Tooltip title="Editar">
-                                                        <IconButton 
-                                                            size="small"
-                                                            sx={{ 
-                                                                color: theme.palette.warning.main,
-                                                                '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.1) }
-                                                            }}
-                                                        >
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Eliminar">
-                                                        <IconButton 
-                                                            size="small"
-                                                            sx={{ 
-                                                                color: theme.palette.error.main,
-                                                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
-                                                            }}
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </>
-                                            )}
-                                        </Stack>
-                                    </TableCell>
-                                </TableRow>
+                            {filteredClientes.map((cliente) => (
+                                <ClientRow
+                                    key={cliente.id_usuario}
+                                    cliente={cliente}
+                                    onDelete={handleDelete}
+                                />
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
             )}
-
-            {/* Drawer de Detalles */}
-            <ClienteDetailDrawer
-                cliente={selectedCliente}
-                open={openDrawer}
-                onClose={handleCloseDrawer}
-                isManagementView={isManagementView}
-            />
         </Box>
     );
 };

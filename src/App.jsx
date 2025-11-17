@@ -6,7 +6,7 @@ import {
     Modal, Fade, IconButton 
     // 'Avatar' ya no se usa aquí
 } from '@mui/material';
-import { Close } from '@mui/icons-material'; // 'Login' (icon) ya no se usa aquí
+import { Close, Pets } from '@mui/icons-material'; // 'Login' (icon) ya no se usa aquí
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 // 🔑 2. IMPORTA EL COMPONENTE DE LOGIN
@@ -15,6 +15,7 @@ import AuthModalContent from './components/auth/AuthModalContent';
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage'; 
 import PerfilPage from './pages/PerfilPage';
+import PetsPage from './pages/PetsPage';
 import PetDetailPage from './pages/PetDetailPage';
 import AdoptionRequestPage from './pages/AdoptionRequestPage';
 import DashboardRoutes from './pages/admin/DashboardRoutes'; 
@@ -82,19 +83,20 @@ const AppCore = () => {
     }
   };
 
-  const handleProfileUpdate = (updatedUser) => {
-    if (!updatedUser) {
+   const handleProfileUpdate = (updatedUserData) => {
+    if (!updatedUserData) {
       console.warn("[Auth] handleProfileUpdate fue llamado sin un usuario.");
       return;
     }
 
-    console.log("[Auth] Actualizando currentUser global:", updatedUser);
+    const mergedUser = {
+        ...currentUser,
+        ...updatedUserData
+    };
 
-    // 1. Actualiza el estado de React
-    setCurrentUser(updatedUser);
+    setCurrentUser(mergedUser);
     
-    // 2. Actualiza el localStorage para que coincida
-    localStorage.setItem('userData', JSON.stringify(updatedUser));
+    localStorage.setItem('userData', JSON.stringify(mergedUser));
   };
 
   useEffect(() => {
@@ -148,13 +150,26 @@ const AppCore = () => {
               <MainLayout 
                 currentUser={currentUser} 
                 onLogout={handleLogout}
-                onOpenLoginModal={handleOpenLoginModal} 
+                onProfileUpdate={handleProfileUpdate}
               />
             </ProtectedDashboardRoute>
           }
         >
           {DashboardRoutes()}
         </Route>
+
+        <Route
+          path="/mascotas"
+          element={
+            <PetsPage
+              isAuthenticated={isAuthenticated}
+              currentUser={currentUser}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
+              onOpenLoginModal={handleOpenLoginModal}
+            />
+          }
+        />
 
         <Route
           path="/mascota/:petId"

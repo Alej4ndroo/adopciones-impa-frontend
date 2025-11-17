@@ -362,6 +362,8 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                                         <Button
+                                            component={Link}     // 1. Añade esto (le dice a MUI que use el Link)
+                                            to="/mascotas"
                                             variant="contained"
                                             size="large"
                                             endIcon={<ArrowForward />}

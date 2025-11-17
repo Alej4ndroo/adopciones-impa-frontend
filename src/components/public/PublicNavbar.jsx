@@ -99,11 +99,11 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal
 
         try {
             // ⚙️ 3b. Usamos la URL real y el token
-            const response = await fetch(`${VITE_API_URL_BACKEND}/notificaciones`, { 
+            const response = await fetch(`${VITE_API_URL_BACKEND}/notificaciones/${currentUser.id_usuario}`, { 
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // <-- ¡AUTENTICACIÓN!
+                    'Authorization': `Bearer ${token}` 
                 },
             });
             

@@ -7,7 +7,7 @@ import SidebarMUI from '../components/admin/SidebarMUI';
 
 const drawerWidth = 300;
 
-const MainLayout = ({ currentUser, onLogout }) => { 
+const MainLayout = ({ currentUser, onLogout, onProfileUpdate}) => { 
   const userPermissions = currentUser?.permisos || [];
   const location = useLocation();
 
@@ -51,7 +51,7 @@ const MainLayout = ({ currentUser, onLogout }) => {
         }}
       >
         <Toolbar /> 
-        <Outlet />
+        <Outlet context={{ onProfileUpdate, currentUser }} />
       </Box>
     </Box>
   );

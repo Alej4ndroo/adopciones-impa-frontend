@@ -1,5 +1,6 @@
 //pages/admin/EmpleadosPerfilPage.jsx
 import React, { useState, useEffect, useRef } from 'react'; 
+import { useOutletContext } from 'react-router-dom';
 import {
     Box, Typography, Grid, Paper, Divider, CircularProgress,
     Alert, Avatar, Stack, useTheme, Chip, Button,
@@ -32,6 +33,7 @@ const DOCUMENT_UPLOAD_ENDPOINT = '/empleados/subir-documento';
 const PerfilUsuarioPage = () => {
     const theme = useTheme();
 
+    const { onProfileUpdate } = useOutletContext();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
@@ -51,7 +53,6 @@ const PerfilUsuarioPage = () => {
         setLoading(true);
         setError(null);
         setSuccessMessage(null);
-        // --- NUEVO: Limpiar errores de documento al recargar ---
         setDocumentError(null); 
         setDocumentSuccess(null);
 
@@ -115,8 +116,10 @@ const PerfilUsuarioPage = () => {
                 }
             );
 
-            // Asumiendo que el backend responde con los datos del usuario actualizados
-            setUserData(response.data); 
+            const usuarioActualizado = response.data; // <-- Guarda el dato
+            setUserData(usuarioActualizado); // Actualiza el estado local
+            onProfileUpdate(usuarioActualizado); // Actualiza el usuario global
+            
             setSuccessMessage("Foto de perfil actualizada con éxito.");
             setSelectedPhoto(null);
             setPhotoPreview(null);
@@ -234,8 +237,6 @@ const PerfilUsuarioPage = () => {
                 }
             );
 
-            // Asumiendo que el backend responde con los datos del usuario actualizados
-            // (incluyendo la nueva lista de documentos)
             setUserData(response.data); 
             setDocumentSuccess("Documento subido con éxito.");
             setSelectedDocument(null);
