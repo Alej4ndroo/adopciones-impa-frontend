@@ -1,33 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios'; // ◀️ Importado para las citas
 import { 
-    Grid, Card, CardContent, Typography, Box, Paper, CircularProgress, 
-    Icon, useTheme, Divider, List, ListItem, ListItemText, ListItemIcon
+    Grid, Typography, Box, Paper, CircularProgress, 
+    useTheme, Divider
 } from '@mui/material';
 import { 
-    CalendarMonth, BarChart, Pets, CheckCircle, HourglassEmpty, AttachMoney, 
-    Event, WarningAmber, TrendingUp, Info
+    CalendarMonth, Pets, HourglassEmpty, AttachMoney, 
+    Event
 } from '@mui/icons-material';
-import { Users, Heart, Stethoscope, FileText, LayoutDashboard, Microscope } from 'lucide-react'; 
-import { 
-    BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell, AreaChart, Area
-} from 'recharts';
+import { LayoutDashboard } from 'lucide-react'; 
 
+// --- 📅 Imports de FullCalendar ---
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import listPlugin from '@fullcalendar/list';
+import esLocale from '@fullcalendar/core/locales/es'; // ◀️ Para poner el calendario en español
+
+// --- URLs de API ---
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const API_URLS = {
-    // Estas rutas deben devolver un ARRAY de elementos que contaremos con .length
     MASCOTAS_DISPONIBLES: `${API_URL_BACKEND}/mascotas/contar`,
     SOLICITUDES_PENDIENTES: `${API_URL_BACKEND}/adopciones/pendientes`, 
     CITAS_HOY: `${API_URL_BACKEND}/citas/contar`, 
-    // Asumo que esta ruta devuelve un único objeto con el total de ingresos.
-    INGRESOS_MES: `${API_URL_BACKEND}/finanzas/ingresos/mes`, 
+    INGRESOS_MES: `${API_URL_BACKEND}/finanzas/ingresos/mes`,
+    // --- ⬇️ NUEVA RUTA ---
+    CITAS_LISTAR: `${API_URL_BACKEND}/citas/listar`, 
 };
 
 // -------------------------------------------------------------------
 // COMPONENTE 1: MÉTRICAS DIRECTAS (KPIs) - Se mantiene igual
 // -------------------------------------------------------------------
 const KpiCard = ({ title, value, icon: IconComponent, color, subtitle, loading = false, isCurrency = false }) => {
-    // ... (el código de KpiCard se mantiene IGUAL)
     const theme = useTheme();
     
     // Si el valor es null, undefined, o 0, mostramos 'N/A' si no está cargando
@@ -77,34 +81,11 @@ const KpiCard = ({ title, value, icon: IconComponent, color, subtitle, loading =
 };
 
 // -------------------------------------------------------------------
-// COMPONENTE 2: CONTENEDOR DE GRÁFICAS (GraphCard) - Se mantiene igual
+// COMPONENTE 2: CONTENEDOR DE GRÁFICAS (GraphCard) - Eliminado
 // -------------------------------------------------------------------
-const GraphCard = ({ title, height = 300, icon: IconComponent, loading = false, children }) => (
-    <Card sx={{ height: '100%', minHeight: height, transition: 'box-shadow 0.3s' }}>
-        <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{title}</Typography>
-                {IconComponent && <IconComponent size={24} color="#007BFF" />}
-            </Box>
-            
-            <Box 
-                sx={{ 
-                    flexGrow: 1, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    minHeight: height - 80 
-                }}
-            >
-                {loading ? (
-                    <CircularProgress size={30} />
-                ) : (
-                    children
-                )}
-            </Box>
-        </CardContent>
-    </Card>
-);
+// Se eliminó GraphCard y todas las definiciones de gráficas
+// (AdopcionBarChart, SpeciesPieChart, RevenueAreaChart, ExpedientesList, SeguimientosList)
+// y también se eliminó 'simulatedMetrics'.
 
 // -------------------------------------------------------------------
 // COMPONENTE PRINCIPAL MODIFICADO
@@ -121,23 +102,23 @@ const DashboardContentMUI = () => {
         loadingKpis: true, 
     });
 
-    // 2. FUNCIÓN ASÍNCRONA PARA EL FETCH
-    // 2. FUNCIÓN ASÍNCRONA PARA EL FETCH
-useEffect(() => {
-        
-        // FUNCIÓN UNIFICADA (Asume que el backend devuelve un número directo)
+    // --- ⬇️ NUEVO ESTADO PARA EL CALENDARIO ---
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [calendarLoading, setCalendarLoading] = useState(true);
+
+    // 2. FUNCIÓN ASÍNCRONA PARA EL FETCH DE KPIs (Se mantiene)
+    useEffect(() => {
         const fetchNumericValue = async (url) => {
+            // Asumimos que no necesitas token para estos contadores públicos
             const response = await fetch(url);
 
             if (!response.ok) {
-                // ⚠️ IMPORTANTE: Si una promesa falla, lanzamos un error que será capturado abajo.
                 console.error(`ERROR HTTP en ${url}: ${response.status} ${response.statusText}`);
                 throw new Error(`Fallo en la petición a ${url}`);
             }
             
             const data = await response.json(); 
             
-            // Lógica para devolver el número o 0.
             if (typeof data === 'number' && !isNaN(data)) {
                 return data; 
             }
@@ -153,31 +134,29 @@ useEffect(() => {
             setKpiMetrics(prev => ({ ...prev, loadingKpis: true }));
 
             try {
-                // 🔑 CAMBIO CLAVE: Solo se ejecuta la promesa de mascotasCount
-                const mascotasCount = await fetchNumericValue(API_URLS.MASCOTAS_DISPONIBLES);
-            
-                //const solicitudesCount = await fetchNumericValue(API_URLS.SOLICITUDES_PENDIENTES);
-                const citasCount = await fetchNumericValue(API_URLS.CITAS_HOY);
-                //const ingresosTotal = await fetchNumericValue(API_URLS.INGRESOS_MES);
+                // Hacemos las peticiones en paralelo
+                const [mascotasCount, citasCount, solicitudesCount, ingresosTotal] = await Promise.allSettled([
+                    fetchNumericValue(API_URLS.MASCOTAS_DISPONIBLES),
+                    fetchNumericValue(API_URLS.CITAS_HOY),
+                    fetchNumericValue(API_URLS.SOLICITUDES_PENDIENTES),
+                    fetchNumericValue(API_URLS.INGRESOS_MES)
+                ]);
 
-                // Actualizamos el estado
+                // Actualizamos el estado, manejando resultados exitosos o fallidos
                 setKpiMetrics({
-                    mascotasDisponibles: mascotasCount,
-                    // Dejamos los demás en null para que se muestren como N/A
-                    solicitudesPendientes: null, 
-                    citasProgramadasHoy: citasCount, 
-                    ingresosMes: null, 
+                    mascotasDisponibles: mascotasCount.status === 'fulfilled' ? mascotasCount.value : null,
+                    solicitudesPendientes: solicitudesCount.status === 'fulfilled' ? solicitudesCount.value : null,
+                    citasProgramadasHoy: citasCount.status === 'fulfilled' ? citasCount.value : null,
+                    ingresosMes: ingresosTotal.status === 'fulfilled' ? ingresosTotal.value : null,
                     loadingKpis: false,
                 });
 
             } catch (error) {
-                // Este catch solo se ejecutará si falla la promesa de mascotasCount
-                console.error("Error FATAL al obtener KPIs (Mascotas):", error);
-                
+                console.error("Error FATA_L al obtener KPIs:", error);
                 setKpiMetrics(prev => ({ 
                     ...prev, 
                     loadingKpis: false, 
-                    mascotasDisponibles: null, // Si falla, sigue siendo null/N/A
+                    mascotasDisponibles: null,
                     solicitudesPendientes: null, 
                     citasProgramadasHoy: null, 
                     ingresosMes: null 
@@ -188,142 +167,51 @@ useEffect(() => {
         fetchKpis();
     }, []);
 
-    // 3. DATOS SIMULADOS RESTANTES (Gráficos y Listas)
-    // Se mantienen los datos simulados para el resto del dashboard que no se está modificando.
-    const simulatedMetrics = {
-        adopcionTrend: [
-            { name: 'Ene', Solicitudes: 15, Aprobaciones: 10 },
-            { name: 'Feb', Solicitudes: 20, Aprobaciones: 14 },
-            { name: 'Mar', Solicitudes: 18, Aprobaciones: 12 },
-            { name: 'Abr', Solicitudes: 25, Aprobaciones: 19 },
-            { name: 'May', Solicitudes: 30, Aprobaciones: 25 },
-            { name: 'Jun', Solicitudes: 35, Aprobaciones: 28 },
-        ],
-        speciesDistribution: [
-            { name: 'Perros Disponibles', value: 5, color: '#007BFF' },
-            { name: 'Gatos Disponibles', value: 3, color: '#32CD32' },
-            { name: 'Conejos Disponibles', value: 1, color: '#FFC107' },
-            { name: 'Perros en Proceso', value: 2, color: '#dc3545' },
-            { name: 'Gatos en Proceso', value: 1, color: '#fd7e14' },
-        ],
-        monthlyRevenue: [
-            { name: 'Ene', Ingresos: 3500 },
-            { name: 'Feb', Ingresos: 4200 },
-            { name: 'Mar', Ingresos: 3800 },
-            { name: 'Abr', Ingresos: 5100 },
-            { name: 'May', Ingresos: 5500 },
-            { name: 'Jun', Ingresos: 6000 },
-        ],
-        expedientesSinConsulta: [
-            { id: 1, nombre: 'Max (Labrador)', dias: 95 }, 
-            { id: 2, nombre: 'Nala (Angora)', dias: 70 }
-        ],
-        proximosSeguimientos: [
-            { id: 1, mascota: 'Rocky', fecha: '2025-10-25', dias: 2 },
-            { id: 2, mascota: 'Thor', fecha: '2025-10-28', dias: 5 }
-        ],
-    };
+    // --- ⬇️ NUEVO useEffect PARA CARGAR CITAS DEL CALENDARIO ---
+    useEffect(() => {
+        const fetchCitas = async () => {
+            setCalendarLoading(true);
+            const token = localStorage.getItem('authToken');
 
-    // --- Definiciones de Gráficos y Listas (usan simulatedMetrics) ---
-    const AdopcionBarChart = (
-        <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart data={simulatedMetrics.adopcionTrend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
-                <YAxis allowDecimals={false} stroke={theme.palette.text.secondary} />
-                <Tooltip 
-                    contentStyle={{ backgroundColor: theme.palette.background.paper, border: 'none', borderRadius: 4 }}
-                    formatter={(value, name) => [value, name]}
-                />
-                <Legend />
-                <Bar dataKey="Solicitudes" fill={theme.palette.primary.light} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Aprobaciones" fill={theme.palette.success.main} radius={[4, 4, 0, 0]} />
-            </RechartsBarChart>
-        </ResponsiveContainer>
-    );
+            // Asumimos que esta ruta requiere autenticación
+            if (!token) {
+                console.error("No se encontró token de autenticación para cargar citas.");
+                setCalendarLoading(false);
+                return;
+            }
 
-    const SpeciesPieChart = (
-        <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-                <Pie
-                    data={simulatedMetrics.speciesDistribution}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={120}
-                    label
-                >
-                    {simulatedMetrics.speciesDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                </Pie>
-                <Tooltip 
-                    contentStyle={{ backgroundColor: theme.palette.background.paper, border: 'none', borderRadius: 4 }}
-                    formatter={(value, name) => [value, name]}
-                />
-                <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ paddingLeft: '10px' }} />
-            </PieChart>
-        </ResponsiveContainer>
-    );
+            try {
+                const response = await axios.get(API_URLS.CITAS_LISTAR, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
-    const RevenueAreaChart = (
-        <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={simulatedMetrics.monthlyRevenue} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} vertical={false} />
-                <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
-                <YAxis 
-                    stroke={theme.palette.text.secondary} 
-                    tickFormatter={(tick) => `$${tick.toLocaleString()}`}
-                />
-                <Tooltip 
-                    contentStyle={{ backgroundColor: theme.palette.background.paper, border: 'none', borderRadius: 4 }}
-                    formatter={(value, name) => [`$${value.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, name]}
-                />
-                <Area type="monotone" dataKey="Ingresos" stroke={theme.palette.primary.main} fill={theme.palette.primary.light} fillOpacity={0.6} />
-            </AreaChart>
-        </ResponsiveContainer>
-    );
+                // Transformamos los datos para FullCalendar
+                const events = response.data.map(cita => ({
+                    id: cita.id_cita,
+                    title: cita.motivo || `Cita (ID: ${cita.id_cita})`, // Usamos 'motivo' como título
+                    start: cita.fecha_cita, // FullCalendar entiende fechas ISO 8601
+                    // Puedes cambiar el color según el estado
+                    color: cita.estado_cita === 'programada' 
+                        ? theme.palette.info.main 
+                        : (cita.estado_cita === 'completada' ? theme.palette.success.main : theme.palette.grey[500]),
+                    extendedProps: {
+                        // Aquí puedes guardar más datos si quieres usarlos en un 'eventClick'
+                        ...cita
+                    }
+                }));
+                
+                setCalendarEvents(events);
 
-    const ExpedientesList = (
-        <List sx={{ width: '100%' }}>
-            {simulatedMetrics.expedientesSinConsulta.map((item) => (
-                <ListItem key={item.id} divider>
-                    <ListItemIcon>
-                        <Microscope size={20} color={theme.palette.error.main} />
-                    </ListItemIcon>
-                    <ListItemText 
-                        primary={item.nombre} 
-                        secondary={`Última consulta hace ${item.dias} días`}
-                        primaryTypographyProps={{ fontWeight: 600 }}
-                    />
-                </ListItem>
-            ))}
-             <Typography variant="caption" sx={{ p: 2, display: 'block', textAlign: 'right' }}>
-                Total: {simulatedMetrics.expedientesSinConsulta.length} Mascotas
-            </Typography>
-        </List>
-    );
+            } catch (error) {
+                console.error("Error al cargar las citas del calendario:", error);
+            } finally {
+                setCalendarLoading(false);
+            }
+        };
 
-    const SeguimientosList = (
-        <List sx={{ width: '100%' }}>
-            {simulatedMetrics.proximosSeguimientos.map((item) => (
-                <ListItem key={item.id} divider>
-                    <ListItemIcon>
-                        <Heart size={20} color={theme.palette.warning.main} />
-                    </ListItemIcon>
-                    <ListItemText 
-                        primary={`Seguimiento de ${item.mascota}`} 
-                        secondary={`Fecha: ${item.fecha} (en ${item.dias} días)`}
-                        primaryTypographyProps={{ fontWeight: 600 }}
-                    />
-                </ListItem>
-            ))}
-             <Typography variant="caption" sx={{ p: 2, display: 'block', textAlign: 'right' }}>
-                Total: {simulatedMetrics.proximosSeguimientos.length} Próximos
-            </Typography>
-        </List>
-    );
+        fetchCitas();
+    }, [theme]); // Depende de 'theme' para los colores
+
     // -------------------------------------------------------------------
 
     return (
@@ -337,11 +225,11 @@ useEffect(() => {
             <Divider sx={{ mb: 4 }} />
 
             {/* ------------------------------------------------------------------- */}
-            {/* 🔑 FILA SUPERIOR: Métricas Clave (KPIs) - AHORA USAN EL ESTADO REAL  */}
+            {/* 🔑 FILA SUPERIOR: Métricas Clave (KPIs) - Se mantiene                  */}
             {/* ------------------------------------------------------------------- */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 
-                {/* 1. Mascotas Disponibles (PRIORIDAD) */}
+                {/* 1. Mascotas Disponibles */}
                 <Grid item xs={12} sm={6} lg={3}>
                     <KpiCard 
                         title="Mascotas Disponibles" 
@@ -353,7 +241,7 @@ useEffect(() => {
                     />
                 </Grid>
                 
-                {/* 2. Solicitudes de Adopción Pendientes (PRIORIDAD ALTA) */}
+                {/* 2. Solicitudes de Adopción Pendientes */}
                 <Grid item xs={12} sm={6} lg={3}>
                     <KpiCard 
                         title="Solicitudes Pendientes" 
@@ -377,7 +265,7 @@ useEffect(() => {
                     />
                 </Grid>
                 
-                {/* 4. Ingresos por Servicios (KPI Financiero) */}
+                {/* 4. Ingresos por Servicios */}
                 <Grid item xs={12} sm={6} lg={3}>
                     <KpiCard 
                         title="Ingresos Netos (Mes)" 
@@ -391,67 +279,68 @@ useEffect(() => {
                 </Grid>
                 
             </Grid>
-            {/* ... Resto del dashboard con gráficas simuladas ... */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                
-                {/* Cuadro 5: Tendencias de Adopción (Gráfico de Barras) */}
-                <Grid item xs={12} lg={8}>
-                    <GraphCard 
-                        title="Tendencia Mensual: Solicitudes vs. Aprobaciones" 
-                        icon={BarChart} 
-                        height={400} 
-                    >
-                        {AdopcionBarChart}
-                    </GraphCard>
-                </Grid>
-                
-                {/* Cuadro 6: Distribución de Inventario (Gráfico de Pastel) */}
-                <Grid item xs={12} lg={4}>
-                    <GraphCard 
-                        title="Inventario por Especie y Estado" 
-                        icon={Pets}
-                        height={400} 
-                    >
-                        {SpeciesPieChart}
-                    </GraphCard>
-                </Grid>
-            </Grid>
             
-            <Grid container spacing={3}>
-                
-                {/* Cuadro 7: Ingresos por Servicios Veterinarios (Gráfico de Área) */}
-                <Grid item xs={12} sm={6} lg={4}>
-                    <GraphCard 
-                        title="Desempeño Financiero Mensual" 
-                        icon={TrendingUp}
-                        height={300} 
+            {/* ------------------------------------------------------------------- */}
+            {/* 🔑 FILA INFERIOR: CALENDARIO DE CITAS                              */}
+            {/* ------------------------------------------------------------------- */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12}>
+                    <Paper 
+                        elevation={4} 
+                        sx={{ 
+                            p: { xs: 1, sm: 2, md: 3 }, // Padding responsivo
+                            borderRadius: 3,
+                            minHeight: '70vh', // Altura mínima
+                            height: 'auto', // Se ajusta al contenido
+                            // Estilos para que FullCalendar se integre con MUI
+                            '& .fc-button': {
+                                backgroundColor: theme.palette.primary.main,
+                                border: 'none',
+                                '&:hover': {
+                                    backgroundColor: theme.palette.primary.dark,
+                                },
+                            },
+                            '& .fc-daygrid-day.fc-day-today': {
+                                backgroundColor: theme.palette.action.hover,
+                            },
+                            '& .fc-list-event-title': {
+                                // Mejora la legibilidad en la vista de lista
+                                whiteSpace: 'normal !important', 
+                            },
+                        }}
                     >
-                        {RevenueAreaChart}
-                    </GraphCard>
-                </Grid>
-
-                {/* Cuadro 8: Tareas Veterinarias (Lista) */}
-                <Grid item xs={12} sm={6} lg={4}>
-                    <GraphCard 
-                        title="Alerta: Expedientes sin Consulta Reciente" 
-                        icon={Microscope}
-                        height={300} 
-                    >
-                        {ExpedientesList}
-                    </GraphCard>
-                </Grid>
-                
-                    {/* Cuadro 9: Seguimientos Próximos (Lista) */}
-                <Grid item xs={12} lg={4}>
-                    <GraphCard 
-                        title="Próximos Seguimientos Post-Adopción" 
-                        icon={CalendarMonth}
-                        height={300} 
-                    >
-                        {SeguimientosList}
-                    </GraphCard>
+                        {calendarLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                                <CircularProgress size={50} />
+                                <Typography variant="h6" sx={{ ml: 2 }}>Cargando calendario...</Typography>
+                            </Box>
+                        ) : (
+                            <FullCalendar
+                                plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
+                                headerToolbar={{
+                                    left: 'prev,next today',
+                                    center: 'title',
+                                    right: 'dayGridMonth,timeGridWeek,listWeek' // Controles responsivos
+                                }}
+                                initialView="dayGridMonth"
+                                locale={esLocale} // ◀️ Español
+                                events={calendarEvents}
+                                weekends={true}
+                                editable={false} // Citas no se pueden arrastrar
+                                selectable={false}
+                                height="auto" // Se ajusta al Paper
+                                contentHeight="auto"
+                                handleWindowResize={true} // Clave para responsividad
+                                // Alerta simple al hacer clic en un evento
+                                eventClick={(clickInfo) => {
+                                    alert(`Cita: ${clickInfo.event.title}\nEstado: ${clickInfo.event.extendedProps.estado_cita}\nFecha: ${clickInfo.event.start.toLocaleString()}`);
+                                }}
+                            />
+                        )}
+                    </Paper>
                 </Grid>
             </Grid>
+
         </Box>
     );
 };

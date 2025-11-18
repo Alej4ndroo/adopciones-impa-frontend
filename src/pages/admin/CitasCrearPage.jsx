@@ -369,7 +369,8 @@ const CitasCrearPage = () => {
                                     renderInput={(params) => (
                                         <TextField 
                                             {...params} 
-                                            label="Servicio (Opcional)" 
+                                            required
+                                            label="Servicio" 
                                             sx={{ 
                                                 '& .MuiOutlinedInput-root': { 
                                                     borderRadius: 2,
@@ -485,7 +486,7 @@ const CitasCrearPage = () => {
                         variant="contained"
                         size="large"
                         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                        disabled={loading || !formData.id_usuario || !formData.fecha_cita}
+                        disabled={loading || !formData.id_usuario || !formData.fecha_cita || !formData.id_servicio}
                         sx={{ 
                             borderRadius: 2, 
                             px: 5, 
