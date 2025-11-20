@@ -250,7 +250,7 @@ const MascotasCrearPage = () => {
     };
 
     return (
-            <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+            <Box sx={{ width: '100%', mx: 'auto' }}>
                 
                 {/* Header Mejorado */}
                 <Paper 
@@ -318,6 +318,7 @@ const MascotasCrearPage = () => {
                     component="form"
                     onSubmit={handleSubmit}
                     sx={{ 
+                        width: '100%',
                         p: { xs: 3, sm: 4, md: 5 },
                         borderRadius: 3
                     }}
@@ -338,118 +339,104 @@ const MascotasCrearPage = () => {
                             </Typography>
                         </Stack>
                         
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} sm={6} md={4}>
-                                <TextField 
-                                    fullWidth 
-                                    required 
-                                    label="Nombre" 
-                                    name="nombre" 
-                                    value={formData.nombre} 
-                                    onChange={handleChange}
-                                    variant="outlined"
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: 2
-                                        }
-                                    }}
-                                />
-                            </Grid>
+                        <Stack spacing={3}>
+                            <TextField 
+                                fullWidth 
+                                required 
+                                label="Nombre" 
+                                name="nombre" 
+                                value={formData.nombre} 
+                                onChange={handleChange}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2
+                                    }
+                                }}
+                            />
                             
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Especie</InputLabel>
-                                    <Select 
-                                        name="especie" 
-                                        value={formData.especie} 
-                                        onChange={handleChange} 
-                                        label="Especie"
-                                        sx={{ borderRadius: 2 }}
-                                    >
-                                        {ESPECIE_OPTIONS.map(opt => (
-                                            <MenuItem key={opt} value={opt}>
-                                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                            <FormControl fullWidth required>
+                                <InputLabel>Especie</InputLabel>
+                                <Select 
+                                    name="especie" 
+                                    value={formData.especie} 
+                                    onChange={handleChange} 
+                                    label="Especie"
+                                    sx={{ borderRadius: 2 }}
+                                >
+                                    {ESPECIE_OPTIONS.map(opt => (
+                                        <MenuItem key={opt} value={opt}>
+                                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                             
-                            <Grid item xs={12} sm={6} md={4}>
-                                <TextField 
-                                    fullWidth 
-                                    label="Raza (Opcional)" 
-                                    name="raza" 
-                                    value={formData.raza} 
-                                    onChange={handleChange}
-                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                />
-                            </Grid>
+                            <TextField 
+                                fullWidth 
+                                label="Raza (Opcional)" 
+                                name="raza" 
+                                value={formData.raza} 
+                                onChange={handleChange}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
                             
-                            <Grid item xs={12} sm={6} md={3}>
-                                <TextField 
-                                    fullWidth 
-                                    required 
-                                    label="Edad (meses)" 
-                                    name="edad_en_meses" 
-                                    type="number" 
-                                    inputProps={{ min: 0 }} 
-                                    value={formData.edad_en_meses} 
-                                    onChange={handleChange}
-                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                />
-                            </Grid>
+                            <TextField 
+                                fullWidth 
+                                required 
+                                label="Edad (meses)" 
+                                name="edad_en_meses" 
+                                type="number" 
+                                inputProps={{ min: 0 }} 
+                                value={formData.edad_en_meses} 
+                                onChange={handleChange}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
                             
-                            <Grid item xs={12} sm={6} md={3}>
-                                <TextField 
-                                    fullWidth 
-                                    required 
-                                    label="Color" 
-                                    name="color" 
-                                    value={formData.color} 
-                                    onChange={handleChange}
-                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                />
-                            </Grid>
+                            <TextField 
+                                fullWidth 
+                                required 
+                                label="Color" 
+                                name="color" 
+                                value={formData.color} 
+                                onChange={handleChange}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
                             
-                            <Grid item xs={12} sm={6} md={3}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Tamaño</InputLabel>
-                                    <Select 
-                                        name="tamano" 
-                                        value={formData.tamano} 
-                                        onChange={handleChange} 
-                                        label="Tamaño"
-                                        sx={{ borderRadius: 2 }}
-                                    >
-                                        {TAMANO_OPTIONS.map(opt => (
-                                            <MenuItem key={opt} value={opt}>
-                                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                            <FormControl fullWidth required>
+                                <InputLabel>Tamaño</InputLabel>
+                                <Select 
+                                    name="tamano" 
+                                    value={formData.tamano} 
+                                    onChange={handleChange} 
+                                    label="Tamaño"
+                                    sx={{ borderRadius: 2 }}
+                                >
+                                    {TAMANO_OPTIONS.map(opt => (
+                                        <MenuItem key={opt} value={opt}>
+                                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                             
-                            <Grid item xs={12} sm={6} md={3}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Sexo</InputLabel>
-                                    <Select 
-                                        name="sexo" 
-                                        value={formData.sexo} 
-                                        onChange={handleChange} 
-                                        label="Sexo"
-                                        sx={{ borderRadius: 2 }}
-                                    >
-                                        {SEXO_OPTIONS.map(opt => (
-                                            <MenuItem key={opt} value={opt}>
-                                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                        </Grid>
+                            <FormControl fullWidth required>
+                                <InputLabel>Sexo</InputLabel>
+                                <Select 
+                                    name="sexo" 
+                                    value={formData.sexo} 
+                                    onChange={handleChange} 
+                                    label="Sexo"
+                                    sx={{ borderRadius: 2 }}
+                                >
+                                    {SEXO_OPTIONS.map(opt => (
+                                        <MenuItem key={opt} value={opt}>
+                                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Stack>
                     </Box>
 
                     <Divider sx={{ my: 4 }} />
@@ -579,45 +566,41 @@ const MascotasCrearPage = () => {
                             </Typography>
                         </Stack>
 
-                        <Grid container spacing={3} alignItems="center">
-                            <Grid item xs={12} sm={3}>
-                                <FormControlLabel 
-                                    control={
-                                        <Checkbox 
-                                            checked={formData.vacunado} 
-                                            onChange={handleChange} 
-                                            name="vacunado" 
-                                            color="primary"
-                                            sx={{ '& .MuiSvgIcon-root': { fontSize: 28 } }}
-                                        />
-                                    } 
-                                    label={
-                                        <Typography variant="body1" fontWeight={500}>
-                                            Vacunado
-                                        </Typography>
-                                    }
-                                />
-                            </Grid>
+                        <Stack spacing={2}>
+                            <FormControlLabel 
+                                control={
+                                    <Checkbox 
+                                        checked={formData.vacunado} 
+                                        onChange={handleChange} 
+                                        name="vacunado" 
+                                        color="primary"
+                                        sx={{ '& .MuiSvgIcon-root': { fontSize: 28 } }}
+                                    />
+                                } 
+                                label={
+                                    <Typography variant="body1" fontWeight={500}>
+                                        Vacunado
+                                    </Typography>
+                                }
+                            />
                             
-                            <Grid item xs={12} sm={3}>
-                                <FormControlLabel 
-                                    control={
-                                        <Checkbox 
-                                            checked={formData.esterilizado} 
-                                            onChange={handleChange} 
-                                            name="esterilizado" 
-                                            color="primary"
-                                            sx={{ '& .MuiSvgIcon-root': { fontSize: 28 } }}
-                                        />
-                                    } 
-                                    label={
-                                        <Typography variant="body1" fontWeight={500}>
-                                            Esterilizado
-                                        </Typography>
-                                    }
-                                />
-                            </Grid>
-                        </Grid>
+                            <FormControlLabel 
+                                control={
+                                    <Checkbox 
+                                        checked={formData.esterilizado} 
+                                        onChange={handleChange} 
+                                        name="esterilizado" 
+                                        color="primary"
+                                        sx={{ '& .MuiSvgIcon-root': { fontSize: 28 } }}
+                                    />
+                                } 
+                                label={
+                                    <Typography variant="body1" fontWeight={500}>
+                                        Esterilizado
+                                    </Typography>
+                                }
+                            />
+                        </Stack>
                     </Box>
 
                     {/* Botón de Envío */}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-    Box, Typography, TextField, Button, MenuItem, 
-    FormControl, InputLabel, Select, Grid, Paper, 
+    Box, Typography, TextField, Button,
+    FormControl, Paper, 
     CircularProgress, Alert, Divider, useTheme, Stack, 
     alpha, Zoom, Autocomplete
 } from '@mui/material';
@@ -174,7 +174,7 @@ const CitasCrearPage = () => {
 
     // --- RENDERIZADO ---
     return (
-        <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+        <Box sx={{ width: '100%', mx: 'auto' }}>
             
             {/* Header */}
             <Paper 
@@ -242,6 +242,7 @@ const CitasCrearPage = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{ 
+                    width: '100%',
                     p: { xs: 3, sm: 4, md: 5 },
                     borderRadius: 3
                 }}
@@ -260,81 +261,79 @@ const CitasCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                                <Autocomplete
-                                    options={usuarios}
-                                    getOptionLabel={(option) => `${option.nombre} (${option.correo_electronico})`}
-                                    value={usuarios.find(u => u.id_usuario === formData.id_usuario) || null}
-                                    onChange={(e, newValue) => handleAutocompleteChange('id_usuario', newValue?.id_usuario || '')}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Usuario (Cliente)" 
-                                            required
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth>
-                                <Autocomplete
-                                    options={mascotas}
-                                    getOptionLabel={(option) => `${option.nombre} - ${option.especie} (${option.raza || 'Sin raza'})`}
-                                    value={mascotas.find(m => m.id_mascota === formData.id_mascota) || null}
-                                    onChange={(e, newValue) => handleAutocompleteChange('id_mascota', newValue?.id_mascota || '')}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Mascota (Opcional)" 
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField 
-                                fullWidth 
-                                required 
-                                label="Fecha y Hora de la Cita" 
-                                name="fecha_cita" 
-                                type="datetime-local" 
-                                value={formData.fecha_cita} 
-                                onChange={handleChange} 
-                                InputLabelProps={{ shrink: true }} 
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
+                    <Stack spacing={3}>
+                        <FormControl fullWidth required>
+                            <Autocomplete
+                                fullWidth
+                                options={usuarios}
+                                getOptionLabel={(option) => `${option.nombre} (${option.correo_electronico})`}
+                                value={usuarios.find(u => u.id_usuario === formData.id_usuario) || null}
+                                onChange={(e, newValue) => handleAutocompleteChange('id_usuario', newValue?.id_usuario || '')}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        fullWidth
+                                        {...params} 
+                                        label="Usuario (Cliente)" 
+                                        required
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
                             />
-                        </Grid>
-                    </Grid>
+                        </FormControl>
+
+                        <FormControl fullWidth>
+                            <Autocomplete
+                                fullWidth
+                                options={mascotas}
+                                getOptionLabel={(option) => `${option.nombre} - ${option.especie} (${option.raza || 'Sin raza'})`}
+                                value={mascotas.find(m => m.id_mascota === formData.id_mascota) || null}
+                                onChange={(e, newValue) => handleAutocompleteChange('id_mascota', newValue?.id_mascota || '')}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        fullWidth
+                                        {...params} 
+                                        label="Mascota (Opcional)" 
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
+                            />
+                        </FormControl>
+
+                        <TextField 
+                            fullWidth 
+                            required 
+                            label="Fecha y Hora de la Cita" 
+                            name="fecha_cita" 
+                            type="datetime-local" 
+                            value={formData.fecha_cita} 
+                            onChange={handleChange} 
+                            InputLabelProps={{ shrink: true }} 
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -353,85 +352,83 @@ const CitasCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth>
-                                <Autocomplete
-                                    options={servicios.filter(s => s.activo)}
-                                    getOptionLabel={(option) => `${option.nombre} - ${option.costo_base || 0}`}
-                                    value={servicios.find(s => s.id_servicio === formData.id_servicio) || null}
-                                    onChange={(e, newValue) => {
-                                        handleAutocompleteChange('id_servicio', newValue?.id_servicio || '');
-                                        if (newValue?.costo_base) {
-                                            setFormData(prev => ({ ...prev, costo: newValue.costo_base }));
-                                        }
-                                    }}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            required
-                                            label="Servicio" 
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth>
-                                <Autocomplete
-                                    options={empleados.filter(e => e.activo)}
-                                    getOptionLabel={(option) => `${option.nombre} - ${option.numero_empleado}`}
-                                    value={empleados.find(e => e.id_empleado === formData.id_empleado) || null}
-                                    onChange={(e, newValue) => handleAutocompleteChange('id_empleado', newValue?.id_empleado || '')}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Empleado Asignado (Opcional)" 
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Costo de la Cita" 
-                                name="costo" 
-                                type="number" 
-                                value={formData.costo} 
-                                onChange={handleChange}
-                                inputProps={{ min: 0, step: 0.01 }}
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
+                    <Stack spacing={3}>
+                        <FormControl fullWidth>
+                            <Autocomplete
+                                fullWidth
+                                options={servicios.filter(s => s.activo)}
+                                getOptionLabel={(option) => `${option.nombre} - ${option.costo_base || 0}`}
+                                value={servicios.find(s => s.id_servicio === formData.id_servicio) || null}
+                                onChange={(e, newValue) => {
+                                    handleAutocompleteChange('id_servicio', newValue?.id_servicio || '');
+                                    if (newValue?.costo_base) {
+                                        setFormData(prev => ({ ...prev, costo: newValue.costo_base }));
                                     }
-                                }} 
+                                }}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        fullWidth
+                                        {...params} 
+                                        required
+                                        label="Servicio" 
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
                             />
-                        </Grid>
-                    </Grid>
+                        </FormControl>
+
+                        <FormControl fullWidth>
+                            <Autocomplete
+                                fullWidth
+                                options={empleados.filter(e => e.activo)}
+                                getOptionLabel={(option) => `${option.nombre} - ${option.numero_empleado}`}
+                                value={empleados.find(e => e.id_empleado === formData.id_empleado) || null}
+                                onChange={(e, newValue) => handleAutocompleteChange('id_empleado', newValue?.id_empleado || '')}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        fullWidth
+                                        {...params} 
+                                        label="Empleado Asignado (Opcional)" 
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
+                            />
+                        </FormControl>
+
+                        <TextField 
+                            fullWidth 
+                            label="Costo de la Cita" 
+                            name="costo" 
+                            type="number" 
+                            value={formData.costo} 
+                            onChange={handleChange}
+                            inputProps={{ min: 0, step: 0.01 }}
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -450,33 +447,29 @@ const CitasCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={12}>
-                            <TextField 
-                                fullWidth 
-                                label="Motivo de la Cita" 
-                                name="motivo" 
-                                value={formData.motivo} 
-                                onChange={handleChange}
-                                multiline
-                                rows={3}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
-                            />
-                        </Grid>
+                    <Stack spacing={3}>
+                        <TextField 
+                            fullWidth 
+                            label="Motivo de la Cita" 
+                            name="motivo" 
+                            value={formData.motivo} 
+                            onChange={handleChange}
+                            multiline
+                            rows={3}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                        />
 
-                        <Grid item xs={12}>
-                            <TextField 
-                                fullWidth 
-                                label="Observaciones" 
-                                name="observaciones" 
-                                value={formData.observaciones} 
-                                onChange={handleChange}
-                                multiline
-                                rows={3}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
-                            />
-                        </Grid>
-                    </Grid>
+                        <TextField 
+                            fullWidth 
+                            label="Observaciones" 
+                            name="observaciones" 
+                            value={formData.observaciones} 
+                            onChange={handleChange}
+                            multiline
+                            rows={3}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                        />
+                    </Stack>
                 </Box>
 
                 {/* Botón de Envío */}
