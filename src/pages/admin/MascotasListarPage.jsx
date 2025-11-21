@@ -31,6 +31,7 @@ import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const PETS_ENDPOINT = '/mascotas/listar'; 
+const TAMANO_LABELS = { 'pequeño': 'Pequeño', 'pequeño': 'Pequeño', pequeno: 'Pequeño', mediano: 'Mediano', grande: 'Grande' };
 
 // Componente de tarjeta para móviles
 const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
@@ -215,7 +216,7 @@ const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">Tamaño</Typography>
                                     <Typography variant="body2" fontWeight={500}>
-                                        {pet.tamano?.charAt(0).toUpperCase() + pet.tamano?.slice(1)}
+                                        {TAMANO_LABELS[pet.tamano] || pet.tamano}
                                     </Typography>
                                 </Box>
                             </Grid>
@@ -547,7 +548,7 @@ const PetRow = ({ pet, onEdit, onDelete, onView }) => {
                                                 <Box>
                                                     <Typography variant="caption" color="text.secondary">Tamaño</Typography>
                                                     <Typography variant="body2" fontWeight={500}>
-                                                        {pet.tamano?.charAt(0).toUpperCase() + pet.tamano?.slice(1)}
+                                                        {TAMANO_LABELS[pet.tamano] || pet.tamano}
                                                     </Typography>
                                                 </Box>
                                             </Box>
@@ -1012,7 +1013,7 @@ const MascotasListarPage = ({ isManagementView = false }) => {
                                     onChange={(e) => handleFilterChange('tamano', e.target.value)}
                                 >
                                     <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="pequeño">Pequeño</MenuItem>
+                                    <MenuItem value="pequeño">Pequeño</MenuItem>
                                     <MenuItem value="mediano">Mediano</MenuItem>
                                     <MenuItem value="grande">Grande</MenuItem>
                                 </Select>
