@@ -25,6 +25,7 @@ const TAMANO_OPTIONS = [
     { value: 'mediano', label: 'Mediano' },
     { value: 'grande', label: 'Grande' }
 ];
+const TAMANO_LABELS = { 'pequeño': 'Pequeño', 'pequeño': 'Pequeño', pequeno: 'Pequeño', mediano: 'Mediano', grande: 'Grande' };
 const SEXO_OPTIONS = ['macho', 'hembra'];
 
 const convertFileToBase64 = (file) => {
