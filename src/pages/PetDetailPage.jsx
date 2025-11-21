@@ -193,6 +193,9 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                             <Chip icon={<Cake />} label={calcularEdad(mascota.edad_en_meses)} variant="outlined" />
                             <Chip icon={<PawPrint size={18} />} label={mascota.raza || 'Raza desconocida'} variant="outlined" />
                             <Chip icon={<Heart />} label={mascota.especie} variant="outlined" />
+                            {mascota.tamano && (
+                                <Chip label={`Tamaño: ${mascota.tamano}`} variant="outlined" />
+                            )}
                         </Stack>
                     </Stack>
 
@@ -200,13 +203,12 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                         {/* Galería vertical con miniaturas alineadas */}
                         <Grid item xs={12} md={6}>
                             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 110px' }, gap: 1.5, alignItems: 'stretch' }}>
-                                <Box sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.08)', minHeight: 420 }}>
-                                    <CardMedia
+                                <Box sx={{ position: 'relative', borderRadius: 4, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.08)', aspectRatio: '4 / 5', minHeight: 360 }}>
+                                    <Box
                                         component="img"
-                                        height="520"
-                                        image={mainImage || getImageUrl(mascota.imagenes_base64?.[0])}
+                                        src={mainImage || getImageUrl(mascota.imagenes_base64?.[0])}
                                         alt={mascota.nombre}
-                                        sx={{ objectFit: 'cover', height: '100%' }}
+                                        sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
                                 </Box>
                                 <Stack spacing={1} sx={{ maxHeight: 520, overflow: 'auto', pr: 0.5 }}>
@@ -215,7 +217,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                                             key={index}
                                             onClick={() => handleImageClick(base64)}
                                             sx={{
-                                                height: 90,
+                                                height: 100,
                                                 borderRadius: 2,
                                                 overflow: 'hidden',
                                                 border: mainImage === getImageUrl(base64) ? '3px solid #007BFF' : '1px solid #e6e9f0',
@@ -226,7 +228,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                                                 src={getImageUrl(base64, index)}
                                                 alt={`Miniatura ${index + 1}`}
                                                 loading="lazy"
-                                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                                style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                                             />
                                         </Box>
                                     ))}
@@ -251,15 +253,16 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
 
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.2 }}>
                                     <Box sx={{ p: 2.3, bgcolor: '#f7f9ff', borderRadius: 3, border: '1px solid #e6e9f0' }}>
-                                        <Typography variant="subtitle2" color="text.secondary">Datos rápidos</Typography>
-                                        <Stack spacing={0.6} sx={{ mt: 1 }}>
-                                            <Typography variant="body1"><strong>Especie:</strong> {mascota.especie}</Typography>
-                                            <Typography variant="body1"><strong>Edad:</strong> {calcularEdad(mascota.edad_en_meses)}</Typography>
-                                            <Typography variant="body1"><strong>Raza:</strong> {mascota.raza || 'N/D'}</Typography>
-                                            <Typography variant="body1"><strong>Peso:</strong> {mascota.peso || 'N/D'}</Typography>
-                                            <Typography variant="body1"><strong>Estado:</strong> {mascota.estado_adopcion}</Typography>
-                                        </Stack>
-                                    </Box>
+                                    <Typography variant="subtitle2" color="text.secondary">Datos rápidos</Typography>
+                                    <Stack spacing={0.6} sx={{ mt: 1 }}>
+                                        <Typography variant="body1"><strong>Especie:</strong> {mascota.especie}</Typography>
+                                        <Typography variant="body1"><strong>Edad:</strong> {calcularEdad(mascota.edad_en_meses)}</Typography>
+                                        <Typography variant="body1"><strong>Raza:</strong> {mascota.raza || 'N/D'}</Typography>
+                                        <Typography variant="body1"><strong>Tamaño:</strong> {mascota.tamano || 'N/D'}</Typography>
+                                        <Typography variant="body1"><strong>Peso:</strong> {mascota.peso || 'N/D'}</Typography>
+                                        <Typography variant="body1"><strong>Estado:</strong> {mascota.estado_adopcion}</Typography>
+                                    </Stack>
+                                </Box>
                                     <Box sx={{ p: 2.3, bgcolor: 'white', borderRadius: 3, border: '1px solid #e6e9f0' }}>
                                         <Typography variant="subtitle2" color="text.secondary">Salud</Typography>
                                         <Stack spacing={0.8} sx={{ mt: 1 }}>
