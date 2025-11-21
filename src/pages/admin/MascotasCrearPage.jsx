@@ -20,7 +20,11 @@ const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_PET_ENDPOINT = '/mascotas/crear';
 
 const ESPECIE_OPTIONS = ['perro', 'gato', 'conejo', 'hamster', 'otro'];
-const TAMANO_OPTIONS = ['pequeño', 'mediano', 'grande'];
+const TAMANO_OPTIONS = [
+    { value: 'pequeño', label: 'Pequeño' }, // usa n + tilde combinada para coincidir con enum DB
+    { value: 'mediano', label: 'Mediano' },
+    { value: 'grande', label: 'Grande' }
+];
 const SEXO_OPTIONS = ['macho', 'hembra'];
 
 const convertFileToBase64 = (file) => {
@@ -413,8 +417,8 @@ const MascotasCrearPage = () => {
                                     sx={{ borderRadius: 2 }}
                                 >
                                     {TAMANO_OPTIONS.map(opt => (
-                                        <MenuItem key={opt} value={opt}>
-                                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                        <MenuItem key={opt.value} value={opt.value}>
+                                            {opt.label}
                                         </MenuItem>
                                     ))}
                                 </Select>
