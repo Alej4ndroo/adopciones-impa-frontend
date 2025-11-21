@@ -121,6 +121,25 @@ const mergeUserData = (prev, incoming) => {
     };
 };
 
+// Lee un archivo y devuelve su dataURL completa (para preview) y la parte base64 (para enviar)
+const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        const result = reader.result || '';
+        const dataUrl = typeof result === 'string' ? result : '';
+        const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+        resolve({ dataUrl, base64 });
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.readAsDataURL(file);
+});
+
+// Asegura que el string base64 tenga el prefijo data URL para mostrar la imagen
+const asDataUrlImage = (value) => {
+    if (!value) return null;
+    return value.startsWith('data:') ? value : `data:image/jpeg;base64,${value}`;
+};
+
 const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout }) => {
     // 🔥 CAMBIO PRINCIPAL: Un solo estado para el usuario (como EmpleadosPerfilPage)
     const [userData, setUserData] = useState(null);
@@ -171,6 +190,8 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     // Estados para documentos
     const [docUploads, setDocUploads] = useState({ ine: null, acta: null, comprobante: null });
     const [docUploading, setDocUploading] = useState(null);
+    const [docRemoving, setDocRemoving] = useState(null);
+    const [docPreviews, setDocPreviews] = useState({ ine: null, acta: null, comprobante: null });
 
     // Ref para el input de foto
     const photoInputRef = useRef(null);
@@ -363,9 +384,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     };
 
     const documentTypes = [
-        { key: 'ine', label: 'INE / IFE', helper: 'PDF o imagen (JPG, PNG)', field: 'url_ine' },
-        { key: 'acta', label: 'Acta de nacimiento', helper: 'PDF o imagen (JPG, PNG)', field: 'url_acta' },
-        { key: 'comprobante', label: 'Comprobante de domicilio', helper: 'PDF o imagen (JPG, PNG)', field: 'url_comprobante' }
+        { key: 'ine', label: 'INE / IFE', helper: 'Imagen (JPG, PNG)', field: 'url_ine' },
+        { key: 'acta', label: 'Acta de nacimiento', helper: 'Imagen (JPG, PNG)', field: 'url_acta' },
+        { key: 'comprobante', label: 'Comprobante de domicilio', helper: 'Imagen (JPG, PNG)', field: 'url_comprobante' }
     ];
 
     const handleDocSelect = (type, event) => {
@@ -375,9 +396,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         setError(null);
         setSuccessMessage(null);
 
-        const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+        const allowed = ['image/jpeg', 'image/png'];
         if (!allowed.includes(file.type)) {
-            setError('Formato no permitido. Usa PDF, JPG o PNG.');
+            setError('Formato no permitido. Usa JPG o PNG.');
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
@@ -386,6 +407,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         }
 
         setDocUploads((prev) => ({ ...prev, [type]: file }));
+        // Previsualizar al instante
+        readFileAsBase64(file)
+            .then(({ dataUrl }) => setDocPreviews((prev) => ({ ...prev, [type]: dataUrl })))
+            .catch(() => setDocPreviews((prev) => ({ ...prev, [type]: null })));
     };
 
     const handleDocUpload = async (type) => {
@@ -404,33 +429,81 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         setSuccessMessage(null);
 
         try {
-            const formData = new FormData();
-            formData.append('archivo', file);
-            formData.append('tipo_documento', type);
-            formData.append('id_usuario', userData.id_usuario);
+            const { dataUrl, base64 } = await readFileAsBase64(file);
 
-            // TODO: Conectar con endpoint Multer, ejemplo:
-            // const token = localStorage.getItem('authToken');
-            // const response = await fetch(`${VITE_API_URL_BACKEND}/personas/${userData.id_usuario}/documentos`, {
-            //     method: 'POST',
-            //     headers: { Authorization: `Bearer ${token}` },
-            //     body: formData
-            // });
-            // const data = await response.json();
-            // const field = documentTypes.find((d) => d.key === type)?.field;
-            // const docUrl = data.archivo_url || data.url;
-            // const patchedUser = { ...userData, [field]: docUrl };
-            // setUserData(patchedUser);
-            // localStorage.setItem('userData', JSON.stringify(patchedUser));
-            // onProfileUpdate?.(patchedUser);
+            const field = documentTypes.find((d) => d.key === type)?.field;
+            if (!field) {
+                throw new Error('Tipo de documento no reconocido.');
+            }
 
-            console.info('FormData listo para Multer', { type, fileName: file.name });
-            setSuccessMessage('Documento listo para enviar. Conecta el endpoint Multer para persistir en backend.');
+            // Enviamos como base64 al backend (igual que la foto de perfil).
+            // Si el backend rechaza el campo, guardamos localmente para la demo.
+            let patchedUser;
+            try {
+                const response = await apiUpdateUser(userData.id_usuario, { [field]: base64 });
+                const usuarioActualizado = response.usuario || response;
+                const mergedUser = mergeUserData(userData, usuarioActualizado);
+                patchedUser = { ...mergedUser, [field]: base64 };
+                setSuccessMessage('Documento guardado correctamente.');
+            } catch (apiErr) {
+                console.error('API no aceptó el documento, guardando solo local:', apiErr);
+                patchedUser = { ...userData, [field]: base64 };
+                setSuccessMessage('Documento guardado localmente (no se guardó en el servidor).');
+            }
+
+            setUserData(patchedUser);
+            localStorage.setItem('userData', JSON.stringify(patchedUser));
+            onProfileUpdate?.(patchedUser);
+
+            // Limpiar input y file seleccionado
+            setDocUploads((prev) => ({ ...prev, [type]: null }));
+            setDocPreviews((prev) => ({ ...prev, [type]: dataUrl }));
+            if (docInputRefs.current[type]) {
+                docInputRefs.current[type].value = '';
+            }
         } catch (err) {
             console.error('Error al preparar documento:', err);
-            setError('No se pudo preparar el documento. Revisa la consola para más detalle.');
+            setError(err.message || 'No se pudo subir el documento.');
         } finally {
             setDocUploading(null);
+        }
+    };
+
+    const handleDocRemove = async (type) => {
+        const field = documentTypes.find((d) => d.key === type)?.field;
+        if (!field) {
+            setError('Tipo de documento no reconocido.');
+            return;
+        }
+
+        setDocRemoving(type);
+        setError(null);
+        setSuccessMessage(null);
+
+        try {
+            try {
+                await apiUpdateUser(userData.id_usuario, { [field]: null });
+                setSuccessMessage('Documento eliminado correctamente.');
+            } catch (apiErr) {
+                console.warn('API no aceptó eliminar, limpiando solo local:', apiErr);
+                setSuccessMessage('Documento eliminado localmente (no se eliminó en el servidor).');
+            }
+
+            const patchedUser = { ...userData, [field]: null };
+            setUserData(patchedUser);
+            localStorage.setItem('userData', JSON.stringify(patchedUser));
+            onProfileUpdate?.(patchedUser);
+
+            setDocUploads((prev) => ({ ...prev, [type]: null }));
+            setDocPreviews((prev) => ({ ...prev, [type]: null }));
+            if (docInputRefs.current[type]) {
+                docInputRefs.current[type].value = '';
+            }
+        } catch (err) {
+            console.error('Error al eliminar documento:', err);
+            setError(err.message || 'No se pudo eliminar el documento.');
+        } finally {
+            setDocRemoving(null);
         }
     };
 
@@ -1066,6 +1139,8 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                         {documentTypes.map((doc) => {
                                             const existingUrl = userData?.[doc.field];
                                             const pendingFile = docUploads[doc.key];
+                                            const currentPreview = docPreviews[doc.key] || asDataUrlImage(existingUrl);
+                                            const hasDoc = Boolean(pendingFile || existingUrl || currentPreview);
                                             const statusLabel = pendingFile
                                                 ? `Pendiente de envío (${pendingFile.name})`
                                                 : existingUrl
@@ -1108,7 +1183,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                         />
                                                         <input
                                                             type="file"
-                                                            accept=".pdf,image/*"
+                                                            accept="image/*"
                                                             style={{ display: 'none' }}
                                                             ref={(el) => (docInputRefs.current[doc.key] = el)}
                                                             onChange={(e) => handleDocSelect(doc.key, e)}
@@ -1130,12 +1205,30 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                         >
                                                             Subir
                                                         </Button>
+                                                        <Button
+                                                            variant="outlined"
+                                                            color="error"
+                                                            disabled={docRemoving === doc.key || !hasDoc}
+                                                            onClick={() => handleDocRemove(doc.key)}
+                                                            sx={{ fontWeight: 700 }}
+                                                            startIcon={docRemoving === doc.key ? <CircularProgress size={16} color="inherit" /> : <Close fontSize="small" />}
+                                                        >
+                                                            Quitar
+                                                        </Button>
                                                     </Stack>
-                                                </Box>
-                                            );
-                                        })}
-                                    </Stack>
-                                </CardContent>
+                                                    {currentPreview && (
+                                                        <Box
+                                                            component="img"
+                                                            src={currentPreview}
+                                                        alt={`Vista previa de ${doc.label}`}
+                                                        sx={{ mt: { xs: 1, sm: 0 }, maxHeight: 120, borderRadius: 1.5, border: '1px solid #edf0f5' }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        );
+                                    })}
+                                </Stack>
+                            </CardContent>
                             </Card>
                         </Box>
                     )}

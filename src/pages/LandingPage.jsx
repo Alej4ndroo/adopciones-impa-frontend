@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Container, Box, Grid, Card, CardContent, Avatar, CardMedia, CardActions,
-    Fade, Typography, Button, CssBaseline, Chip, CircularProgress, Alert
+    Fade, Typography, Button, CssBaseline, Chip, CircularProgress, Alert, Stack
 } from '@mui/material';
 import { 
     CheckCircle, ArrowForward, Favorite, Male, Female, Cake,
     LocalHospital, AccessTime, AttachMoney
 } from '@mui/icons-material';
 import { 
-    HeartHandshake, Stethoscope, Shield, Bone, PawPrint, Heart, Syringe
+    HeartHandshake, Stethoscope, Shield, Heart, Syringe, PawPrint
 } from 'lucide-react'; 
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Link } from 'react-router-dom';
@@ -44,7 +44,6 @@ const customTheme = createTheme({
 });
 
 const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
-    const [hoveredCard, setHoveredCard] = useState(null); 
     const [mascotas, setMascotas] = useState([]);
     const [servicios, setServicios] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -76,6 +75,12 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
         { number: '98%', label: 'Índice de Permanencia' },
         { number: '15+', label: 'Años de Trayectoria' },
         { number: '400+', label: 'Voluntarios Activos' }
+    ];
+
+    const pasos = [
+        { title: 'Completa tu perfil', description: 'Cuéntanos sobre tu hogar y estilo de vida para hacer el mejor match.', icon: HeartHandshake },
+        { title: 'Conoce a la mascota', description: 'Agenda una visita y convive con ella en un espacio seguro y acompañado.', icon: Stethoscope },
+        { title: 'Acompañamiento real', description: 'Seguimiento veterinario y guías de adaptación durante los primeros meses.', icon: Shield }
     ];
 
     // Consultar mascotas del backend
@@ -159,7 +164,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
 
     const PetCard = ({ pet }) => {
         // --- LÓGICA DE BASE64: CONVERSIÓN EN EL FRONTEND ---
-        
+
         // 1. Obtener el primer string Base64 del array
         let base64String = pet.imagenes_base64?.[0];
 
@@ -174,7 +179,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
             ? prefix + base64String 
             : '';
         // --- FIN DE LA LÓGICA DE BASE64 ---
-        
+
         return (
             <Card 
                 component={Link} // 🔑 Usamos Link como componente base
@@ -184,14 +189,11 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                     width: 350,
                     display: 'flex', 
                     flexDirection: 'column',
-                    transition: 'all 0.3s ease',
                     borderRadius: 3,
                     textDecoration: 'none',
                     color: 'inherit',
-                    '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: 6
-                    }
+                    boxShadow: 3,
+                    border: '1px solid #e6e9f0'
                 }}>
                 <CardMedia
                     component="img"
@@ -269,9 +271,9 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                 width: 320,
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.3s ease',
                 borderRadius: 4,
-                '&:hover': { transform: 'translateY(-10px)', boxShadow: '0 15px 30px rgba(0, 123, 255, 0.2)' }
+                boxShadow: 3,
+                border: '1px solid #e6e9f0'
             }}
         >
             <CardContent sx={{ p: 4, textAlign: 'center', flexGrow: 1 }}> {/* flexGrow: 1 */}
@@ -338,27 +340,31 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                     position: 'relative',
                     bgcolor: 'primary.main',
                     color: 'white',
-                    py: { xs: 10, md: 18 },
-                    overflow: 'hidden',
-                    background: 'linear-gradient(135deg, #007BFF 0%, #00C6FF 100%)',
+                    py: { xs: 10, md: 16 },
+                    overflow: 'hidden'
                 }}
             >
                 <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
                     <Grid container spacing={6} alignItems="center">
-                        <Grid item xs={12} md={8}>
+                        <Grid item xs={12} md={7}>
                             <Fade in timeout={1200}>
                                 <Box>
+                                    <Chip
+                                        label="Adopciones responsables"
+                                        color="secondary"
+                                        sx={{ mb: 2, fontWeight: 700, bgcolor: '#fff', color: 'primary.main' }}
+                                    />
                                     <Typography 
                                         variant="h1" 
                                         sx={{ fontSize: { xs: '3rem', md: '5rem' }, mb: 3, lineHeight: 1.1 }}
                                     >
-                                        Adopta Amor, Cambia una Vida
+                                        Un lugar seguro para adoptar y ayudar
                                     </Typography>
                                     <Typography 
                                         variant="h6" 
                                         sx={{ mb: 4, opacity: 0.9, fontSize: '1.4rem' }}
                                     >
-                                        Encuentra a tu compañero peludo perfecto. Nuestro proceso es seguro, responsable y lleno de alegría.
+                                        Encuentra a tu compañero peludo con un proceso claro, acompañamiento real y un equipo que cuida cada detalle.
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                                         <Button
@@ -373,22 +379,104 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                                                 px: 4, 
                                                 py: 1.5, 
                                                 fontSize: '1.1rem', 
-                                                borderRadius: 10, 
-                                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                                                '&:hover': {
-                                                    transform: 'scale(1.05)',
-                                                    boxShadow: '0 12px 32px rgba(0,0,0,0.3)'
-                                                }
+                                                borderRadius: 2, 
+                                                boxShadow: '0 8px 18px rgba(0,0,0,0.16)'
                                             }}
                                         >
                                             Ver Mascotas Ahora
+                                        </Button>
+                                        <Button
+                                            component="a"
+                                            href="#pasos-adopcion"
+                                            variant="outlined"
+                                            size="large"
+                                            sx={{
+                                                color: 'white',
+                                                borderColor: 'white',
+                                                px: 3.5,
+                                                py: 1.3,
+                                                fontWeight: 700,
+                                                borderRadius: 2
+                                            }}
+                                        >
+                                            Cómo funciona
                                         </Button>
                                     </Box>
                                 </Box>
                             </Fade>
                         </Grid>
-                        <Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'block' } }}>
-                            <PawPrint size={200} color="rgba(255,255,255,0.1)" style={{ position: 'absolute', right: 50, top: 50 }} />
+                    </Grid>
+                </Container>
+                <PawPrint size={150} color="rgba(255,255,255,0.1)" style={{ position: 'absolute', right: 50, top: 10, transform: 'rotate(15deg)' }} />
+                <PawPrint size={100} color="rgba(255,255,255,0.1)" style={{ position: 'absolute', left: 60, bottom: 20, transform: 'rotate(-25deg)' }} />
+            </Box>
+
+            {/* Franja de impacto */}
+            <Box sx={{ bgcolor: 'background.default', py: 4, borderBottom: '1px solid #e4e7ec' }}>
+                <Container maxWidth="lg">
+                    <Grid container spacing={2} justifyContent="center">
+                        {stats.map((stat, idx) => (
+                            <Grid item xs={6} sm={3} key={idx}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main' }}>{stat.number}</Typography>
+                                    <Typography variant="body1" color="text.secondary">{stat.label}</Typography>
+                                </Box>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* Ruta de adopción */}
+            <Box sx={{ bgcolor: 'white', py: 9 }} id="pasos-adopcion">
+                <Container maxWidth="lg">
+                    <Grid container spacing={4} alignItems="center">
+                        <Grid item xs={12} md={4}>
+                            <Chip
+                                label=""
+                                sx={{bgcolor: '#ffffffff'}}
+                            />
+                            <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'primary.main' }}>
+                                Tu adopción, clara y acompañada
+                            </Typography>
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                                Tres momentos clave para que te concentres en conocer a tu próxima compañera(o).
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                Te guiamos en cada paso y te damos tiempos claros para que nada quede en duda.
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={8}>
+                            <Stack spacing={3} sx={{ position: 'relative', pl: { md: 2 } }}>
+                                {pasos.map((paso, idx) => (
+                                    <Box
+                                        key={paso.title}
+                                        sx={{
+                                            display: 'flex',
+                                            gap: 2,
+                                            alignItems: 'flex-start',
+                                            position: 'relative',
+                                            borderBottom: idx === pasos.length - 1 ? 'none' : '1px solid #e6e9f0',
+                                            pb: idx === pasos.length - 1 ? 0 : 2,
+                                            mb: idx === pasos.length - 1 ? 0 : 1
+                                        }}
+                                    >
+                                        <Box sx={{ minWidth: 46, display: 'flex', justifyContent: 'center' }}>
+                                            <Avatar sx={{ bgcolor: 'secondary.main', width: 46, height: 46, fontWeight: 800 }}>
+                                                {idx + 1}
+                                            </Avatar>
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                                {paso.title}
+                                            </Typography>
+                                            <Typography variant="body1" color="text.secondary">
+                                                {paso.description}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                ))}
+                            </Stack>
                         </Grid>
                     </Grid>
                 </Container>
@@ -451,7 +539,14 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
             {/* --- SERVICIOS SECTION: Alto y Centrado corregidos --- */}
             <Box sx={{ py: 10, bgcolor: 'background.default' }}>
                 <Container maxWidth="lg">
-                    {/* ... (Títulos) ... */}
+                    <Box sx={{ textAlign: 'center', mb: 6 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'primary.main' }}>
+                            Servicios que cuidan de tu mascota
+                        </Typography>
+                        <Typography variant="h6" color="text.secondary">
+                            Salud preventiva, esterilización y seguimiento en un solo lugar
+                        </Typography>
+                    </Box>
                     {loadingServicios || errorServicios || servicios.length === 0 ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
                             {loadingServicios ? <CircularProgress /> : errorServicios ? <Alert severity="error">{errorServicios}</Alert> : <Alert severity="info">No hay servicios disponibles en este momento</Alert>}
@@ -468,11 +563,11 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                 </Container>
             </Box>
 
-            {/* --- Features: Alto y Centrado corregidos --- */}
-            <Box sx={{ py: 10, bgcolor: 'white' }}>
+            {/* --- Nuestro Compromiso (rediseñado) --- */}
+            <Box sx={{ py: 10, bgcolor: '#f5f8ff' }}>
                 <Container maxWidth="lg">
                     <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography variant="h2" sx={{ color: 'primary.main', mb: 2, fontSize: '3rem' }}>
+                        <Typography variant="h2" sx={{ color: 'primary.main', mb: 1.5, fontSize: '3rem' }}>
                             Nuestro Compromiso
                         </Typography>
                         <Typography variant="h6" color="text.secondary">
@@ -480,35 +575,42 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={4} justifyContent="center">
+                    <Grid container spacing={3}>
                         {features.map((feature, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Card
-                                    onMouseEnter={() => setHoveredCard(index)}
-                                    onMouseLeave={() => setHoveredCard(null)}
+                            <Grid item xs={12} md={4} key={index}>
+                                <Box
                                     sx={{
-                                        // 🎯 Flexbox para alto uniforme
-                                        height: '100%', 
-                                        display: 'flex', 
+                                        position: 'relative',
+                                        p: 3,
+                                        borderRadius: 0,
+                                        minHeight: 150,
+                                        display: 'flex',
                                         flexDirection: 'column',
-                                        transition: 'all 0.3s ease', 
-                                        borderRadius: 4,
-                                        transform: hoveredCard === index ? 'translateY(-10px)' : 'translateY(0)',
-                                        boxShadow: hoveredCard === index ? '0 15px 30px rgba(0, 123, 255, 0.2)' : 1,
+                                        gap: 1.2,
+                                        borderBottom: '2px solid #dfe6f5'
                                     }}
                                 >
-                                    <CardContent sx={{ p: 4, textAlign: 'center', flexGrow: 1 }}> {/* 🎯 flexGrow: 1 */}
-                                        <Avatar sx={{ bgcolor: 'secondary.main', width: 70, height: 70, mx: 'auto', mb: 3 }}>
-                                            <feature.icon size={36} />
-                                        </Avatar>
-                                        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                                    <Box sx={{ width: 68, height: 6, bgcolor: 'secondary.main', borderRadius: 3 }} />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Box sx={{
+                                            width: 56,
+                                            height: 56,
+                                            borderRadius: '50%',
+                                            bgcolor: 'primary.main',
+                                            color: 'white',
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                        }}>
+                                            <feature.icon size={26} />
+                                        </Box>
+                                        <Typography variant="h6" sx={{ fontWeight: 800 }}>
                                             {feature.title}
                                         </Typography>
-                                        <Typography variant="body1" color="text.secondary">
-                                            {feature.description}
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
+                                    </Box>
+                                    <Typography variant="body1" color="text.secondary">
+                                        {feature.description}
+                                    </Typography>
+                                </Box>
                             </Grid>
                         ))}
                     </Grid>
@@ -516,14 +618,17 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
             </Box>
 
             {/* CTA */}
-            <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 10, textAlign: 'center' }}>
-                <Container maxWidth="md">
-                    <Typography variant="h2" sx={{ mb: 3 }}>
+            <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 10, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+                    <Typography variant="h2" sx={{ mb: 3, fontWeight: 800 }}>
                         ¿Listo para Cambiar una Vida?
                     </Typography>
                     <Button
+                        component={Link}
+                        to="/mascotas"
                         variant="contained" 
                         size="large"
+                        disableElevation
                         sx={{  
                             bgcolor: 'white', 
                             color: 'primary.main', 
@@ -531,16 +636,14 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                             py: 2, 
                             fontSize: '1.2rem', 
                             borderRadius: 3, 
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)', 
-                            '&:hover': { 
-                                bgcolor: 'rgba(255,255,255,0.95)', 
-                                transform: 'scale(1.05)' 
-                            } 
+                            boxShadow: '0 8px 16px rgba(0,0,0,0.18)'
                         }}
                     >
                         Comenzar Adopción
                     </Button>
                 </Container>
+                <PawPrint size={120} color="rgba(255,255,255,0.14)" style={{ position: 'absolute', right: 80, top: 30, transform: 'rotate(12deg)' }} />
+                <PawPrint size={90} color="rgba(255,255,255,0.1)" style={{ position: 'absolute', left: 70, bottom: 10, transform: 'rotate(-20deg)' }} />
             </Box>
 
             {/* FOOTER */}
