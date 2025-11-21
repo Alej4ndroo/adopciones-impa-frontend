@@ -33,7 +33,6 @@ const AdopcionesCrearPage = () => {
         fecha_entrega: '',
         estado: 'en_proceso',
         estado_solicitud: 'en_revision',
-        documentos_verificados: false,
         motivo_devolucion: '',
         fecha_devolucion: '',
         observaciones: '',
@@ -154,7 +153,6 @@ const AdopcionesCrearPage = () => {
                 fecha_entrega: '',
                 estado: 'en_proceso',
                 estado_solicitud: 'en_revision',
-                documentos_verificados: false,
                 motivo_devolucion: '',
                 fecha_devolucion: '',
                 observaciones: '',
@@ -359,83 +357,6 @@ const AdopcionesCrearPage = () => {
                                         fontSize: '0.95rem'
                                     }
                                 }} 
-                            />
-                        </Grid>
-                    </Grid>
-                </Box>
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Sección: Estados y Verificación */}
-                <Box sx={{ mb: 5 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-                        <Box 
-                            sx={{ 
-                                width: 4, height: 28, borderRadius: 2,
-                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-                            }} 
-                        />
-                        <Typography variant="h6" fontWeight={600} color="primary">
-                            Estado y Verificación
-                        </Typography>
-                    </Stack>
-                    
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                                <InputLabel>Estado de la Adopción</InputLabel>
-                                <Select 
-                                    name="estado" 
-                                    value={formData.estado} 
-                                    onChange={handleChange} 
-                                    label="Estado de la Adopción"
-                                    sx={{ 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }}
-                                >
-                                    {ESTADO_ADOPCION_OPTIONS.map(estado => (
-                                        <MenuItem key={estado} value={estado}>
-                                            {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                                <InputLabel>Estado de la Solicitud</InputLabel>
-                                <Select 
-                                    name="estado_solicitud" 
-                                    value={formData.estado_solicitud} 
-                                    onChange={handleChange} 
-                                    label="Estado de la Solicitud"
-                                    sx={{ 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }}
-                                >
-                                    {ESTADO_SOLICITUD_OPTIONS.map(estado => (
-                                        <MenuItem key={estado} value={estado}>
-                                            {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        name="documentos_verificados"
-                                        checked={formData.documentos_verificados}
-                                        onChange={handleChange}
-                                        color="primary"
-                                    />
-                                }
-                                label="Documentos Verificados"
                             />
                         </Grid>
                     </Grid>
