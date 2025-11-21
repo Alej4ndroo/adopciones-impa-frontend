@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import {
     Box, Typography, TextField, Button, MenuItem, 
-    FormControl, InputLabel, Select, Grid, Paper, 
-    CircularProgress, Alert, FormControlLabel, Checkbox, 
-    Divider, useTheme, Stack, alpha, Zoom
+    FormControl, InputLabel, Select, Paper, 
+    CircularProgress, Alert, Divider, useTheme, Stack, alpha, Zoom
 } from '@mui/material';
 import { 
     GroupAdd as GroupAddIcon, 
     Save as SaveIcon,
-    Close as CloseIcon,
     CheckCircle as CheckCircleIcon, 
     CloudUpload as CloudUploadIcon, // 👈 CORREGIDO: Necesario para la importación
 } from '@mui/icons-material';
@@ -200,7 +198,7 @@ const EmpleadosCrearPage = () => {
 
     // --- RENDERIZADO (Sección modificada del campo Contraseña) ---
     return (
-        <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+        <Box sx={{ width: '100%', mx: 'auto' }}>
             
             {/* Header Empleado - Se mantiene igual */}
             {/* ... */}
@@ -269,6 +267,7 @@ const EmpleadosCrearPage = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{ 
+                    width: '100%',
                     p: { xs: 3, sm: 4, md: 5 },
                     borderRadius: 3
                 }}
@@ -287,40 +286,30 @@ const EmpleadosCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Nombre completo" name="nombre" value={formData.nombre} onChange={handleChange} variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Correo Electrónico" name="correo_electronico" type="email" value={formData.correo_electronico} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
+                    <Stack spacing={3}>
+                        <TextField fullWidth required label="Nombre completo" name="nombre" value={formData.nombre} onChange={handleChange} variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Correo Electrónico" name="correo_electronico" type="email" value={formData.correo_electronico} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                         
                         {/* 🔒 CAMPO DE CONTRASEÑA MODIFICADO CON VALIDACIÓN */}
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                required 
-                                label="Contraseña" 
-                                name="contrasena" 
-                                type="password" 
-                                value={formData.contrasena} 
-                                onChange={handleChange} 
-                                error={!!passwordError} // Muestra error si passwordError tiene un valor
-                                helperText={
-                                    passwordError || 
-                                    "Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial."
-                                }
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
-                            />
-                        </Grid>
+                        <TextField 
+                            fullWidth 
+                            required 
+                            label="Contraseña" 
+                            name="contrasena" 
+                            type="password" 
+                            value={formData.contrasena} 
+                            onChange={handleChange} 
+                            error={!!passwordError} // Muestra error si passwordError tiene un valor
+                            helperText={
+                                passwordError || 
+                                "Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial."
+                            }
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                        />
 
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={handleChange} InputLabelProps={{ shrink: true }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                    </Grid>
+                        <TextField fullWidth label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={handleChange} InputLabelProps={{ shrink: true }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -338,20 +327,12 @@ const EmpleadosCrearPage = () => {
                             Dirección
                         </Typography>
                     </Stack>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6} md={6}>
-                            <TextField fullWidth required label="Calle y Número" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={6}>
-                            <TextField fullWidth required label="Colonia" name="colonia" value={formData.colonia} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <TextField fullWidth required label="C.P." name="codigo_postal" value={formData.codigo_postal} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={9}>
-                            <TextField fullWidth required label="Ciudad" name="ciudad" value={formData.ciudad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                    </Grid>
+                    <Stack spacing={3}>
+                        <TextField fullWidth required label="Calle y Número" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Colonia" name="colonia" value={formData.colonia} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="C.P." name="codigo_postal" value={formData.codigo_postal} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Ciudad" name="ciudad" value={formData.ciudad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -369,38 +350,28 @@ const EmpleadosCrearPage = () => {
                             Información Laboral
                         </Typography>
                     </Stack>
-                    <Grid container spacing={3} alignItems="center">
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Número de Empleado" name="numero_empleado" value={formData.numero_empleado} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth required>
-                                <InputLabel>Rol</InputLabel>
-                                <Select 
-                                    name="id_rol" 
-                                    value={formData.id_rol} 
-                                    onChange={handleChange} 
-                                    label="Rol"
-                                    sx={{ borderRadius: 2 }}
-                                >
-                                    {ROL_OPTIONS.map(opt => (
-                                        <MenuItem key={opt.id} value={opt.id}>
-                                            {opt.nombre.charAt(0).toUpperCase() + opt.nombre.slice(1)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Licenciatura / Grado" name="licenciatura" value={formData.licenciatura} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth required label="Cédula Profesional (Solo si aplica)" name="cedula_profesional" value={formData.cedula_profesional} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField fullWidth required label="Especialidad (Ej: Cirugía, Medicina Interna)" name="especialidad" value={formData.especialidad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        </Grid>
-                    </Grid>
+                    <Stack spacing={3}>
+                        <TextField fullWidth required label="Número de Empleado" name="numero_empleado" value={formData.numero_empleado} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <FormControl fullWidth required>
+                            <InputLabel>Rol</InputLabel>
+                            <Select 
+                                name="id_rol" 
+                                value={formData.id_rol} 
+                                onChange={handleChange} 
+                                label="Rol"
+                                sx={{ borderRadius: 2 }}
+                            >
+                                {ROL_OPTIONS.map(opt => (
+                                    <MenuItem key={opt.id} value={opt.id}>
+                                        {opt.nombre.charAt(0).toUpperCase() + opt.nombre.slice(1)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField fullWidth required label="Licenciatura / Grado" name="licenciatura" value={formData.licenciatura} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Cédula Profesional (Solo si aplica)" name="cedula_profesional" value={formData.cedula_profesional} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Especialidad (Ej: Cirugía, Medicina Interna)" name="especialidad" value={formData.especialidad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
     Box, Typography, TextField, Button, MenuItem, 
-    FormControl, InputLabel, Select, Grid, Paper, 
+    FormControl, InputLabel, Select, Paper, 
     CircularProgress, Alert, Divider, useTheme, Stack, 
-    alpha, Zoom, InputAdornment
+    alpha, InputAdornment
 } from '@mui/material';
 import { 
     NoteAdd as NoteAddIcon, 
@@ -157,7 +157,7 @@ const ConsultasCrearPage = () => {
 
     // --- RENDERIZADO (Adaptado a la tabla 'consultas_veterinarias') ---
     return (
-        <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+        <Box sx={{ width: '100%', mx: 'auto' }}>
             
             {/* Header Consulta */}
             <Paper elevation={0} sx={{ p: 3, mb: 4, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`, borderRadius: 3, color: 'white' }}>
@@ -185,7 +185,7 @@ const ConsultasCrearPage = () => {
                 elevation={3} 
                 component="form"
                 onSubmit={handleSubmit}
-                sx={{ p: { xs: 3, sm: 4, md: 5 }, borderRadius: 3 }}
+                sx={{ width: '100%', p: { xs: 3, sm: 4, md: 5 }, borderRadius: 3 }}
             >
                 {/* Sección: Datos de la Cita */}
                 <Box sx={{ mb: 5 }}>
@@ -196,53 +196,45 @@ const ConsultasCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth required disabled={loadingDropdowns}>
-                                <InputLabel>Expediente (Paciente)</InputLabel>
-                                <Select name="id_expediente" value={formData.id_expediente} label="Expediente (Paciente)" onChange={handleChange}>
-                                    {expedientes.map(exp => (
-                                        <MenuItem key={exp.id_expediente} value={exp.id_expediente}>
-                                            {`${exp.mascota} (Dueño: ${exp.cliente})`}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth required disabled={loadingDropdowns}>
-                                <InputLabel>Veterinario Asignado</InputLabel>
-                                <Select name="id_empleado" value={formData.id_empleado} label="Veterinario Asignado" onChange={handleChange}>
-                                    {veterinarios.map(vet => (
-                                        <MenuItem key={vet.id_empleado} value={vet.id_empleado}>{vet.nombre}</MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                required 
-                                label="Fecha y Hora de Consulta" 
-                                name="fecha_consulta" 
-                                type="datetime-local" // 👈 NUEVO TIPO
-                                value={formData.fecha_consulta} 
-                                onChange={handleChange}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                         <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Próxima Cita (Opcional)" 
-                                name="proxima_cita" // 👈 NUEVO
-                                type="datetime-local" 
-                                value={formData.proxima_cita} 
-                                onChange={handleChange}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                    </Grid>
+                    <Stack spacing={3}>
+                        <FormControl fullWidth required disabled={loadingDropdowns}>
+                            <InputLabel>Expediente (Paciente)</InputLabel>
+                            <Select name="id_expediente" value={formData.id_expediente} label="Expediente (Paciente)" onChange={handleChange}>
+                                {expedientes.map(exp => (
+                                    <MenuItem key={exp.id_expediente} value={exp.id_expediente}>
+                                        {`${exp.mascota} (Dueño: ${exp.cliente})`}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth required disabled={loadingDropdowns}>
+                            <InputLabel>Veterinario Asignado</InputLabel>
+                            <Select name="id_empleado" value={formData.id_empleado} label="Veterinario Asignado" onChange={handleChange}>
+                                {veterinarios.map(vet => (
+                                    <MenuItem key={vet.id_empleado} value={vet.id_empleado}>{vet.nombre}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField 
+                            fullWidth 
+                            required 
+                            label="Fecha y Hora de Consulta" 
+                            name="fecha_consulta" 
+                            type="datetime-local"
+                            value={formData.fecha_consulta} 
+                            onChange={handleChange}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                        <TextField 
+                            fullWidth 
+                            label="Próxima Cita (Opcional)" 
+                            name="proxima_cita"
+                            type="datetime-local" 
+                            value={formData.proxima_cita} 
+                            onChange={handleChange}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -253,24 +245,28 @@ const ConsultasCrearPage = () => {
                         <Box sx={{ width: 4, height: 28, borderRadius: 2, background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }} />
                         <Typography variant="h6" fontWeight={600} color="primary">Examen y Motivo</Typography>
                     </Stack>
-                    <Grid container spacing={3}>
-                         <Grid item xs={12}>
-                            <TextField fullWidth required label="Motivo de la Consulta" name="motivo" value={formData.motivo} onChange={handleChange} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField fullWidth multiline rows={3} label="Síntomas" name="sintomas" value={formData.sintomas} onChange={handleChange} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Peso" name="peso_kg" value={formData.peso_kg} onChange={handleChange} type="number" 
-                                InputProps={{ endAdornment: <InputAdornment position="end">kg</InputAdornment> }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Temperatura" name="temperatura_c" value={formData.temperatura_c} onChange={handleChange} type="number" 
-                                InputProps={{ endAdornment: <InputAdornment position="end">°C</InputAdornment> }}
-                            />
-                        </Grid>
-                    </Grid>
+                    <Stack spacing={3}>
+                        <TextField fullWidth required label="Motivo de la Consulta" name="motivo" value={formData.motivo} onChange={handleChange} />
+                        <TextField fullWidth multiline rows={3} label="Síntomas" name="sintomas" value={formData.sintomas} onChange={handleChange} />
+                        <TextField
+                            fullWidth
+                            label="Peso"
+                            name="peso_kg"
+                            value={formData.peso_kg}
+                            onChange={handleChange}
+                            type="number" 
+                            InputProps={{ endAdornment: <InputAdornment position="end">kg</InputAdornment> }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Temperatura"
+                            name="temperatura_c"
+                            value={formData.temperatura_c}
+                            onChange={handleChange}
+                            type="number" 
+                            InputProps={{ endAdornment: <InputAdornment position="end">°C</InputAdornment> }}
+                        />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -281,17 +277,11 @@ const ConsultasCrearPage = () => {
                         <Box sx={{ width: 4, height: 28, borderRadius: 2, background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }} />
                         <Typography variant="h6" fontWeight={600} color="primary">Diagnóstico y Tratamiento</Typography>
                     </Stack>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}>
-                            <TextField fullWidth required multiline rows={4} label="Diagnóstico" name="diagnostico" value={formData.diagnostico} onChange={handleChange} />
-                        </Grid>
-                         <Grid item xs={12}>
-                            <TextField fullWidth multiline rows={4} label="Tratamiento" name="tratamiento" value={formData.tratamiento} onChange={handleChange} />
-                        </Grid>
-                         <Grid item xs={12}>
-                            <TextField fullWidth multiline rows={2} label="Recomendaciones" name="recomendaciones" value={formData.recomendaciones} onChange={handleChange} />
-                        </Grid>
-                    </Grid>
+                    <Stack spacing={3}>
+                        <TextField fullWidth required multiline rows={4} label="Diagnóstico" name="diagnostico" value={formData.diagnostico} onChange={handleChange} />
+                        <TextField fullWidth multiline rows={4} label="Tratamiento" name="tratamiento" value={formData.tratamiento} onChange={handleChange} />
+                        <TextField fullWidth multiline rows={2} label="Recomendaciones" name="recomendaciones" value={formData.recomendaciones} onChange={handleChange} />
+                    </Stack>
                 </Box>
                 
                 <Divider sx={{ my: 4 }} />
@@ -302,14 +292,18 @@ const ConsultasCrearPage = () => {
                         <Box sx={{ width: 4, height: 28, borderRadius: 2, background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }} />
                         <Typography variant="h6" fontWeight={600} color="primary">Costo</Typography>
                     </Stack>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Costo" name="costo" value={formData.costo} onChange={handleChange} type="number" 
-                                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                            />
-                        </Grid>
-                         {/* 🚨 ELIMINADO: El campo 'estado_consulta' no está en la tabla */}
-                    </Grid>
+                    <Stack spacing={3}>
+                        <TextField
+                            fullWidth
+                            label="Costo"
+                            name="costo"
+                            value={formData.costo}
+                            onChange={handleChange}
+                            type="number" 
+                            InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                        />
+                        {/* 🚨 ELIMINADO: El campo 'estado_consulta' no está en la tabla */}
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />

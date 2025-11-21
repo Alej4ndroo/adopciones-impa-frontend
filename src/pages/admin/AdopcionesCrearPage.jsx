@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
     Box, Typography, TextField, Button, MenuItem, 
-    FormControl, InputLabel, Select, Grid, Paper, 
+    FormControl, InputLabel, Select, Paper, 
     CircularProgress, Alert, Divider, useTheme, Stack, 
     alpha, Zoom, Autocomplete, FormControlLabel, Checkbox
 } from '@mui/material';
@@ -180,7 +180,7 @@ const AdopcionesCrearPage = () => {
 
     // --- RENDERIZADO ---
     return (
-        <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+        <Box sx={{ width: '100%', mx: 'auto' }}>
             
             {/* Header */}
             <Paper 
@@ -248,6 +248,7 @@ const AdopcionesCrearPage = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{ 
+                    width: '100%',
                     p: { xs: 3, sm: 4, md: 5 },
                     borderRadius: 3
                 }}
@@ -266,100 +267,163 @@ const AdopcionesCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                                <Autocomplete
-                                    options={usuarios}
-                                    getOptionLabel={(option) => `${option.nombre} (${option.correo_electronico})`}
-                                    value={usuarios.find(u => u.id_usuario === formData.id_usuario) || null}
-                                    onChange={(e, newValue) => handleAutocompleteChange('id_usuario', newValue?.id_usuario || '')}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Usuario Adoptante" 
-                                            required
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth required>
-                                <Autocomplete
-                                    options={mascotas}
-                                    getOptionLabel={(option) => `${option.nombre} - ${option.especie} (${option.raza || 'Sin raza'})`}
-                                    value={mascotas.find(m => m.id_mascota === formData.id_mascota) || null}
-                                    onChange={(e, newValue) => handleAutocompleteChange('id_mascota', newValue?.id_mascota || '')}
-                                    renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Mascota a Adoptar" 
-                                            required
-                                            sx={{ 
-                                                '& .MuiOutlinedInput-root': { 
-                                                    borderRadius: 2,
-                                                    fontSize: '0.95rem'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField 
-                                fullWidth 
-                                required 
-                                label="Fecha de Solicitud" 
-                                name="fecha_solicitud" 
-                                type="datetime-local" 
-                                value={formData.fecha_solicitud} 
-                                onChange={handleChange} 
-                                InputLabelProps={{ shrink: true }} 
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
+                    <Stack spacing={3}>
+                        <FormControl fullWidth required>
+                            <Autocomplete
+                                options={usuarios}
+                                getOptionLabel={(option) => `${option.nombre} (${option.correo_electronico})`}
+                                value={usuarios.find(u => u.id_usuario === formData.id_usuario) || null}
+                                onChange={(e, newValue) => handleAutocompleteChange('id_usuario', newValue?.id_usuario || '')}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        {...params} 
+                                        label="Usuario Adoptante" 
+                                        required
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
                             />
-                        </Grid>
+                        </FormControl>
 
-                        <Grid item xs={12} md={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Fecha de Entrega (Opcional)" 
-                                name="fecha_entrega" 
-                                type="datetime-local" 
-                                value={formData.fecha_entrega} 
-                                onChange={handleChange} 
-                                InputLabelProps={{ shrink: true }} 
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
+                        <FormControl fullWidth required>
+                            <Autocomplete
+                                options={mascotas}
+                                getOptionLabel={(option) => `${option.nombre} - ${option.especie} (${option.raza || 'Sin raza'})`}
+                                value={mascotas.find(m => m.id_mascota === formData.id_mascota) || null}
+                                onChange={(e, newValue) => handleAutocompleteChange('id_mascota', newValue?.id_mascota || '')}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        {...params} 
+                                        label="Mascota a Adoptar" 
+                                        required
+                                        sx={{ 
+                                            '& .MuiOutlinedInput-root': { 
+                                                borderRadius: 2,
+                                                fontSize: '0.95rem'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }
+                                        }}
+                                    />
+                                )}
                             />
-                        </Grid>
-                    </Grid>
+                        </FormControl>
+
+                        <TextField 
+                            fullWidth 
+                            required 
+                            label="Fecha de Solicitud" 
+                            name="fecha_solicitud" 
+                            type="datetime-local" 
+                            value={formData.fecha_solicitud} 
+                            onChange={handleChange} 
+                            InputLabelProps={{ shrink: true }} 
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
+
+                        <TextField 
+                            fullWidth 
+                            label="Fecha de Entrega (Opcional)" 
+                            name="fecha_entrega" 
+                            type="datetime-local" 
+                            value={formData.fecha_entrega} 
+                            onChange={handleChange} 
+                            InputLabelProps={{ shrink: true }} 
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
+                    </Stack>
+                </Box>
+
+                <Divider sx={{ my: 4 }} />
+
+                {/* Sección: Estados y Verificación */}
+                <Box sx={{ mb: 5 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+                        <Box 
+                            sx={{ 
+                                width: 4, height: 28, borderRadius: 2,
+                                background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                            }} 
+                        />
+                        <Typography variant="h6" fontWeight={600} color="primary">
+                            Estado y Verificación
+                        </Typography>
+                    </Stack>
+                    
+                    <Stack spacing={3}>
+                        <FormControl fullWidth required>
+                            <InputLabel>Estado de la Adopción</InputLabel>
+                            <Select 
+                                name="estado" 
+                                value={formData.estado} 
+                                onChange={handleChange} 
+                                label="Estado de la Adopción"
+                                sx={{ 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }}
+                            >
+                                {ESTADO_ADOPCION_OPTIONS.map(estado => (
+                                    <MenuItem key={estado} value={estado}>
+                                        {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl fullWidth required>
+                            <InputLabel>Estado de la Solicitud</InputLabel>
+                            <Select 
+                                name="estado_solicitud" 
+                                value={formData.estado_solicitud} 
+                                onChange={handleChange} 
+                                label="Estado de la Solicitud"
+                                sx={{ 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }}
+                            >
+                                {ESTADO_SOLICITUD_OPTIONS.map(estado => (
+                                    <MenuItem key={estado} value={estado}>
+                                        {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    name="documentos_verificados"
+                                    checked={formData.documentos_verificados}
+                                    onChange={handleChange}
+                                    color="primary"
+                                />
+                            }
+                            label="Documentos Verificados"
+                        />
+                    </Stack>
                 </Box>
 
                 <Divider sx={{ my: 4 }} />
@@ -378,64 +442,58 @@ const AdopcionesCrearPage = () => {
                         </Typography>
                     </Stack>
                     
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}>
-                            <TextField 
-                                fullWidth 
-                                label="Motivo de la Adopción" 
-                                name="motivo_adopcion" 
-                                value={formData.motivo_adopcion} 
-                                onChange={handleChange}
-                                multiline
-                                rows={3}
-                                placeholder="¿Por qué desea adoptar esta mascota?"
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
-                            />
-                        </Grid>
+                    <Stack spacing={3}>
+                        <TextField 
+                            fullWidth 
+                            label="Motivo de la Adopción" 
+                            name="motivo_adopcion" 
+                            value={formData.motivo_adopcion} 
+                            onChange={handleChange}
+                            multiline
+                            rows={3}
+                            placeholder="¿Por qué desea adoptar esta mascota?"
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
 
-                        <Grid item xs={12}>
-                            <TextField 
-                                fullWidth 
-                                label="Ubicación en el Hogar" 
-                                name="ubicacion_en_hogar" 
-                                value={formData.ubicacion_en_hogar} 
-                                onChange={handleChange}
-                                multiline
-                                rows={2}
-                                placeholder="Describa dónde vivirá la mascota (interior, patio, etc.)"
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
-                            />
-                        </Grid>
+                        <TextField 
+                            fullWidth 
+                            label="Ubicación en el Hogar" 
+                            name="ubicacion_en_hogar" 
+                            value={formData.ubicacion_en_hogar} 
+                            onChange={handleChange}
+                            multiline
+                            rows={2}
+                            placeholder="Describa dónde vivirá la mascota (interior, patio, etc.)"
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
 
-                        <Grid item xs={12}>
-                            <TextField 
-                                fullWidth 
-                                label="Observaciones Generales" 
-                                name="observaciones" 
-                                value={formData.observaciones} 
-                                onChange={handleChange}
-                                multiline
-                                rows={3}
-                                placeholder="Cualquier información adicional relevante"
-                                sx={{ 
-                                    '& .MuiOutlinedInput-root': { 
-                                        borderRadius: 2,
-                                        fontSize: '0.95rem'
-                                    }
-                                }} 
-                            />
-                        </Grid>
-                    </Grid>
+                        <TextField 
+                            fullWidth 
+                            label="Observaciones Generales" 
+                            name="observaciones" 
+                            value={formData.observaciones} 
+                            onChange={handleChange}
+                            multiline
+                            rows={3}
+                            placeholder="Cualquier información adicional relevante"
+                            sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                    borderRadius: 2,
+                                    fontSize: '0.95rem'
+                                }
+                            }} 
+                        />
+                    </Stack>
                 </Box>
 
                 {/* Sección: Información de Devolución (Solo si estado es 'devuelta') */}
@@ -455,46 +513,42 @@ const AdopcionesCrearPage = () => {
                                 </Typography>
                             </Stack>
                             
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
-                                    <TextField 
-                                        fullWidth 
-                                        required
-                                        label="Fecha de Devolución" 
-                                        name="fecha_devolucion" 
-                                        type="datetime-local" 
-                                        value={formData.fecha_devolucion} 
-                                        onChange={handleChange} 
-                                        InputLabelProps={{ shrink: true }} 
-                                        sx={{ 
-                                            '& .MuiOutlinedInput-root': { 
-                                                borderRadius: 2,
-                                                fontSize: '0.95rem'
-                                            }
-                                        }} 
-                                    />
-                                </Grid>
+                            <Stack spacing={3}>
+                                <TextField 
+                                    fullWidth 
+                                    required
+                                    label="Fecha de Devolución" 
+                                    name="fecha_devolucion" 
+                                    type="datetime-local" 
+                                    value={formData.fecha_devolucion} 
+                                    onChange={handleChange} 
+                                    InputLabelProps={{ shrink: true }} 
+                                    sx={{ 
+                                        '& .MuiOutlinedInput-root': { 
+                                            borderRadius: 2,
+                                            fontSize: '0.95rem'
+                                        }
+                                    }} 
+                                />
 
-                                <Grid item xs={12}>
-                                    <TextField 
-                                        fullWidth 
-                                        required
-                                        label="Motivo de la Devolución" 
-                                        name="motivo_devolucion" 
-                                        value={formData.motivo_devolucion} 
-                                        onChange={handleChange}
-                                        multiline
-                                        rows={3}
-                                        placeholder="Explique las razones de la devolución"
-                                        sx={{ 
-                                            '& .MuiOutlinedInput-root': { 
-                                                borderRadius: 2,
-                                                fontSize: '0.95rem'
-                                            }
-                                        }} 
-                                    />
-                                </Grid>
-                            </Grid>
+                                <TextField 
+                                    fullWidth 
+                                    required
+                                    label="Motivo de la Devolución" 
+                                    name="motivo_devolucion" 
+                                    value={formData.motivo_devolucion} 
+                                    onChange={handleChange}
+                                    multiline
+                                    rows={3}
+                                    placeholder="Explique las razones de la devolución"
+                                    sx={{ 
+                                        '& .MuiOutlinedInput-root': { 
+                                            borderRadius: 2,
+                                            fontSize: '0.95rem'
+                                        }
+                                    }} 
+                                />
+                            </Stack>
                         </Box>
                     </>
                 )}
