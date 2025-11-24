@@ -5,11 +5,11 @@ import {
     Typography, Button, CssBaseline, Chip, CircularProgress, Alert,
     Divider, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, IconButton,
-    Stack, Zoom
+    Stack, Zoom, MenuItem
 } from '@mui/material';
 import {
     Email, Badge, Pets, Event, Phone, Home, CameraAlt, Edit, Close,
-    CloudUpload, Description
+    CloudUpload, Description, CheckCircle, AccessTime
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Link } from 'react-router-dom';
@@ -80,7 +80,7 @@ const statCardSx = {
 };
 
 // -------------------------------------------------------------------
-// 🚀 FUNCIÓN HELPER - Actualización de Usuario
+// FUNCIÓN HELPER - Actualización de Usuario
 // -------------------------------------------------------------------
 const apiUpdateUser = async (userId, data) => {
     const token = localStorage.getItem('authToken');
@@ -106,9 +106,68 @@ const apiUpdateUser = async (userId, data) => {
         throw new Error(errorData.message || 'Error al actualizar los datos.');
     }
 
-    return response.json();
+    const payload = await response.json();
+    const usuario = payload?.usuario || payload?.perfil || payload?.user || payload;
+    if (usuario) {
+        const direcciones = normalizeDirecciones(usuario);
+        return { ...usuario, direcciones };
+    }
+    return usuario;
+};
+
+const apiGetUser = async (userId) => {
+    const token = localStorage.getItem('authToken');
+    if (!token) throw new Error('No autenticado.');
+    const url = `${VITE_API_URL_BACKEND}/usuarios/${userId}`;
+    const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('No se pudo obtener el usuario actualizado.');
+    const data = await res.json();
+    const usuario = data?.usuario_completo || data;
+    const direcciones = normalizeDirecciones(usuario);
+    return { ...usuario, direcciones };
 };
 // -------------------------------------------------------------------
+
+// Normaliza y fusiona direcciones aunque el backend devuelva "direccion" singular o venga vacío
+const normalizeDirecciones = (user, fallbackAddress = null) => {
+    if (!user) return fallbackAddress ? [fallbackAddress] : [];
+    const parseNumero = (calleText) => {
+        if (!calleText) return { base: calleText || '', ext: '', int: '' };
+        // Intenta extraer dígitos al final o con "Int."
+        const match = calleText.match(/^(.*?)(\d+)(?:\s*Int\.?\s*([A-Za-z0-9]+))?\s*$/i);
+        if (!match) return { base: calleText, ext: '', int: '' };
+        const [, base, ext, inter] = match;
+        return { base: base.trim(), ext: ext || '', int: inter || '' };
+    };
+
+    const list = [];
+    if (Array.isArray(user.direcciones) && user.direcciones.length) {
+        list.push(...user.direcciones);
+    }
+    if (user.direccion) list.push(user.direccion);
+    const personaAddrKeys = ['calle', 'colonia', 'codigo_postal', 'ciudad', 'estado', 'pais'];
+    const hasPersonaFields = personaAddrKeys.some((k) => user?.persona?.[k]);
+    if (hasPersonaFields) {
+        list.push({
+            ...fallbackAddress,
+            ...user.persona
+        });
+    }
+    if (!list.length && fallbackAddress) list.push(fallbackAddress);
+
+    return list.map((dir) => {
+        if (dir.numero_exterior) return dir;
+        const parsed = parseNumero(dir.calle);
+        return {
+            ...dir,
+            calle: parsed.base || dir.calle,
+            numero_exterior: parsed.ext || dir.numero_exterior || '',
+            numero_interior: parsed.int || dir.numero_interior || ''
+        };
+    });
+};
 
 // Merge helper to keep nested data (rol/direcciones) when API returns partial updates
 const mergeUserData = (prev, incoming) => {
@@ -119,6 +178,50 @@ const mergeUserData = (prev, incoming) => {
         rol: incoming?.rol || prev.rol,
         direcciones: incoming?.direcciones ?? prev.direcciones
     };
+};
+
+const resolvePersonaFromState = (userData, misAdopciones = []) => {
+    if (!userData) return null;
+    if (userData.id_persona) return { id_persona: userData.id_persona, persona: userData.persona };
+    if (userData.persona?.id_persona) return { id_persona: userData.persona.id_persona, persona: userData.persona };
+    const adop = misAdopciones.find((a) => a.id_persona);
+    if (adop) return { id_persona: adop.id_persona, persona: userData.persona };
+    return null;
+};
+
+const resolvePrimaryAddress = (data) => {
+    if (!data) return null;
+    if (Array.isArray(data.direcciones) && data.direcciones.length) return data.direcciones[0];
+    if (data.direccion) return data.direccion;
+
+    const source = data.persona || data;
+    const hasFields = ['calle', 'colonia', 'ciudad', 'codigo_postal', 'numero_exterior', 'numero_interior', 'estado', 'pais']
+        .some((key) => Boolean(source?.[key]));
+
+    if (!hasFields) return null;
+
+    return {
+        calle: source.calle || '',
+        numero_exterior: source.numero_exterior || '',
+        numero_interior: source.numero_interior || '',
+        colonia: source.colonia || '',
+        ciudad: source.ciudad || '',
+        estado: source.estado || '',
+        codigo_postal: source.codigo_postal || '',
+        pais: source.pais || 'México'
+    };
+};
+
+// Helpers de subida multipart (foto/documentos)
+const uploadMultipart = async (url, formData) => {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(url, { method: 'POST', headers, body: formData });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.mensaje || data.error || data.message || 'Error al subir archivo.');
+    }
+    return res.json();
 };
 
 // Lee un archivo y devuelve su dataURL completa (para preview) y la parte base64 (para enviar)
@@ -167,7 +270,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     const [newPhoto, setNewPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [isSavingPhoto, setIsSavingPhoto] = useState(false);
-    
+
     const initialAddressState = {
         calle: '',
         numero_exterior: '',
@@ -181,17 +284,104 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
 
     // Estado para nueva dirección
     const [newAddress, setNewAddress] = useState(initialAddressState);
-    const hasAddress = Boolean(userData?.direcciones?.length);
+    const normalizedDirecciones = normalizeDirecciones(userData);
+    const primaryAddress = normalizedDirecciones[0] || resolvePrimaryAddress(userData);
+    const addressList = normalizedDirecciones;
+    const hasAddress = Boolean(primaryAddress);
 
     const normalizeSpaces = (value) => value.replace(/\s+/g, ' ').trim();
     const onlyDigits = (value) => value.replace(/[^0-9]/g, '');
     const limit = (value, max) => value.slice(0, max);
+    const formatDate = (value) => {
+        if (!value) return 'N/A';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed)) return value;
+        return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+    };
+    const persistUser = (user) => {
+        if (!user) return;
+        localStorage.setItem('userData', JSON.stringify(user));
+        onProfileUpdate?.(user);
+    };
+
+    const formatStatusLabel = (value) => {
+        if (!value) return '';
+        const map = {
+            en_proceso: 'En proceso',
+            en_revision: 'En revisión',
+            en_progreso: 'En progreso',
+            aprobada: 'Aprobada',
+            rechazada: 'Rechazada',
+            cancelada: 'Cancelada',
+            pendiente: 'Pendiente',
+            confirmada: 'Confirmada'
+        };
+        const normalized = value.toString().toLowerCase();
+        if (map[normalized]) return map[normalized];
+        const cleaned = normalized.replace(/_/g, ' ');
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    };
+    const toInputDateTime = (dateValue) => {
+        const date = dateValue ? new Date(dateValue) : new Date();
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return local.toISOString().slice(0, 16);
+    };
+
+    // Mascotas del usuario (aprobadas/adoptadas)
+    const adoptedMascotas = misAdopciones
+        .filter((ad) => {
+            const estado = (ad.estado_solicitud || ad.estado || '').toLowerCase();
+            return ['aprobada', 'aprobado', 'adoptado', 'en_proceso', 'en proceso', 'confirmada'].includes(estado);
+        })
+        .map((ad) => ad.mascota)
+        .filter(Boolean);
+    const hasMascotas = adoptedMascotas.length > 0;
 
     // Estados para documentos
     const [docUploads, setDocUploads] = useState({ ine: null, acta: null, comprobante: null });
     const [docUploading, setDocUploading] = useState(null);
     const [docRemoving, setDocRemoving] = useState(null);
     const [docPreviews, setDocPreviews] = useState({ ine: null, acta: null, comprobante: null });
+    const docEndpoints = {
+        ine: { tipo_documento: 'ine' },
+        acta: { tipo_documento: 'acnac' },
+        comprobante: { tipo_documento: 'comdom' }
+    };
+
+    const refreshUser = async (userId, fallbackUser = null) => {
+        try {
+            const fresh = await apiGetUser(userId);
+            const merged = mergeUserData(fallbackUser || userData, fresh);
+            setUserData(merged);
+            persistUser(merged);
+        } catch (err) {
+            console.warn('[refreshUser] no se pudo refrescar usuario:', err);
+        }
+    };
+
+    // Estado para agendar cita desde perfil
+    const [openBookCita, setOpenBookCita] = useState(false);
+    const [bookingForm, setBookingForm] = useState({
+        fecha_cita: '',
+        motivo: '',
+        observaciones: '',
+        id_servicio: '',
+        id_mascota: ''
+    });
+    const [bookingLoading, setBookingLoading] = useState(false);
+    const [bookingError, setBookingError] = useState(null);
+    const [servicios, setServicios] = useState([]);
+    const [serviciosLoading, setServiciosLoading] = useState(false);
+    const filteredServicios = servicios.filter((srv) => {
+        if (hasMascotas) return true;
+        const nombre = (srv?.nombre || '').toLowerCase();
+        return nombre.includes('adop') && !nombre.includes('seguimiento');
+    });
+    const [openReschedule, setOpenReschedule] = useState(false);
+    const [rescheduleTarget, setRescheduleTarget] = useState(null);
+    const [rescheduleDate, setRescheduleDate] = useState('');
+    const [rescheduleError, setRescheduleError] = useState(null);
+    const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
     // Ref para el input de foto
     const photoInputRef = useRef(null);
@@ -200,12 +390,21 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     // 🔥 CAMBIO: useEffect simplificado - Solo carga inicial
     useEffect(() => {
         if (currentUser) {
-            setUserData(currentUser);
+            const stored = (() => {
+                try {
+                    return JSON.parse(localStorage.getItem('userData') || 'null');
+                } catch {
+                    return null;
+                }
+            })();
+            const mergedUser = stored ? mergeUserData(currentUser, stored) : currentUser;
+
+            setUserData(mergedUser);
 
             setEditedUser({
-                nombre: currentUser.nombre || '',
-                telefono: currentUser.telefono || '',
-                fecha_nacimiento: currentUser.fecha_nacimiento ? currentUser.fecha_nacimiento.split('T')[0] : ''
+                nombre: mergedUser.nombre || '',
+                telefono: mergedUser.telefono || '',
+                fecha_nacimiento: mergedUser.fecha_nacimiento ? mergedUser.fecha_nacimiento.split('T')[0] : ''
             });
 
             fetchUserData(currentUser.id_usuario);
@@ -215,7 +414,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             setMisAdopciones([]);
             setLoading(false);
         }
-    }, [currentUser?.id_usuario]); // 🔥 Solo reacciona al cambio de ID
+    }, [currentUser?.id_usuario]); // Solo reacciona al cambio de ID
 
 
     // Carga los datos secundarios (citas, adopciones)
@@ -298,18 +497,12 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
 
                 // 🔥 Extrae el usuario de la respuesta
                 const usuarioActualizado = response.usuario || response;
-
-                // 🔥 Fusiona para no perder rol/direcciones cuando el backend responde parcial
-                const mergedUser = mergeUserData(userData, usuarioActualizado);
+                const normalized = { ...usuarioActualizado, direcciones: normalizeDirecciones(usuarioActualizado) };
+                const mergedUser = mergeUserData(userData, normalized);
 
                 setUserData(mergedUser);
-
-                // 🔥 Actualiza también el localStorage y currentUser del padre
-                localStorage.setItem('userData', JSON.stringify(mergedUser));
-
-                if (onProfileUpdate) {
-                    onProfileUpdate(mergedUser);
-                }
+                persistUser(mergedUser);
+                await refreshUser(userData.id_usuario, mergedUser);
 
                 setSuccessMessage('Foto actualizada correctamente');
                 setOpenEditPhoto(false);
@@ -342,21 +535,19 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
 
             // 🔥 Extrae el usuario de la respuesta
             const usuarioActualizado = response.usuario || response;
+            const normalized = { ...usuarioActualizado, direcciones: normalizeDirecciones(usuarioActualizado) };
 
             // 🔥 Fusiona para no perder rol/direcciones cuando el backend responde parcial
-            const mergedUser = mergeUserData(userData, usuarioActualizado);
+            const mergedUser = mergeUserData(userData, normalized);
 
-            // 🔥 Actualiza el estado local
+            // 🔥 Actualiza el estado local y almacenamiento
             setUserData(mergedUser);
-
-            // 🔥 Actualiza también el localStorage y currentUser del padre
-            localStorage.setItem('userData', JSON.stringify(mergedUser));
-            if (onProfileUpdate) {
-                onProfileUpdate(mergedUser);
-            }
+            persistUser(mergedUser);
 
             setSuccessMessage('Perfil actualizado correctamente');
             setOpenEditProfile(false);
+
+            await refreshUser(userData.id_usuario, mergedUser);
 
         } catch (err) {
             console.error('Error al actualizar perfil:', err);
@@ -365,8 +556,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     };
 
     const handleOpenAddressModal = () => {
-        if (hasAddress && userData?.direcciones?.length) {
-            const dir = userData.direcciones[0];
+        const dir = primaryAddress;
+
+        if (dir) {
             setNewAddress({
                 calle: normalizeSpaces(dir.calle || ''),
                 numero_exterior: limit(onlyDigits(dir.numero_exterior || ''), 6),
@@ -384,10 +576,28 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     };
 
     const documentTypes = [
-        { key: 'ine', label: 'INE / IFE', helper: 'Imagen (JPG, PNG)', field: 'url_ine' },
+        { key: 'ine', label: 'INE', helper: 'Imagen (JPG, PNG)', field: 'url_ine' },
         { key: 'acta', label: 'Acta de nacimiento', helper: 'Imagen (JPG, PNG)', field: 'url_acta' },
         { key: 'comprobante', label: 'Comprobante de domicilio', helper: 'Imagen (JPG, PNG)', field: 'url_comprobante' }
     ];
+
+    // Prepara las previsualizaciones cuando el usuario ya tiene documentos guardados (p. ej., tras login)
+    useEffect(() => {
+        if (!userData) {
+            setDocPreviews({ ine: null, acta: null, comprobante: null });
+            return;
+        }
+        const nextPreviews = {};
+        documentTypes.forEach(({ key, field }) => {
+            const val = userData[field];
+            if (val) {
+                nextPreviews[key] = asDataUrlImage(val);
+            }
+        });
+        if (Object.keys(nextPreviews).length) {
+            setDocPreviews((prev) => ({ ...prev, ...nextPreviews }));
+        }
+    }, [userData]);
 
     const handleDocSelect = (type, event) => {
         const file = event.target.files?.[0];
@@ -419,8 +629,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             setError('Selecciona un archivo antes de subir.');
             return;
         }
-        if (!userData?.id_usuario && !userData?.id_persona) {
-            setError('Falta el identificador del usuario para asociar los documentos.');
+        const field = documentTypes.find((d) => d.key === type)?.field;
+        if (!field) {
+            setError('Tipo de documento no reconocido.');
             return;
         }
 
@@ -429,40 +640,56 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         setSuccessMessage(null);
 
         try {
+            const endpoint = docEndpoints[type];
+            if (!endpoint) throw new Error('Tipo de documento no reconocido.');
+
             const { dataUrl, base64 } = await readFileAsBase64(file);
+            const mime = file.type || 'image/jpeg';
 
-            const field = documentTypes.find((d) => d.key === type)?.field;
-            if (!field) {
-                throw new Error('Tipo de documento no reconocido.');
+            const payload = {
+                id_usuario: userData?.id_usuario,
+                tipo_documento: endpoint.tipo_documento,
+                archivo_base64: base64.startsWith('data:') ? base64 : `data:${mime};base64,${base64}`
+            };
+
+            const res = await fetch(`${VITE_API_URL_BACKEND}/personas/subir-documento`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.mensaje || data.error || data.message || `No se pudo subir el documento (status ${res.status}).`);
             }
 
-            // Enviamos como base64 al backend (igual que la foto de perfil).
-            // Si el backend rechaza el campo, guardamos localmente para la demo.
-            let patchedUser;
-            try {
-                const response = await apiUpdateUser(userData.id_usuario, { [field]: base64 });
-                const usuarioActualizado = response.usuario || response;
-                const mergedUser = mergeUserData(userData, usuarioActualizado);
-                patchedUser = { ...mergedUser, [field]: base64 };
-                setSuccessMessage('Documento guardado correctamente.');
-            } catch (apiErr) {
-                console.error('API no aceptó el documento, guardando solo local:', apiErr);
-                patchedUser = { ...userData, [field]: base64 };
-                setSuccessMessage('Documento guardado localmente (no se guardó en el servidor).');
-            }
+            const data = await res.json().catch(() => ({}));
+            const urlDocumento =
+                data?.documento?.archivo_url ||
+                data?.documento?.archivo_base64 ||
+                payload.archivo_base64 ||
+                dataUrl;
+
+            const patchedUser = { ...userData, [field]: urlDocumento };
 
             setUserData(patchedUser);
-            localStorage.setItem('userData', JSON.stringify(patchedUser));
-            onProfileUpdate?.(patchedUser);
+            persistUser(patchedUser);
 
             // Limpiar input y file seleccionado
             setDocUploads((prev) => ({ ...prev, [type]: null }));
-            setDocPreviews((prev) => ({ ...prev, [type]: dataUrl }));
+            setDocPreviews((prev) => ({
+                ...prev,
+                [type]: asDataUrlImage(urlDocumento) || dataUrl
+            }));
             if (docInputRefs.current[type]) {
                 docInputRefs.current[type].value = '';
             }
+            setSuccessMessage('Documento guardado correctamente.');
         } catch (err) {
-            console.error('Error al preparar documento:', err);
+            console.error('Error al subir documento:', err);
             setError(err.message || 'No se pudo subir el documento.');
         } finally {
             setDocUploading(null);
@@ -481,14 +708,6 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         setSuccessMessage(null);
 
         try {
-            try {
-                await apiUpdateUser(userData.id_usuario, { [field]: null });
-                setSuccessMessage('Documento eliminado correctamente.');
-            } catch (apiErr) {
-                console.warn('API no aceptó eliminar, limpiando solo local:', apiErr);
-                setSuccessMessage('Documento eliminado localmente (no se eliminó en el servidor).');
-            }
-
             const patchedUser = { ...userData, [field]: null };
             setUserData(patchedUser);
             localStorage.setItem('userData', JSON.stringify(patchedUser));
@@ -499,6 +718,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             if (docInputRefs.current[type]) {
                 docInputRefs.current[type].value = '';
             }
+            setSuccessMessage('Documento eliminado localmente.');
         } catch (err) {
             console.error('Error al eliminar documento:', err);
             setError(err.message || 'No se pudo eliminar el documento.');
@@ -544,42 +764,38 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                 return;
             }
 
-            const addressData = {
-                ...newAddress,
-                tipo_direccion: 'residencial',
+            // La BD no tiene columnas de número; lo concatenamos en la calle para no perderlo
+            const calleConNumero = `${newAddress.calle} ${newAddress.numero_exterior || ''}${newAddress.numero_interior ? ' Int. ' + newAddress.numero_interior : ''}`.trim();
+
+            const addressPayload = {
+                calle: calleConNumero,
+                colonia: newAddress.colonia,
+                codigo_postal: newAddress.codigo_postal,
+                ciudad: newAddress.ciudad,
+                estado: newAddress.estado,
+                pais: newAddress.pais,
+                tipo_direccion: 'domicilio',
                 es_principal: true
             };
 
-            const response = await apiUpdateUser(userData.id_usuario, addressData);
-            
-            // 🔥 Extrae el usuario de la respuesta
-            const usuarioActualizado = response.usuario || response;
-            
-            // 🔥 Fusiona para no perder rol/direcciones cuando el backend responde parcial
-            const mergedUser = mergeUserData(userData, usuarioActualizado);
+            const response = await apiUpdateUser(userData.id_usuario, addressPayload);
+            const usuarioActualizado = response.usuario || response.perfil || response;
 
-            // 🔥 Resuelve direcciones: usa las del backend si vienen, de lo contrario actualiza localmente
-            const backendDirecciones = usuarioActualizado?.direcciones;
-            const updatedDirecciones = backendDirecciones && backendDirecciones.length
-                ? backendDirecciones
-                : (() => {
-                    const existing = userData?.direcciones?.[0];
-                    const mergedAddress = existing
-                        ? { ...existing, ...newAddress }
-                        : { ...newAddress };
-                    return [mergedAddress];
-                })();
+            // Tomamos direcciones directamente de la respuesta; si no viene, usamos la capturada
+            const backendDirecciones = normalizeDirecciones(usuarioActualizado, newAddress);
+            const updatedDirecciones = backendDirecciones.length ? backendDirecciones : [newAddress];
 
-            const patchedUser = { ...mergedUser, direcciones: updatedDirecciones };
-            
+            const patchedUser = {
+                ...mergeUserData(userData, usuarioActualizado),
+                direcciones: updatedDirecciones
+            };
+
             // 🔥 Actualiza el estado local
             setUserData(patchedUser);
-            
-            // 🔥 Actualiza también el localStorage y currentUser del padre
-            localStorage.setItem('userData', JSON.stringify(patchedUser));
-            if (onProfileUpdate) {
-                onProfileUpdate(patchedUser);
-            }
+            persistUser(patchedUser);
+
+            await refreshUser(userData.id_usuario, patchedUser);
+            await refreshUser(userData.id_usuario, patchedUser);
 
             setSuccessMessage('Dirección actualizada correctamente');
             setOpenAddAddress(false);
@@ -591,7 +807,223 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         }
     };
 
+    const fetchServicios = async () => {
+        if (serviciosLoading || servicios.length) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        try {
+            setServiciosLoading(true);
+            const res = await fetch(`${VITE_API_URL_BACKEND}/servicios/listar`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setServicios(Array.isArray(data) ? data : []);
+            }
+        } catch (err) {
+            console.error('Error al cargar servicios', err);
+        } finally {
+            setServiciosLoading(false);
+        }
+    };
+
+    const handleSubmitCita = async () => {
+        setBookingError(null);
+        setSuccessMessage(null);
+        if (!bookingForm.fecha_cita || !bookingForm.motivo) {
+            setBookingError('Completa fecha y motivo de la cita.');
+            return;
+        }
+        const selectedDate = new Date(bookingForm.fecha_cita);
+        const now = new Date();
+        if (selectedDate < new Date(now.getTime() - 60000)) {
+            setBookingError('No puedes seleccionar una fecha anterior a hoy.');
+            return;
+        }
+        const hour = selectedDate.getHours();
+        if (hour < 10 || hour >= 18) {
+            setBookingError('El horario de atención es de 10:00 a 18:00.');
+            return;
+        }
+        if (!bookingForm.id_servicio) {
+            setBookingError('Selecciona un servicio para la cita.');
+            return;
+        }
+        if (hasMascotas && !bookingForm.id_mascota) {
+            setBookingError('Selecciona una mascota para este servicio.');
+            return;
+        }
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setBookingError('Necesitas iniciar sesión para agendar.');
+            return;
+        }
+        setBookingLoading(true);
+        try {
+            const payload = {
+                id_usuario: userData.id_usuario,
+                fecha_cita: bookingForm.fecha_cita,
+                motivo: bookingForm.motivo,
+                observaciones: bookingForm.observaciones || undefined,
+                id_servicio: bookingForm.id_servicio || undefined,
+                id_mascota: bookingForm.id_mascota || undefined,
+                estado_cita: 'programada'
+            };
+            Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+            const res = await fetch(`${VITE_API_URL_BACKEND}/citas/crear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || data.message || 'No se pudo agendar la cita.');
+            }
+            setSuccessMessage('Cita agendada correctamente.');
+            setOpenBookCita(false);
+            setBookingForm({ fecha_cita: '', motivo: '', observaciones: '', id_servicio: '', id_mascota: '' });
+            fetchUserData(userData.id_usuario);
+        } catch (err) {
+            console.error('Error al agendar cita:', err);
+            setBookingError(err.message || 'No se pudo agendar la cita.');
+        } finally {
+            setBookingLoading(false);
+        }
+    };
+
+    const handleOpenReschedule = (cita) => {
+        setRescheduleTarget(cita);
+        setRescheduleDate(toInputDateTime(cita.fecha_hora || cita.fecha_cita));
+        setRescheduleError(null);
+        setOpenReschedule(true);
+    };
+
+    const handleSubmitReschedule = async () => {
+        if (!rescheduleTarget) return;
+        setRescheduleError(null);
+        setSuccessMessage(null);
+
+        if (!rescheduleDate) {
+            setRescheduleError('Selecciona fecha y hora.');
+            return;
+        }
+
+        const selectedDate = new Date(rescheduleDate);
+        const now = new Date();
+        if (selectedDate < new Date(now.getTime() - 60000)) {
+            setRescheduleError('No puedes seleccionar una fecha anterior a hoy.');
+            return;
+        }
+
+        const hour = selectedDate.getHours();
+        if (hour < 10 || hour >= 18) {
+            setRescheduleError('El horario de atención es de 10:00 a 18:00.');
+            return;
+        }
+
+        const getCitaService = (c) => c?.id_servicio || c?.servicio?.id_servicio || null;
+        const targetService = getCitaService(rescheduleTarget);
+        if (targetService) {
+            const conflict = misCitas.some((c) => {
+                if (c.id_cita === rescheduleTarget.id_cita) return false;
+                const cs = getCitaService(c);
+                if (cs !== targetService) return false;
+                const cDate = new Date(c.fecha_hora || c.fecha_cita || '');
+                return cDate.getTime() === selectedDate.getTime();
+            });
+            if (conflict) {
+                setRescheduleError('Ya tienes una cita de ese servicio en la misma fecha y hora.');
+                return;
+            }
+        }
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setRescheduleError('Necesitas iniciar sesión para reagendar.');
+            return;
+        }
+
+        setRescheduleLoading(true);
+        try {
+            const payload = {
+                fecha_cita: selectedDate.toISOString(),
+                estado_cita: 'programada'
+            };
+            const res = await fetch(`${VITE_API_URL_BACKEND}/citas/actualizar-fecha/${rescheduleTarget.id_cita}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || data.message || 'No se pudo reagendar la cita.');
+            }
+
+            const updated = misCitas.map((c) =>
+                c.id_cita === rescheduleTarget.id_cita
+                    ? { ...c, fecha_hora: payload.fecha_cita, fecha_cita: payload.fecha_cita }
+                    : c
+            );
+            setMisCitas(updated);
+            setSuccessMessage('Cita reagendada correctamente.');
+            setOpenReschedule(false);
+            setRescheduleTarget(null);
+            setRescheduleDate('');
+        } catch (err) {
+            console.error('Error al reagendar cita:', err);
+            setRescheduleError(err.message || 'No se pudo reagendar la cita.');
+        } finally {
+            setRescheduleLoading(false);
+        }
+    };
+
+    const verificationRaw = (userData?.documentacion_verificada
+        || userData?.estado_documentacion
+        || userData?.persona?.documentacion_verificada
+        || '').toString().toLowerCase();
+
+    const verificationStatus = (() => {
+        if (['verificada', 'verificado', 'aprobada', 'aprobado', 'validada', 'validado', 'confirmada'].includes(verificationRaw)) {
+            return {
+                value: 'Verificado',
+                description: 'Documentación revisada',
+                icon: CheckCircle,
+                color: 'success.main',
+                bg: '#e6f4ea'
+            };
+        }
+        if (['rechazada', 'rechazado', 'denegada', 'denegado'].includes(verificationRaw)) {
+            return {
+                value: 'Rechazada',
+                description: 'Revisa tus documentos',
+                icon: Close,
+                color: 'error.main',
+                bg: '#ffecec'
+            };
+        }
+        return {
+            value: 'En revisión',
+            description: 'Proceso de verificación',
+            icon: AccessTime,
+            color: 'warning.main',
+            bg: '#fff7e6'
+        };
+    })();
+
     const statBlocks = [
+        {
+            key: 'verificado',
+            label: 'Estado de perfil',
+            ...verificationStatus
+        },
         {
             key: 'citas',
             label: 'Citas',
@@ -609,20 +1041,11 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             icon: Pets,
             color: 'secondary.main',
             bg: '#eef2ff'
-        },
-        {
-            key: 'direcciones',
-            label: 'Direcciones',
-            value: userData?.direcciones?.length || 0,
-            description: 'Ubicaciones registradas',
-            icon: Home,
-            color: 'primary.dark',
-            bg: '#e6f4ff'
         }
     ];
 
     // -------------------------------------------------------------------
-    // ⬇️ RENDERIZADO (JSX) ⬇️
+    // RENDERIZADO (JSX)
     // -------------------------------------------------------------------
 
     // Loading state
@@ -651,6 +1074,8 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         );
     }
 
+    const profilePhotoSrc = photoPreview || asDataUrlImage(userData?.foto_perfil_base64 || userData?.url_foto_perfil);
+
     return (
         <ThemeProvider theme={customTheme}>
             <CssBaseline />
@@ -671,7 +1096,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                     pb: 10
                 }}
             >
-                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, pt: 2 }}>
+                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
                     <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                         <Box>
                             <Typography variant="overline" sx={{ letterSpacing: 1, color: 'primary.main', fontWeight: 700 }}>Panel personal</Typography>
@@ -710,8 +1135,13 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                             component="section"
                             sx={{
                                 display: 'grid',
-                                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                                gap: 2.2,
+                                gridTemplateColumns: {
+                                    xs: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                    sm: 'repeat(2, minmax(260px, 1fr))',
+                                    md: 'repeat(2, minmax(300px, 1fr))',
+                                    lg: 'repeat(3, minmax(320px, 1fr))'
+                                },
+                                gap: 2.4,
                                 mb: 3.5
                             }}
                         >
@@ -762,238 +1192,274 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                         </Card>
 
                     ) : (
-                        <Grid container spacing={{ xs: 3, md: 4 }} alignItems="stretch">
+                        <Stack spacing={{ xs: 3, md: 3.5 }}>
 
-                            {/* Columna Izquierda: Tarjeta de Usuario */}
-                            <Grid item xs={12} md={4}>
-                                <Card sx={{ ...cardBaseSx, height: '100%', width: '697px' }}>
-                                    <CardContent sx={{ ...sectionContentSx, textAlign: 'center', height: '100%', p: 3 }}>
-                                        <Stack spacing={2.5} sx={{ height: '100%' }}>
-                                            <Stack spacing={1.5} alignItems="center">
-                                                <Box sx={{ position: 'relative', display: 'inline-block', alignSelf: 'center', p: 1.2, borderRadius: '50%', background: '#eef2ff' }}>
-                                                    <input
-                                                        accept="image/*"
-                                                        type="file"
-                                                        ref={photoInputRef}
-                                                        style={{ display: 'none' }}
-                                                        onChange={handlePhotoChange}
-                                                    />
-                                                    <Avatar
-                                                        src={photoPreview || (userData.foto_perfil_base64 ? `data:image/jpeg;base64,${userData.foto_perfil_base64}` : undefined)}
-                                                        sx={{
-                                                            width: 120,
-                                                            height: 120,
-                                                            mx: 'auto',
-                                                            bgcolor: 'secondary.main',
-                                                            fontSize: '3.4rem',
-                                                            fontWeight: 600,
-                                                            cursor: 'pointer',
-                                                            border: '4px solid #fff',
-                                                        }}
-                                                        onClick={() => photoInputRef.current?.click()}
-                                                    >
-                                                        {!photoPreview && !userData.foto_perfil_base64 && userData.nombre?.charAt(0).toUpperCase()}
-                                                    </Avatar>
-                                                    <IconButton
+                            {/* Tarjeta de Perfil */}
+                            <Card sx={{ ...cardBaseSx, height: '100%' }}>
+                                <CardContent sx={{ ...sectionContentSx, textAlign: 'center', height: '100%', p: 3 }}>
+                                    <Stack spacing={2.5} sx={{ height: '100%' }}>
+                                        <Box sx={{ textAlign: 'left', width: '100%' }}>
+                                            <Typography sx={mutedLabelSx}>Perfil</Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                                                Mi Perfil
+                                            </Typography>
+                                        </Box>
+                                        <Stack spacing={1.5} alignItems="center">
+                                            <Box sx={{ position: 'relative', display: 'inline-block', alignSelf: 'center', p: 1.2, borderRadius: '50%', background: '#eef2ff' }}>
+                                                <input
+                                                    accept="image/*"
+                                                    type="file"
+                                                    ref={photoInputRef}
+                                                    style={{ display: 'none' }}
+                                                    onChange={handlePhotoChange}
+                                                />
+                                                <Avatar
+                                                    src={profilePhotoSrc || undefined}
+                                                    sx={{
+                                                        width: 120,
+                                                        height: 120,
+                                                        mx: 'auto',
+                                                        bgcolor: 'secondary.main',
+                                                        fontSize: '3.4rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        border: '4px solid #fff',
+                                                    }}
+                                                    onClick={() => photoInputRef.current?.click()}
+                                                >
+                                                    {!profilePhotoSrc && userData.nombre?.charAt(0).toUpperCase()}
+                                                </Avatar>
+                                                <IconButton
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        bottom: 6,
+                                                        right: 6,
+                                                        bgcolor: 'primary.main',
+                                                        color: 'white',
+                                                    }}
+                                                    size="small"
+                                                    onClick={() => photoInputRef.current?.click()}
+                                                >
+                                                    <CameraAlt fontSize="small" />
+                                                </IconButton>
+                                                {newPhoto && (
+                                                    <Chip
+                                                        label="Nueva foto"
+                                                        color="success"
+                                                        size="small"
                                                         sx={{
                                                             position: 'absolute',
-                                                            bottom: 6,
-                                                            right: 6,
-                                                            bgcolor: 'primary.main',
-                                                            color: 'white',
+                                                            top: -8,
+                                                            left: '50%',
+                                                            transform: 'translateX(-50%)',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.7rem'
                                                         }}
-                                                        size="small"
-                                                        onClick={() => photoInputRef.current?.click()}
-                                                    >
-                                                        <CameraAlt fontSize="small" />
-                                                    </IconButton>
-                                                    {newPhoto && (
-                                                        <Chip
-                                                            label="Nueva foto"
-                                                            color="success"
-                                                            size="small"
-                                                            sx={{
-                                                                position: 'absolute',
-                                                                top: -8,
-                                                                left: '50%',
-                                                                transform: 'translateX(-50%)',
-                                                                fontWeight: 600,
-                                                                fontSize: '0.7rem'
-                                                            }}
-                                                        />
-                                                    )}
-                                                </Box>
-
-                                                {newPhoto && (
-                                                    <Stack direction="row" spacing={1} justifyContent="center">
-                                                        <Button
-                                                            size="small"
-                                                            variant="contained"
-                                                            onClick={handleUploadPhoto}
-                                                            disabled={isSavingPhoto}
-                                                            startIcon={isSavingPhoto ? <CircularProgress size={16} color="inherit" /> : null}
-                                                        >
-                                                            Guardar
-                                                        </Button>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            onClick={() => {
-                                                                setNewPhoto(null);
-                                                                setPhotoPreview(null);
-                                                                if (photoInputRef.current) {
-                                                                    photoInputRef.current.value = "";
-                                                                }
-                                                            }}
-                                                            disabled={isSavingPhoto}
-                                                        >
-                                                            Cancelar
-                                                        </Button>
-                                                    </Stack>
-                                                )}
-
-                                                <Stack spacing={0.2} sx={{ alignItems: 'center' }}>
-                                                    <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em', ...ellipsisText }} title={userData.nombre}>
-                                                        {userData.nombre}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={userData.rol?.nombre_rol?.toUpperCase() || 'SIN ROL'}
-                                                        color="primary"
-                                                        variant="outlined"
-                                                        size="small"
-                                                        sx={{ fontWeight: 700, maxWidth: '100%', ...ellipsisText, borderRadius: 1.5 }}
                                                     />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Información básica y datos de contacto.
-                                                    </Typography>
+                                                )}
+                                            </Box>
+
+                                            {newPhoto && (
+                                                <Stack direction="row" spacing={1} justifyContent="center">
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        onClick={handleUploadPhoto}
+                                                        disabled={isSavingPhoto}
+                                                        startIcon={isSavingPhoto ? <CircularProgress size={16} color="inherit" /> : null}
+                                                    >
+                                                        Guardar
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => {
+                                                            setNewPhoto(null);
+                                                            setPhotoPreview(null);
+                                                            if (photoInputRef.current) {
+                                                                photoInputRef.current.value = "";
+                                                            }
+                                                        }}
+                                                        disabled={isSavingPhoto}
+                                                    >
+                                                        Cancelar
+                                                    </Button>
                                                 </Stack>
+                                            )}
+
+                                            <Stack spacing={0.2} sx={{ alignItems: 'center' }}>
+                                                <Typography
+                                                    variant="h5"
+                                                    sx={{
+                                                        fontWeight: 800,
+                                                        letterSpacing: '-0.01em',
+                                                        textAlign: 'center',
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        wordBreak: 'break-word',
+                                                        minHeight: '3.2rem'
+                                                    }}
+                                                    title={userData.nombre}
+                                                >
+                                                    {userData.nombre}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Información básica y datos de contacto.
+                                                </Typography>
                                             </Stack>
+                                        </Stack>
 
-                                            <Divider />
+                                        <Divider />
 
-                                            <Stack spacing={1.4} sx={{ textAlign: 'left', flexGrow: 1 }}>
-                                                <Typography variant="subtitle2" sx={mutedLabelSx}>Datos de contacto</Typography>
-                                                <Stack spacing={1.1}>
-                                                    <Stack direction="row" spacing={1.5} alignItems="center">
-                                                        <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
-                                                            <Email fontSize="small" />
-                                                        </Avatar>
-                                                        <Box>
-                                                            <Typography variant="body2" color="text.secondary">Correo</Typography>
-                                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                {userData.correo_electronico}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Stack>
-                                                    <Stack direction="row" spacing={1.5} alignItems="center">
-                                                        <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
-                                                            <Phone fontSize="small" />
-                                                        </Avatar>
-                                                        <Box>
-                                                            <Typography variant="body2" color="text.secondary">Teléfono</Typography>
-                                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                {userData.telefono || 'No registrado'}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Stack>
+                                        <Stack spacing={1.4} sx={{ textAlign: 'left', flexGrow: 1 }}>
+                                            <Typography variant="subtitle2" sx={mutedLabelSx}>Datos de contacto</Typography>
+                                            <Stack spacing={1.1}>
+                                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                                    <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
+                                                        <Email fontSize="small" />
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" color="text.secondary">Correo</Typography>
+                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
+                                                            {userData.correo_electronico}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
+                                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                                    <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
+                                                        <Phone fontSize="small" />
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" color="text.secondary">Teléfono</Typography>
+                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
+                                                            {userData.telefono || 'No registrado'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
                                                     <Stack direction="row" spacing={1.5} alignItems="center">
                                                         <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
                                                             <Badge fontSize="small" />
                                                         </Avatar>
                                                         <Box>
-                                                            <Typography variant="body2" color="text.secondary">Rol</Typography>
+                                                            <Typography variant="body2" color="text.secondary">Fecha de nacimiento</Typography>
                                                             <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                {userData.rol?.nombre_rol?.toUpperCase() || 'N/A'}
+                                                                {formatDate(userData.fecha_nacimiento)}
                                                             </Typography>
                                                         </Box>
                                                     </Stack>
-                                                </Stack>
-                                            </Stack>
-
-                                            <Stack direction="row" spacing={1} sx={{ mt: 'auto', width: '100%' }}>
-                                                <Button
-                                                    variant="contained"
-                                                    startIcon={<Edit />}
-                                                    sx={{ borderRadius: 2, fontWeight: 700, width: '100%', py: 1.05, boxShadow: 'none' }}
-                                                    onClick={() => {
-                                                        setEditedUser({
-                                                            nombre: userData.nombre || '',
-                                                            telefono: userData.telefono || '',
-                                                            fecha_nacimiento: userData.fecha_nacimiento ? userData.fecha_nacimiento.split('T')[0] : ''
-                                                        });
-                                                        setOpenEditProfile(true);
-                                                    }}
-                                                >
-                                                    Editar Perfil
-                                                </Button>
                                             </Stack>
                                         </Stack>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
 
-                            {/* Columna Derecha: Direcciones, Citas y Adopciones */}
-                            <Grid item xs={12} md={8}>
-                                <Stack spacing={2.5}>
-                                    <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
-                                        <CardContent sx={{ ...sectionContentSx, p: 3 }}>
-                                            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
-                                                <Box>
-                                                    <Typography sx={mutedLabelSx}>Ubicaciones</Typography>
-                                                    <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Direcciones</Typography>
-                                                </Box>
-                                                <Button
-                                                    variant="outlined"
-                                                    startIcon={hasAddress ? <Edit /> : <Home />}
-                                                    sx={{ fontWeight: 700 }}
-                                                    onClick={handleOpenAddressModal}
+                                        <Stack direction="row" spacing={1} sx={{ mt: 'auto', width: '100%' }}>
+                                            <Button
+                                                variant="contained"
+                                                startIcon={<Edit />}
+                                                sx={{ borderRadius: 2, fontWeight: 700, width: '100%', py: 1.05, boxShadow: 'none' }}
+                                                onClick={() => {
+                                                    setEditedUser({
+                                                        nombre: userData.nombre || '',
+                                                        telefono: userData.telefono || '',
+                                                        fecha_nacimiento: userData.fecha_nacimiento ? userData.fecha_nacimiento.split('T')[0] : ''
+                                                    });
+                                                    setOpenEditProfile(true);
+                                                }}
+                                            >
+                                                Editar Perfil
+                                            </Button>
+                                        </Stack>
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+
+                            {/* Ubicaciones */}
+                            <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
+                                <CardContent sx={{ ...sectionContentSx, p: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                                        <Box>
+                                            <Typography sx={mutedLabelSx}>Ubicaciones</Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Direcciones</Typography>
+                                        </Box>
+                                        <Button
+                                            variant="outlined"
+                                            startIcon={hasAddress ? <Edit /> : <Home />}
+                                            sx={{ fontWeight: 700 }}
+                                            onClick={handleOpenAddressModal}
+                                        >
+                                            {hasAddress ? 'Editar dirección' : 'Agregar dirección'}
+                                        </Button>
+                                    </Stack>
+
+                                    {addressList.length === 0 ? (
+                                        <Alert severity="info" sx={{ mb: 1 }}>No tienes direcciones registradas.</Alert>
+                                    ) : (
+                                        <Stack spacing={1.2}>
+                                            {addressList.map((dir, index) => (
+                                                <Box
+                                                    key={dir.id_direccion || index}
+                                                    sx={{
+                                                        border: '1px solid #edf0f5',
+                                                        borderRadius: 2,
+                                                        p: 1.4,
+                                                        display: 'flex',
+                                                        gap: 1.4,
+                                                        alignItems: 'flex-start'
+                                                    }}
                                                 >
-                                                    {hasAddress ? 'Editar dirección' : 'Agregar dirección'}
-                                                </Button>
-                                            </Stack>
-
-                                            {userData.direcciones && userData.direcciones.length === 0 ? (
-                                                <Alert severity="info" sx={{ mb: 1 }}>No tienes direcciones registradas.</Alert>
-                                            ) : (
-                                                <Stack spacing={1.2}>
-                                                    {userData.direcciones && userData.direcciones.map((dir, index) => (
-                                                        <Box
-                                                            key={dir.id_direccion || index}
-                                                            sx={{
-                                                                border: '1px solid #edf0f5',
-                                                                borderRadius: 2,
-                                                                p: 1.4,
-                                                                display: 'flex',
-                                                                gap: 1.4,
-                                                                alignItems: 'flex-start'
-                                                            }}
-                                                        >
-                                                            <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                                                                <Home fontSize="small" />
-                                                            </Avatar>
-                                                            <Box sx={{ flex: 1 }}>
-                                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                    {`${dir.calle} ${dir.numero_exterior}${dir.numero_interior ? ' Int. ' + dir.numero_interior : ''}`}
-                                                                </Typography>
-                                                                <Typography variant="body2" color="text.secondary" sx={{ ...ellipsisText }}>
-                                                                    {`${dir.colonia}, ${dir.ciudad}, ${dir.estado} - CP ${dir.codigo_postal}`}
-                                                                </Typography>
-                                                            </Box>
+                                                        <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                                                            <Home fontSize="small" />
+                                                        </Avatar>
+                                                        <Box sx={{ flex: 1 }}>
+                                                            <Typography
+                                                                variant="subtitle1"
+                                                                sx={{
+                                                                    fontWeight: 700,
+                                                                    ...ellipsisText,
+                                                                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                                                    wordBreak: 'break-word'
+                                                                }}
+                                                            >
+                                                                {`${dir.calle} ${dir.numero_exterior}${dir.numero_interior ? ' Int. ' + dir.numero_interior : ''}`}
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="body2"
+                                                                color="text.secondary"
+                                                                sx={{
+                                                                    ...ellipsisText,
+                                                                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                                                    wordBreak: 'break-word'
+                                                                }}
+                                                            >
+                                                                {`${dir.colonia}, ${dir.ciudad}, ${dir.estado} - CP ${dir.codigo_postal}`}
+                                                            </Typography>
                                                         </Box>
-                                                    ))}
-                                                </Stack>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                                    </Box>
+                                                ))}
+                                        </Stack>
+                                    )}
+                                </CardContent>
+                            </Card>
 
-                                    <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
-                                        <CardContent sx={{ ...sectionContentSx, p: 3 }}>
-                                            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
-                                                <Box>
-                                                    <Typography sx={mutedLabelSx}>Agenda</Typography>
+                            {/* Citas */}
+                            <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
+                                <CardContent sx={{ ...sectionContentSx, p: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                                        <Box>
+                                            <Typography sx={mutedLabelSx}>Agenda</Typography>
                                                     <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Citas</Typography>
                                                 </Box>
-                                                <Button variant="contained" component={Link} to="/citas" sx={{ fontWeight: 700, boxShadow: 'none' }} >
+                                                <Button
+                                                    variant="contained"
+                                                    sx={{ fontWeight: 700, boxShadow: 'none' }}
+                                                    onClick={() => {
+                                                        setBookingError(null);
+                                                        setOpenBookCita(true);
+                                                        setBookingForm({ fecha_cita: '', motivo: '', observaciones: '', id_servicio: '', id_mascota: '' });
+                                                        fetchServicios();
+                                                    }}
+                                                >
                                                     Agendar nueva cita
                                                 </Button>
                                             </Stack>
@@ -1001,132 +1467,131 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
                                             ) : misCitas.length === 0 ? (
                                                 <Alert severity="info">No tienes citas programadas.</Alert>
-                                            ) : (
-                                                <Stack spacing={1.1}>
-                                                    {misCitas.map((cita) => {
-                                                        const estadoColor = cita.estado === 'aprobada' || cita.estado === 'confirmada'
-                                                            ? 'success'
-                                                            : cita.estado === 'rechazada'
-                                                                ? 'error'
-                                                                : 'warning';
+                                    ) : (
+                                        <Stack spacing={1.1}>
+                                            {misCitas.map((cita) => {
+                                                const estadoColor = cita.estado === 'aprobada' || cita.estado === 'confirmada'
+                                                    ? 'success'
+                                                    : cita.estado === 'rechazada'
+                                                        ? 'error'
+                                                        : 'warning';
 
-                                                        return (
-                                                            <Box
-                                                                key={cita.id_cita}
-                                                                sx={{
-                                                                    border: '1px solid #edf0f5',
-                                                                    borderRadius: 2,
-                                                                    p: 1.4,
-                                                                    display: 'flex',
-                                                                    flexDirection: { xs: 'column', sm: 'row' },
-                                                                    gap: 1.1,
-                                                                    alignItems: { sm: 'center' },
-                                                                    justifyContent: 'space-between'
-                                                                }}
-                                                            >
-                                                                <Stack direction="row" spacing={1.4} alignItems="center" sx={{ flex: 1 }}>
-                                                                    <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 42, height: 42 }}>
-                                                                        <Event fontSize="small" />
-                                                                    </Avatar>
-                                                                    <Box>
-                                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                            {cita.motivo || 'Cita veterinaria'}
-                                                                        </Typography>
-                                                                        <Typography variant="body2" color="text.secondary" sx={{ ...ellipsisText }}>
-                                                                            {`Fecha: ${new Date(cita.fecha_hora).toLocaleDateString()} · ${new Date(cita.fecha_hora).toLocaleTimeString()} `}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                </Stack>
-
-                                                                <Stack direction="row" spacing={1} alignItems="center">
-                                                                    <Chip
-                                                                        label={cita.estado}
-                                                                        color={estadoColor}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                    />
-                                                                    {cita.estado === 'pendiente' && (
-                                                                        <Button size="small" variant="outlined" color="error">Cancelar</Button>
-                                                                    )}
-                                                                </Stack>
+                                                return (
+                                                    <Box
+                                                        key={cita.id_cita}
+                                                        sx={{
+                                                            border: '1px solid #edf0f5',
+                                                            borderRadius: 2,
+                                                            p: 1.4,
+                                                            display: 'flex',
+                                                            flexDirection: { xs: 'column', sm: 'row' },
+                                                            gap: 1.1,
+                                                            alignItems: { sm: 'center' },
+                                                            justifyContent: 'space-between'
+                                                        }}
+                                                    >
+                                                        <Stack direction="row" spacing={1.4} alignItems="center" sx={{ flex: 1 }}>
+                                                            <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 42, height: 42 }}>
+                                                                <Event fontSize="small" />
+                                                            </Avatar>
+                                                            <Box>
+                                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
+                                                                    {cita.motivo || 'Cita veterinaria'}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary" sx={{ ...ellipsisText }}>
+                                                                    {`Fecha: ${new Date(cita.fecha_hora || cita.fecha_cita).toLocaleDateString()} · ${new Date(cita.fecha_hora || cita.fecha_cita).toLocaleTimeString()} `}
+                                                                </Typography>
                                                             </Box>
-                                                        );
-                                                    })}
-                                                </Stack>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                                        </Stack>
 
-                                    <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
-                                        <CardContent sx={{ ...sectionContentSx, p: 3 }}>
-                                            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
-                                                <Box>
-                                                    <Typography sx={mutedLabelSx}>Adopciones</Typography>
-                                                    <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Solicitudes</Typography>
-                                                </Box>
-                                                <Button variant="contained" component={Link} to="/adopciones" sx={{ fontWeight: 700, boxShadow: 'none' }} >
-                                                    Ver mascotas en adopción
-                                                </Button>
-                                            </Stack>
-                                            {loading ? (
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
-                                            ) : misAdopciones.length === 0 ? (
-                                                <Alert severity="info">No tienes solicitudes de adopción.</Alert>
-                                            ) : (
-                                                <Stack spacing={1.1}>
-                                                    {misAdopciones.map((adopcion) => {
-                                                        const estadoColor = adopcion.estado === 'aprobada'
-                                                            ? 'success'
-                                                            : adopcion.estado === 'rechazada'
-                                                                ? 'error'
-                                                                : 'warning';
-                                                        return (
-                                                            <Box
-                                                                key={adopcion.id_adopcion}
-                                                                sx={{
-                                                                    border: '1px solid #edf0f5',
-                                                                    borderRadius: 2,
-                                                                    p: 1.4,
-                                                                    display: 'flex',
-                                                                    flexDirection: { xs: 'column', sm: 'row' },
-                                                                    gap: 1.1,
-                                                                    alignItems: { sm: 'center' },
-                                                                    justifyContent: 'space-between'
-                                                                }}
-                                                            >
-                                                                <Stack direction="row" spacing={1.4} alignItems="center" sx={{ flex: 1 }}>
-                                                                    <Avatar sx={{ bgcolor: '#f0efff', color: 'secondary.main', width: 42, height: 42 }}>
-                                                                        <Pets fontSize="small" />
-                                                                    </Avatar>
-                                                                    <Box>
-                                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                            {`Mascota: ${adopcion.mascota?.nombre || 'N/A'}`}
-                                                                        </Typography>
-                                                                        <Typography variant="body2" color="text.secondary" sx={{ ...ellipsisText }}>
-                                                                            {`Fecha: ${new Date(adopcion.fecha_solicitud).toLocaleDateString()}`}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                </Stack>
-                                                                <Chip
-                                                                    label={adopcion.estado}
-                                                                    color={estadoColor}
-                                                                    size="small"
-                                                                    variant="outlined"
-                                                                />
+                                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                                                        {formatStatusLabel(cita.estado)}
+                                                    </Typography>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => handleOpenReschedule(cita)}
+                                                    >
+                                                        Reagendar
+                                                    </Button>
+                                                    {cita.estado === 'pendiente' && (
+                                                        <Button size="small" variant="outlined" color="error">Cancelar</Button>
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                                );
+                                            })}
+                                        </Stack>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Adopciones */}
+                            <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
+                                <CardContent sx={{ ...sectionContentSx, p: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                                        <Box>
+                                            <Typography sx={mutedLabelSx}>Adopciones</Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Solicitudes</Typography>
+                                        </Box>
+                                        <Button variant="contained" component={Link} to="/mascotas" sx={{ fontWeight: 700, boxShadow: 'none' }} >
+                                            Ver mascotas en adopción
+                                        </Button>
+                                    </Stack>
+                                    {loading ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
+                                    ) : misAdopciones.length === 0 ? (
+                                        <Alert severity="info">No tienes solicitudes de adopción.</Alert>
+                                    ) : (
+                                        <Stack spacing={1.1}>
+                                            {misAdopciones.map((adopcion) => {
+                                                const estadoColor = adopcion.estado === 'aprobada'
+                                                    ? 'success'
+                                                    : adopcion.estado === 'rechazada'
+                                                        ? 'error'
+                                                        : 'warning';
+                                                return (
+                                                    <Box
+                                                        key={adopcion.id_adopcion}
+                                                        sx={{
+                                                            border: '1px solid #edf0f5',
+                                                            borderRadius: 2,
+                                                            p: 1.4,
+                                                            display: 'flex',
+                                                            flexDirection: { xs: 'column', sm: 'row' },
+                                                            gap: 1.1,
+                                                            alignItems: { sm: 'center' },
+                                                            justifyContent: 'space-between'
+                                                        }}
+                                                    >
+                                                        <Stack direction="row" spacing={1.4} alignItems="center" sx={{ flex: 1 }}>
+                                                            <Avatar sx={{ bgcolor: '#f0efff', color: 'secondary.main', width: 42, height: 42 }}>
+                                                                <Pets fontSize="small" />
+                                                            </Avatar>
+                                                            <Box>
+                                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
+                                                                    {`Mascota: ${adopcion.mascota?.nombre || 'N/A'}`}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary" sx={{ ...ellipsisText }}>
+                                                                    {`Fecha: ${new Date(adopcion.fecha_solicitud).toLocaleDateString()}`}
+                                                                </Typography>
                                                             </Box>
-                                                        );
-                                                    })}
-                                                </Stack>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </Stack>
-                            </Grid>
-                        </Grid>
-                    )}
-
-                    {isAuthenticated && userData && (
-                        <Box sx={{ mt: 3.5 }}>
+                                                        </Stack>
+                                                        <Chip
+                                                            label={formatStatusLabel(adopcion.estado)}
+                                                            color={estadoColor}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    </Box>
+                                                );
+                                            })}
+                                        </Stack>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            {/* Documentos oficiales */}
                             <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
                                 <CardContent sx={{ ...sectionContentSx, p: 3 }}>
                                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
@@ -1143,10 +1608,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                             const hasDoc = Boolean(pendingFile || existingUrl || currentPreview);
                                             const statusLabel = pendingFile
                                                 ? `Pendiente de envío (${pendingFile.name})`
-                                                : existingUrl
+                                                : hasDoc
                                                     ? 'Documento cargado'
                                                     : 'Sin documento';
-                                            const statusColor = pendingFile ? 'warning' : existingUrl ? 'success' : 'default';
+                                            const statusColor = pendingFile ? 'warning' : hasDoc ? 'success' : 'default';
                                             return (
                                                 <Box
                                                     key={doc.key}
@@ -1220,17 +1685,17 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                         <Box
                                                             component="img"
                                                             src={currentPreview}
-                                                        alt={`Vista previa de ${doc.label}`}
-                                                        sx={{ mt: { xs: 1, sm: 0 }, maxHeight: 120, borderRadius: 1.5, border: '1px solid #edf0f5' }}
-                                                    />
-                                                )}
-                                            </Box>
-                                        );
-                                    })}
-                                </Stack>
-                            </CardContent>
+                                                            alt={`Vista previa de ${doc.label}`}
+                                                            sx={{ mt: { xs: 1, sm: 0 }, maxHeight: 120, maxWidth: '100%', borderRadius: 1.5, border: '1px solid #edf0f5' }}
+                                                        />
+                                                    )}
+                                                </Box>
+                                            );
+                                        })}
+                                    </Stack>
+                                </CardContent>
                             </Card>
-                        </Box>
+                        </Stack>
                     )}
 
                 </Container>
@@ -1251,10 +1716,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                 <DialogContent>
                     <Box sx={{ textAlign: 'center', py: 3 }}>
                         <Avatar
-                            src={photoPreview || (userData?.foto_perfil_base64 ? `data:image/jpeg;base64,${userData.foto_perfil_base64}` : undefined)}
+                            src={profilePhotoSrc || undefined}
                             sx={{ width: 150, height: 150, mx: 'auto', mb: 3 }}
                         >
-                            {!photoPreview && !userData?.foto_perfil_base64 && userData?.nombre?.charAt(0).toUpperCase()}
+                            {!profilePhotoSrc && userData?.nombre?.charAt(0).toUpperCase()}
                         </Avatar>
                         <input
                             accept="image/*"
@@ -1409,6 +1874,143 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                     <Button onClick={() => setOpenAddAddress(false)}>Cancelar</Button>
                     <Button onClick={handleAddAddress} variant="contained">
                         {hasAddress ? 'Guardar cambios' : 'Agregar Dirección'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Modal: Agendar Cita */}
+            <Dialog open={openBookCita} onClose={() => setOpenBookCita(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    Agendar nueva cita
+                    <IconButton onClick={() => setOpenBookCita(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <TextField
+                            label="Fecha y hora"
+                            type="datetime-local"
+                            value={bookingForm.fecha_cita}
+                            onChange={(e) => setBookingForm({ ...bookingForm, fecha_cita: e.target.value })}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            required
+                            inputProps={{ min: toInputDateTime(new Date()) }}
+                        />
+                        <TextField
+                            label="Motivo"
+                            value={bookingForm.motivo}
+                            onChange={(e) => setBookingForm({ ...bookingForm, motivo: e.target.value })}
+                            fullWidth
+                            required
+                        />
+                        <TextField
+                            label="Mascota"
+                            select
+                            value={bookingForm.id_mascota}
+                            onChange={(e) => setBookingForm({ ...bookingForm, id_mascota: e.target.value })}
+                            fullWidth
+                            required={hasMascotas}
+                            disabled={!hasMascotas || adoptedMascotas.length === 0}
+                            helperText={hasMascotas ? 'Selecciona tu mascota para la cita' : 'Aún no tienes mascotas adoptadas'}
+                        >
+                            <MenuItem value="">Selecciona una mascota</MenuItem>
+                            {adoptedMascotas.map((m) => (
+                                <MenuItem key={m.id_mascota || m.id} value={m.id_mascota || m.id}>
+                                    {m.nombre || 'Mascota'}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <TextField
+                            label="Observaciones"
+                            value={bookingForm.observaciones}
+                            onChange={(e) => setBookingForm({ ...bookingForm, observaciones: e.target.value })}
+                            fullWidth
+                            multiline
+                            minRows={2}
+                        />
+                        <TextField
+                            label="Servicio"
+                            select
+                            value={bookingForm.id_servicio}
+                            onChange={(e) => setBookingForm({ ...bookingForm, id_servicio: e.target.value })}
+                            fullWidth
+                            disabled={serviciosLoading}
+                            required
+                            helperText={
+                                hasMascotas
+                                    ? 'Selecciona el servicio'
+                                    : filteredServicios.length
+                                        ? 'Solo servicios relacionados con adopción'
+                                        : 'Agrega una mascota adoptada para ver más servicios'
+                            }
+                        >
+                            <MenuItem value="">Sin seleccionar</MenuItem>
+                            {filteredServicios.map((srv) => (
+                                <MenuItem key={srv.id_servicio || srv.id} value={srv.id_servicio || srv.id}>
+                                    {srv.nombre}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        {bookingError && (
+                            <Alert severity="error" onClose={() => setBookingError(null)}>
+                                {bookingError}
+                            </Alert>
+                        )}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenBookCita(false)} disabled={bookingLoading}>Cancelar</Button>
+                    <Button
+                        onClick={handleSubmitCita}
+                        variant="contained"
+                        disabled={bookingLoading}
+                        startIcon={bookingLoading ? <CircularProgress size={16} color="inherit" /> : null}
+                    >
+                        Agendar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Modal: Reagendar Cita */}
+            <Dialog open={openReschedule} onClose={() => setOpenReschedule(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    Reagendar cita
+                    <IconButton onClick={() => setOpenReschedule(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <TextField
+                            label="Nueva fecha y hora"
+                            type="datetime-local"
+                            value={rescheduleDate}
+                            onChange={(e) => setRescheduleDate(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            inputProps={{ min: toInputDateTime(new Date()) }}
+                        />
+                        {rescheduleTarget?.servicio?.nombre && (
+                            <Alert severity="info">Servicio: {rescheduleTarget.servicio.nombre}</Alert>
+                        )}
+                        {rescheduleError && (
+                            <Alert severity="error" onClose={() => setRescheduleError(null)}>
+                                {rescheduleError}
+                            </Alert>
+                        )}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenReschedule(false)} disabled={rescheduleLoading}>Cancelar</Button>
+                    <Button
+                        onClick={handleSubmitReschedule}
+                        variant="contained"
+                        disabled={rescheduleLoading}
+                        startIcon={rescheduleLoading ? <CircularProgress size={16} color="inherit" /> : null}
+                    >
+                        Guardar
                     </Button>
                 </DialogActions>
             </Dialog>
