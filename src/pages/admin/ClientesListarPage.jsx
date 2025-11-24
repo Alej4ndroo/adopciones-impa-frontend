@@ -53,8 +53,10 @@ const MobileClientCard = ({ cliente, onDelete }) => {
 
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${cliente.nombre}?`)) {
-            onDelete(cliente.id_usuario);
+        const nextState = !cliente.activo;
+        const actionLabel = nextState ? 'activar' : 'desactivar';
+        if (window.confirm(`¿Seguro que deseas ${actionLabel} a ${cliente.nombre}?`)) {
+            onDelete(cliente.id_usuario, nextState);
         }
     };
 
@@ -195,11 +197,11 @@ const MobileClientCard = ({ cliente, onDelete }) => {
                             fullWidth
                             variant="outlined"
                             startIcon={<DeleteIcon />}
-                            color="error"
+                            color={cliente.activo ? 'error' : 'success'}
                             onClick={handleDelete}
                             sx={{ fontWeight: 600 }}
                         >
-                            Eliminar
+                            {cliente.activo ? 'Desactivar' : 'Activar'}
                         </Button>
                     </Stack>
                 </Box>
@@ -234,8 +236,10 @@ const ClientRow = ({ cliente, onDelete }) => {
 
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${cliente.nombre}?`)) {
-            onDelete(cliente.id_usuario);
+        const nextState = !cliente.activo;
+        const actionLabel = nextState ? 'activar' : 'desactivar';
+        if (window.confirm(`¿Seguro que deseas ${actionLabel} a ${cliente.nombre}?`)) {
+            onDelete(cliente.id_usuario, nextState);
         }
     };
 
@@ -507,7 +511,7 @@ const ClientRow = ({ cliente, onDelete }) => {
                                             fullWidth={{ xs: true, sm: false }}
                                             variant="outlined"
                                             startIcon={<DeleteIcon />}
-                                            color="error"
+                                            color={cliente.activo ? 'error' : 'success'}
                                             onClick={handleDelete}
                                             sx={{
                                                 borderRadius: 2,
@@ -515,7 +519,7 @@ const ClientRow = ({ cliente, onDelete }) => {
                                                 px: 3
                                             }}
                                         >
-                                            Eliminar
+                                            {cliente.activo ? 'Desactivar' : 'Activar'}
                                         </Button>
                                         <Button
                                             fullWidth={{ xs: true, sm: false }}
@@ -619,11 +623,36 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         }
     }, [searchTerm, clientes]);
 
-    const handleDelete = async (idCliente) => {
-        // Aquí implementarías la lógica de eliminación
-        console.log('Eliminar cliente:', idCliente);
-        // Después de eliminar, vuelve a cargar la lista
-        fetchClientes();
+    const handleDelete = async (idCliente, nextState = false) => {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+        const confirm = window.confirm(
+            nextState
+                ? '¿Deseas activar a este cliente?'
+                : '¿Deseas marcar como inactivo a este cliente?'
+        );
+        if (!confirm) return;
+
+        try {
+            await axios.put(
+                `${API_URL_BACKEND}/usuarios/actualizar/${idCliente}`,
+                { activo: nextState },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setClientes((prev) =>
+                prev.map((c) => (c.id_usuario === idCliente ? { ...c, activo: nextState } : c))
+            );
+            setFilteredClientes((prev) =>
+                prev.map((c) => (c.id_usuario === idCliente ? { ...c, activo: nextState } : c))
+            );
+        } catch (err) {
+            console.error('Error al desactivar cliente:', err);
+            setError('No se pudo actualizar el estado. Verifica permisos o intenta más tarde.');
+        }
     };
 
     if (loading) {
