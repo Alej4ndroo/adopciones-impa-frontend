@@ -25,16 +25,12 @@ const routeMap = {
     'Gestionar Clientes': '/dashboard/personas/gestion',
     'Ver Mascotas': '/dashboard/mascotas/ver',
     'Registrar Mascota': '/dashboard/mascotas/registrar',
-    'Editar/Eliminar Mascota': '/dashboard/mascotas/gestion',
     'Ver Citas': '/dashboard/citas/ver',
     'Nueva Cita': '/dashboard/citas/crear',
-    'Editar/Cancelar': '/dashboard/citas/gestion',
     'Ver Solicitudes': '/dashboard/adopciones/ver',
-    'Aprobar/Rechazar': '/dashboard/adopciones/gestion',
     'Crear Adopción': '/dashboard/adopciones/crear',
     'Ver Consultas': '/dashboard/consultas/ver',
     'Crear Consulta': '/dashboard/consultas/crear',
-    'Editar Consulta': '/dashboard/consultas/editar',
     'Ver Documentos': '/dashboard/documentos/ver',
     'Verificar Documento': '/dashboard/documentos/verificar',
 };
@@ -44,7 +40,7 @@ const getIconAndColorForSubmenu = (name) => {
     if (lowerName.includes('eliminar') || lowerName.includes('cancelar') || lowerName.includes('rechazar')) {
         return { Icon: Trash2, color: '#F44336' };
     }
-    if (lowerName.includes('crear') || lowerName.includes('nuevo') || lowerName.includes('registrar') || lowerName.includes('aprobar') || lowerName.includes('verificar')) {
+    if (lowerName.includes('crear') || lowerName.includes('nuevo') || lowerName.includes('nueva') || lowerName.includes('registrar') || lowerName.includes('aprobar') || lowerName.includes('verificar')) {
         return { Icon: Plus, color: '#2196F3' };
     }
     if (lowerName.includes('editar')) {
@@ -61,36 +57,26 @@ const menuItems = [
     { name: 'Empleados', icon: Briefcase, requiredPermissions: ['ver_empleado', 'crear_empleado', 'editar_empleado'], subMenu: [
             { name: 'Ver Empleados', requiredPermissions: ['ver_empleado'] },
             { name: 'Crear Empleado', requiredPermissions: ['crear_empleado'] },
-            { name: 'Gestionar Empleados', requiredPermissions: ['editar_empleado', 'eliminar_empleado'] },
     ] },
     { name: 'Clientes', icon: Users, requiredPermissions: ['ver_usuario', 'crear_usuario', 'editar_usuario'], subMenu: [
             { name: 'Ver Clientes', requiredPermissions: ['ver_usuario'] },
             { name: 'Crear Cliente', requiredPermissions: ['crear_usuario'] },
-            { name: 'Gestionar Clientes', requiredPermissions: ['editar_usuario', 'eliminar_usuario'] },
     ] },
     { name: 'Mascotas', icon: Heart, requiredPermissions: ['ver_mascota', 'crear_mascota'], subMenu: [
       { name: 'Ver Mascotas', requiredPermissions: ['ver_mascota'] },
-      { name: 'Registrar Mascota', requiredPermissions: ['crear_mascota'] },
-      { name: 'Editar/Eliminar', requiredPermissions: ['editar_mascota', 'eliminar_mascota'] },
+      { name: 'Registrar Mascota', requiredPermissions: ['crear_mascota'] }
     ] },
     { name: 'Citas', icon: Stethoscope, requiredPermissions: ['ver_cita', 'crear_cita'], subMenu: [
       { name: 'Ver Citas', requiredPermissions: ['ver_cita'] },
-      { name: 'Nueva Cita', requiredPermissions: ['crear_cita'] },
-      { name: 'Editar/Cancelar', requiredPermissions: ['editar_cita', 'cancelar_cita'] },
+      { name: 'Nueva Cita', requiredPermissions: ['crear_cita'] }
     ] },
     { name: 'Adopciones', icon: Home, requiredPermissions: ['ver_adopcion', 'aprobar_adopcion'], subMenu: [
       { name: 'Ver Solicitudes', requiredPermissions: ['ver_adopcion'] },
-      { name: 'Aprobar/Rechazar', requiredPermissions: ['aprobar_adopcion', 'rechazar_adopcion'] },
       { name: 'Crear Adopción', requiredPermissions: ['crear_adopcion'] },
     ] },
     { name: 'Consultas Médicas', icon: BarChart2, requiredPermissions: ['ver_consulta', 'crear_consulta'], subMenu: [
       { name: 'Ver Consultas', requiredPermissions: ['ver_consulta'] },
-      { name: 'Crear Consulta', requiredPermissions: ['crear_consulta'] },
-      { name: 'Editar Consulta', requiredPermissions: ['editar_consulta'] },
-    ] },
-    { name: 'Documentos', icon: BookOpen, requiredPermissions: ['ver_documento'], subMenu: [
-      { name: 'Ver Documentos', requiredPermissions: ['ver_documento'] },
-      { name: 'Verificar Documento', requiredPermissions: ['verificar_documento', 'rechazar_documento'] },
+      { name: 'Crear Consulta', requiredPermissions: ['crear_consulta'] }
     ] },
 ];
 

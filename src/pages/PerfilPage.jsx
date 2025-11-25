@@ -652,7 +652,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                 archivo_base64: base64.startsWith('data:') ? base64 : `data:${mime};base64,${base64}`
             };
 
-            const res = await fetch(`${VITE_API_URL_BACKEND}/personas/subir-documento`, {
+            const res = await fetch(`${VITE_API_URL_BACKEND}/usuarios/subir-documento`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

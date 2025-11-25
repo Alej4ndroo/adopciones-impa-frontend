@@ -7,7 +7,9 @@ import {
     TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
     Stack, alpha, Card, IconButton, Tooltip, Collapse, Avatar,
     TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
-    Grid, Divider, Button, useMediaQuery, Badge
+    Grid, Divider, Button, useMediaQuery, Badge,
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    RadioGroup, Radio, FormControlLabel
 } from '@mui/material';
 import { 
     Event as EventIcon,
@@ -40,20 +42,18 @@ const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CITAS_ENDPOINT = '/citas/listar';
 
 // Componente de tarjeta para móviles
-const MobileCitaCard = ({ cita, onEdit, onDelete, onView }) => {
+const MobileCitaCard = ({ cita, onEdit, onReschedule, onView }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        if (onEdit) onEdit(cita.id_cita);
+        if (onEdit) onEdit(cita);
     };
 
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar la cita #${cita.id_cita}?`)) {
-            if (onDelete) onDelete(cita.id_cita);
-        }
+        if (onReschedule) onReschedule(cita);
     };
 
     const handleView = (e) => {
@@ -334,7 +334,7 @@ const MobileCitaCard = ({ cita, onEdit, onDelete, onView }) => {
                                 onClick={handleDelete}
                                 sx={{ fontWeight: 600 }}
                             >
-                                Eliminar
+                                Finalizar / Reagendar
                             </Button>
                         </Stack>
                     </Stack>
@@ -345,20 +345,18 @@ const MobileCitaCard = ({ cita, onEdit, onDelete, onView }) => {
 };
 
 // Componente de fila expandible para tabla
-const CitaRow = ({ cita, onEdit, onDelete, onView }) => {
+const CitaRow = ({ cita, onEdit, onReschedule, onView }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        if (onEdit) onEdit(cita.id_cita);
+        if (onEdit) onEdit(cita);
     };
 
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar la cita #${cita.id_cita}?`)) {
-            if (onDelete) onDelete(cita.id_cita);
-        }
+        if (onReschedule) onReschedule(cita);
     };
 
     const handleView = (e) => {
@@ -627,6 +625,17 @@ const CitaRow = ({ cita, onEdit, onDelete, onView }) => {
                                                         </Box>
                                                     </Box>
                                                 )}
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                                                        <PetsIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
+                                                    </Box>
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary">Mascota</Typography>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {cita.mascota?.nombre || 'No aplica (adopción)'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
                                             </Stack>
                                         </Card>
                                     </Grid>
@@ -789,49 +798,49 @@ const CitaRow = ({ cita, onEdit, onDelete, onView }) => {
                                     </Grid>
                                 )}
 
-                                {/* Botones de acción */}
-                                <Grid item xs={12}>
-                                    <Divider sx={{ my: 1 }} />
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
+                            </Grid>
+                            {/* Botones de acción */}
+                            <Box sx={{ mx: -2, px: 2 }}>
+                                <Divider sx={{ my: 2 }} />
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                                         <Button
                                             variant="outlined"
                                             startIcon={<DeleteIcon />}
                                             color="error"
-                                            onClick={handleDelete}
+                                            onClick={() => onReschedule?.(cita)}
                                             sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
                                         >
-                                            Eliminar
+                                            Finalizar / Reagendar
                                         </Button>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<EditIcon />}
-                                            onClick={handleEdit}
-                                            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
-                                        >
-                                            Editar
-                                        </Button>
-                                        <Button
-                                            variant="contained"
-                                            startIcon={<VisibilityIcon />}
-                                            onClick={handleView}
-                                            sx={{
-                                                borderRadius: 2,
-                                                fontWeight: 600,
-                                                px: 3,
-                                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
-                                                boxShadow: theme.shadows[4],
-                                                '&:hover': {
-                                                    boxShadow: theme.shadows[8],
-                                                    transform: 'translateY(-2px)'
-                                                },
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                        >
-                                            Ver Detalles
-                                        </Button>
-                                    </Stack>
-                                </Grid>
-                            </Grid>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<EditIcon />}
+                                        onClick={handleEdit}
+                                        sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
+                                    >
+                                        Editar
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<VisibilityIcon />}
+                                        onClick={handleView}
+                                        sx={{
+                                            borderRadius: 2,
+                                            fontWeight: 600,
+                                            px: 3,
+                                            background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                            boxShadow: theme.shadows[4],
+                                            '&:hover': {
+                                                boxShadow: theme.shadows[8],
+                                                transform: 'translateY(-2px)'
+                                            },
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    >
+                                        Ver Detalles
+                                    </Button>
+                                </Stack>
+                            </Box>
                         </Box>
                     </Collapse>
                 </TableCell>
@@ -855,6 +864,26 @@ const CitasListarPage = ({ isManagementView = false }) => {
     const [showFilters, setShowFilters] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+    const [selectedCita, setSelectedCita] = useState(null);
+    const [rescheduleDateTime, setRescheduleDateTime] = useState('');
+    const [rescheduleAction, setRescheduleAction] = useState('finalizar');
+    const [rescheduleError, setRescheduleError] = useState('');
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editError, setEditError] = useState('');
+    const [editForm, setEditForm] = useState({
+        id_usuario: '',
+        id_mascota: '',
+        id_empleado: '',
+        id_servicio: '',
+        motivo: '',
+        observaciones: '',
+        costo: ''
+    });
+    const [usuarios, setUsuarios] = useState([]);
+    const [mascotas, setMascotas] = useState([]);
+    const [empleados, setEmpleados] = useState([]);
+    const [servicios, setServicios] = useState([]);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -884,8 +913,6 @@ const CitasListarPage = ({ isManagementView = false }) => {
             if (!receivedCitas.length) {
                 setError("No se encontraron citas en el sistema.");
             }
-
-            console.log('Citas recibidas:', receivedCitas);
             setCitas(receivedCitas);
             setFilteredCitas(receivedCitas);
         } catch (err) {
@@ -958,6 +985,29 @@ const CitasListarPage = ({ isManagementView = false }) => {
         setFilteredCitas(filtered);
     }, [searchTerm, filters, citas]);
 
+    useEffect(() => {
+        const fetchCatalogs = async () => {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const headers = { Authorization: `Bearer ${token}` };
+                const [usuariosRes, mascotasRes, empleadosRes, serviciosRes] = await Promise.all([
+                    axios.get(`${API_URL_BACKEND}/usuarios/listar`, { headers }),
+                    axios.get(`${API_URL_BACKEND}/mascotas/listar`, { headers }),
+                    axios.get(`${API_URL_BACKEND}/empleados/listar`, { headers }),
+                    axios.get(`${API_URL_BACKEND}/servicios/listar`, { headers })
+                ]);
+                setUsuarios(Array.isArray(usuariosRes.data) ? usuariosRes.data : usuariosRes.data?.usuarios || []);
+                setMascotas(Array.isArray(mascotasRes.data) ? mascotasRes.data : mascotasRes.data?.mascotas || []);
+                setEmpleados(Array.isArray(empleadosRes.data) ? empleadosRes.data : empleadosRes.data?.empleados || []);
+                setServicios(Array.isArray(serviciosRes.data) ? serviciosRes.data : serviciosRes.data?.servicios || []);
+            } catch (err) {
+                console.error('Error al cargar catálogos para edición de cita:', err);
+            }
+        };
+        fetchCatalogs();
+    }, []);
+
     const handleFilterChange = (filterName, value) => {
         setFilters(prev => ({
             ...prev,
@@ -978,14 +1028,188 @@ const CitasListarPage = ({ isManagementView = false }) => {
 
     const activeFiltersCount = Object.values(filters).filter(v => v !== '').length + (searchTerm ? 1 : 0);
 
-    const handleEdit = (idCita) => {
-        navigate(`/admin/citas/editar/${idCita}`);
+    const handleEdit = (cita) => {
+        if (!cita) return;
+        setSelectedCita(cita);
+        setEditForm({
+            id_usuario: cita.usuario?.id_usuario || '',
+            id_mascota: cita.mascota?.id_mascota || '',
+            id_empleado: cita.empleado?.id_empleado || '',
+            id_servicio: cita.servicio?.id_servicio || '',
+            motivo: cita.motivo || '',
+            observaciones: cita.observaciones || '',
+            costo: cita.costo || ''
+        });
+        setEditError('');
+        setEditDialogOpen(true);
     };
 
-    const handleDelete = async (idCita) => {
-        console.log('Eliminar cita:', idCita);
-        // Implementar lógica de eliminación
-        fetchCitas();
+    const formatDateTimeLocal = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const tzOffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+    };
+
+    const openRescheduleDialog = (cita) => {
+        setSelectedCita(cita);
+        setRescheduleAction('finalizar');
+        setRescheduleDateTime(formatDateTimeLocal(cita.fecha_cita));
+        setRescheduleError('');
+        setRescheduleDialogOpen(true);
+    };
+
+    const closeRescheduleDialog = () => {
+        setRescheduleDialogOpen(false);
+        setSelectedCita(null);
+        setRescheduleDateTime('');
+        setRescheduleAction('finalizar');
+        setRescheduleError('');
+    };
+
+    const closeEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedCita(null);
+        setEditError('');
+        setEditForm({
+            id_usuario: '',
+            id_mascota: '',
+            id_empleado: '',
+            id_servicio: '',
+            motivo: '',
+            observaciones: '',
+            costo: ''
+        });
+    };
+
+    const getTodayMinLocal = () => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+    };
+
+    const handleRescheduleSubmit = async () => {
+        if (!selectedCita) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+
+        let payload = { fecha_cita: selectedCita.fecha_cita, estado_cita: 'completada' };
+
+        if (rescheduleAction === 'reagendar') {
+            if (!rescheduleDateTime) {
+                setRescheduleError('Selecciona fecha y hora');
+                return;
+            }
+            const newDate = new Date(rescheduleDateTime);
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            if (newDate < todayStart) {
+                setRescheduleError('No puedes seleccionar una fecha anterior a hoy.');
+                return;
+            }
+            const hours = newDate.getHours();
+            const minutes = newDate.getMinutes();
+            if (hours < 10 || hours > 17 || (hours === 17 && minutes > 30)) {
+                setRescheduleError('Horario válido: 10:00 a 18:00 (último turno 17:30)');
+                return;
+            }
+            if (minutes !== 0 && minutes !== 30) {
+                setRescheduleError('Solo intervalos de 30 minutos (00 o 30).');
+                return;
+            }
+            const serviceId = selectedCita.servicio?.id_servicio;
+            const newTs = newDate.getTime();
+            const conflict = citas.some((c) =>
+                c.id_cita !== selectedCita.id_cita &&
+                c.servicio?.id_servicio === serviceId &&
+                new Date(c.fecha_cita).getTime() === newTs
+            );
+            if (conflict) {
+                setRescheduleError('Ya hay una cita del mismo servicio en ese horario.');
+                return;
+            }
+            payload = { fecha_cita: newDate.toISOString(), estado_cita: 'programada' };
+        }
+
+        try {
+            await axios.put(
+                `${API_URL_BACKEND}/citas/actualizar-fecha/${selectedCita.id_cita}`,
+                payload,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const updater = (list) =>
+                list.map((c) => {
+                    if (c.id_cita !== selectedCita.id_cita) return c;
+                    return {
+                        ...c,
+                        fecha_cita: rescheduleAction === 'reagendar' ? payload.fecha_cita : c.fecha_cita,
+                        estado_cita: payload.estado_cita
+                    };
+                });
+            setCitas(updater);
+            setFilteredCitas(updater);
+            closeRescheduleDialog();
+        } catch (err) {
+            console.error('Error al actualizar cita:', err);
+            setRescheduleError('No se pudo actualizar la cita. Intenta nuevamente.');
+        }
+    };
+
+    const handleEditSubmit = async () => {
+        if (!selectedCita) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+        try {
+            const payload = {
+                ...editForm,
+                id_usuario: editForm.id_usuario ? Number(editForm.id_usuario) : null,
+                id_mascota: editForm.id_mascota ? Number(editForm.id_mascota) : null,
+                id_empleado: editForm.id_empleado ? Number(editForm.id_empleado) : null,
+                id_servicio: editForm.id_servicio ? Number(editForm.id_servicio) : null,
+                fecha_cita: selectedCita.fecha_cita,
+                estado_cita: selectedCita.estado_cita
+            };
+            await axios.put(
+                `${API_URL_BACKEND}/citas/actualizar/${selectedCita.id_cita}`,
+                payload,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const updater = (list) =>
+                list.map((c) =>
+                    c.id_cita === selectedCita.id_cita
+                        ? {
+                            ...c,
+                            ...payload,
+                            usuario: payload.id_usuario
+                                ? usuarios.find((u) => u.id_usuario === payload.id_usuario) || c.usuario
+                                : c.usuario,
+                            mascota: payload.id_mascota
+                                ? mascotas.find((m) => m.id_mascota === payload.id_mascota) || c.mascota
+                                : c.mascota,
+                            empleado: payload.id_empleado
+                                ? empleados.find((e) => e.id_empleado === payload.id_empleado) || c.empleado
+                                : c.empleado,
+                            servicio: payload.id_servicio
+                                ? servicios.find((s) => s.id_servicio === payload.id_servicio) || c.servicio
+                                : c.servicio
+                        }
+                        : c
+                );
+            setCitas(updater);
+            setFilteredCitas(updater);
+            closeEditDialog();
+        } catch (err) {
+            console.error('Error al editar cita:', err);
+            setEditError('No se pudo guardar los cambios. Intenta nuevamente.');
+        }
     };
 
     const handleView = (idCita) => {
@@ -1226,7 +1450,7 @@ const CitasListarPage = ({ isManagementView = false }) => {
                             key={cita.id_cita}
                             cita={cita}
                             onEdit={handleEdit}
-                            onDelete={handleDelete}
+                            onReschedule={openRescheduleDialog}
                             onView={handleView}
                         />
                     ))}
@@ -1269,7 +1493,7 @@ const CitasListarPage = ({ isManagementView = false }) => {
                                     key={cita.id_cita}
                                     cita={cita}
                                     onEdit={handleEdit}
-                                    onDelete={handleDelete}
+                                    onReschedule={openRescheduleDialog}
                                     onView={handleView}
                                 />
                             ))}
@@ -1277,6 +1501,136 @@ const CitasListarPage = ({ isManagementView = false }) => {
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog open={rescheduleDialogOpen} onClose={closeRescheduleDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Finalizar o reagendar cita</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        <RadioGroup
+                            value={rescheduleAction}
+                            onChange={(e) => setRescheduleAction(e.target.value)}
+                        >
+                            <FormControlLabel value="finalizar" control={<Radio />} label="Marcar como completada" />
+                            <FormControlLabel value="reagendar" control={<Radio />} label="Reagendar" />
+                        </RadioGroup>
+                        {rescheduleAction === 'reagendar' && (
+                            <TextField
+                                label="Nueva fecha y hora"
+                                type="datetime-local"
+                                fullWidth
+                                value={rescheduleDateTime}
+                                onChange={(e) => setRescheduleDateTime(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                inputProps={{ min: getTodayMinLocal() }}
+                                helperText="Horario permitido: 10:00 a 18:00 (intervalos de 30 min)"
+                            />
+                        )}
+                        {rescheduleError && (
+                            <Alert severity="error" onClose={() => setRescheduleError('')}>
+                                {rescheduleError}
+                            </Alert>
+                        )}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeRescheduleDialog}>Cancelar</Button>
+                    <Button variant="contained" onClick={handleRescheduleSubmit}>
+                        Guardar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={editDialogOpen} onClose={closeEditDialog} fullWidth maxWidth="xs">
+                <DialogTitle>Editar estado de la cita</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Cliente</InputLabel>
+                            <Select
+                                label="Cliente"
+                                value={editForm.id_usuario}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, id_usuario: e.target.value }))}
+                            >
+                                <MenuItem value="">Sin cliente</MenuItem>
+                                {usuarios.map((u) => (
+                                    <MenuItem key={u.id_usuario} value={u.id_usuario}>{u.nombre}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel>Mascota</InputLabel>
+                            <Select
+                                label="Mascota"
+                                value={editForm.id_mascota}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, id_mascota: e.target.value }))}
+                            >
+                                <MenuItem value="">Sin mascota</MenuItem>
+                                {mascotas.map((m) => (
+                                    <MenuItem key={m.id_mascota} value={m.id_mascota}>{`${m.nombre} (${m.especie})`}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel>Empleado</InputLabel>
+                            <Select
+                                label="Empleado"
+                                value={editForm.id_empleado}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, id_empleado: e.target.value }))}
+                            >
+                                <MenuItem value="">Sin empleado</MenuItem>
+                                {empleados.map((em) => (
+                                    <MenuItem key={em.id_empleado} value={em.id_empleado}>{em.usuarios?.nombre || em.nombre}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel>Servicio</InputLabel>
+                            <Select
+                                label="Servicio"
+                                value={editForm.id_servicio}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, id_servicio: e.target.value }))}
+                            >
+                                <MenuItem value="">Sin servicio</MenuItem>
+                                {servicios.map((s) => (
+                                    <MenuItem key={s.id_servicio} value={s.id_servicio}>{s.nombre}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            label="Motivo"
+                            value={editForm.motivo}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, motivo: e.target.value }))}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Observaciones"
+                            multiline
+                            minRows={2}
+                            value={editForm.observaciones}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, observaciones: e.target.value }))}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Costo"
+                            type="number"
+                            value={editForm.costo}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, costo: e.target.value }))}
+                            fullWidth
+                        />
+                        {editError && (
+                            <Alert severity="error" onClose={() => setEditError('')}>
+                                {editError}
+                            </Alert>
+                        )}
+                        <Typography variant="body2" color="text.secondary">
+                            El horario no se modifica aquí. Usa “Finalizar / Reagendar” para cambiar fecha/hora.
+                        </Typography>
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeEditDialog}>Cancelar</Button>
+                    <Button variant="contained" onClick={handleEditSubmit}>Guardar</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

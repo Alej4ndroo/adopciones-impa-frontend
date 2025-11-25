@@ -54,6 +54,8 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
         fecha_nacimiento: '', 
         telefono: '',
         calle: '', 
+        numero_exterior: '',
+        numero_interior: '',
         colonia: '',
         codigo_postal: '',
         ciudad: '',
@@ -68,13 +70,48 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
     const [passwordError, setPasswordError] = useState(null);
+    const [emailError, setEmailError] = useState(null);
+
+    const todayMinus18 = (() => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - 18);
+        return d.toISOString().split('T')[0];
+    })();
+
+    const sanitizeDigits = (value, maxLength) => value.replace(/\D/g, '').slice(0, maxLength);
+    const sanitizePhone = (value) => sanitizeDigits(value, 10);
+    const sanitizeCp = (value) => sanitizeDigits(value, 5);
+    const sanitizeNumero = (value) => sanitizeDigits(value, 5);
+    const isValidEmail = (val) => /^[\w.-]+@([\w-]+\.)+[\w-]{2,}$/i.test(val);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        
+
         if (name === 'contrasena') {
             const validationError = validatePassword(value);
             setPasswordError(validationError);
+        }
+
+        if (name === 'telefono') {
+            const digits = sanitizePhone(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'codigo_postal') {
+            const digits = sanitizeCp(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'numero_exterior' || name === 'numero_interior') {
+            const digits = sanitizeNumero(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'correo_electronico') {
+            setEmailError(value && !isValidEmail(value) ? 'Correo no válido' : null);
         }
 
         setFormData({
@@ -101,6 +138,18 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
             return;
         }
 
+        // Edad mínima 18 años
+        if (formData.fecha_nacimiento) {
+            const born = new Date(formData.fecha_nacimiento);
+            const today = new Date();
+            const age = today.getFullYear() - born.getFullYear() - (today < new Date(today.getFullYear(), born.getMonth(), born.getDate()) ? 1 : 0);
+            if (age < 18) {
+                setError('El cliente debe ser mayor de 18 años.');
+                setLoading(false);
+                return;
+            }
+        }
+
         const token = localStorage.getItem('authToken');
         if (!token) {
             setError("No autenticado. Por favor, inicie sesión.");
@@ -111,8 +160,13 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
         // 🚨 ELIMINADO: Bloque 2 (Convertir imagen)
 
         // 3. Preparar Payload
+        const addressLine = [formData.calle, formData.numero_exterior, formData.numero_interior ? `Int ${formData.numero_interior}` : '']
+            .filter(Boolean)
+            .join(' ').trim();
+
         const payload = {
             ...formData,
+            calle: addressLine || formData.calle,
             // 🚨 ELIMINADO: foto_perfil_base64
             id_rol: CLIENT_ROL_ID, // 🚨 Se asegura el ID de Rol de Cliente
         };
@@ -138,8 +192,8 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
             // 5. Resetear
             setFormData({
                 nombre: '', correo_electronico: '', contrasena: '', 
-                fecha_nacimiento: '', telefono: '', calle: '', colonia: '', 
-                codigo_postal: '', ciudad: '',
+                fecha_nacimiento: '', telefono: '', calle: '', numero_exterior: '', numero_interior: '',
+                colonia: '', codigo_postal: '', ciudad: '',
                 id_rol: CLIENT_ROL_ID,
                 activo: true,
             });
@@ -265,8 +319,28 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
                             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
                         />
 
-                        <TextField fullWidth label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={handleChange} InputLabelProps={{ shrink: true }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField
+                            fullWidth
+                            label="Fecha de Nacimiento"
+                            name="fecha_nacimiento"
+                            type="date"
+                            value={formData.fecha_nacimiento}
+                            onChange={handleChange}
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{ max: todayMinus18 }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
+                        <TextField
+                            fullWidth
+                            required
+                            label="Teléfono"
+                            name="telefono"
+                            value={formData.telefono}
+                            onChange={handleChange}
+                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 10 }}
+                            helperText="10 dígitos, solo números"
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
                     </Stack>
                 </Box>
 
@@ -286,9 +360,42 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
                         </Typography>
                     </Stack>
                     <Stack spacing={3}>
-                        <TextField fullWidth required label="Calle y Número" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Calle" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="Número Exterior"
+                                name="numero_exterior"
+                                value={formData.numero_exterior}
+                                onChange={handleChange}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                                helperText="Solo números"
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Número Interior (Opcional)"
+                                name="numero_interior"
+                                value={formData.numero_interior}
+                                onChange={handleChange}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                                helperText="Solo números"
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
+                        </Stack>
                         <TextField fullWidth required label="Colonia" name="colonia" value={formData.colonia} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="C.P." name="codigo_postal" value={formData.codigo_postal} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField
+                            fullWidth
+                            required
+                            label="C.P."
+                            name="codigo_postal"
+                            value={formData.codigo_postal}
+                            onChange={handleChange}
+                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                            helperText="5 dígitos"
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
                         <TextField fullWidth required label="Ciudad" name="ciudad" value={formData.ciudad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Stack>
                 </Box>
@@ -304,7 +411,14 @@ const ClientesCrearPage = () => { // 🚨 MODIFICADO: Nombre del componente
                         size="large"
                         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                         // 🚨 MODIFICADO: Deshabilitado si hay error de contraseña o campos obligatorios de Cliente/Usuario
-                        disabled={loading || !!passwordError || !formData.nombre || !formData.correo_electronico || !formData.contrasena || !formData.telefono || !formData.calle || !formData.colonia || !formData.codigo_postal || !formData.ciudad}
+                        disabled={
+                            loading || !!passwordError || !!emailError ||
+                            !formData.nombre || !formData.correo_electronico || !formData.contrasena ||
+                            !formData.telefono || formData.telefono.length !== 10 ||
+                            !formData.calle || !formData.numero_exterior ||
+                            !formData.colonia || !formData.codigo_postal || formData.codigo_postal.length !== 5 ||
+                            !formData.ciudad
+                        }
                         sx={{ 
                             borderRadius: 2, 
                             px: 5, 

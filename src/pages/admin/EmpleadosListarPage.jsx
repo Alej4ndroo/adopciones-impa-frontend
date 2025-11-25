@@ -6,8 +6,8 @@ import {
     Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Box, CircularProgress, Alert, Chip,
     IconButton, useTheme, Button, Stack, alpha, Avatar,
-    Collapse, TextField, InputAdornment, Tooltip, Grid, Card,
-    useMediaQuery, Divider
+    Collapse, TextField, InputAdornment, Grid, Card,
+    useMediaQuery, Divider, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
     Person as PersonIcon,
@@ -21,20 +21,16 @@ import {
     Badge as BadgeIcon,
     School as SchoolIcon,
     CalendarToday as CalendarIcon,
-    Search as SearchIcon,
-    VerifiedUser as VerifiedIcon,
-    Warning as WarningIcon
+    Search as SearchIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
 
 // --- Componente de tarjeta para móviles ---
-const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
+const MobileEmployeeCard = ({ empleado, usuario, onToggleActive, onEdit }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const fullAddress = empleado.direccion?.calle
         ? `${empleado.direccion.calle || ''} ${empleado.direccion.numero_exterior || ''}, ${empleado.direccion.colonia || ''}, ${empleado.direccion.ciudad || ''}, ${empleado.direccion.estado || ''}, C.P. ${empleado.direccion.codigo_postal || ''}`.trim()
@@ -51,20 +47,17 @@ const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        navigate(`/admin/empleados/editar/${empleado.id_empleado}`);
-    };
-
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${usuario?.nombre}?`)) {
-            onDelete(empleado.id_empleado);
+        if (onEdit) {
+            onEdit(empleado);
         }
     };
 
-    const handleVerify = (e) => {
+    const handleToggleActive = (e) => {
         e.stopPropagation();
-        if (onVerify) {
-            onVerify(empleado.id_empleado);
+        const nextState = !usuario?.activo;
+        const actionLabel = nextState ? 'activar' : 'desactivar';
+        if (window.confirm(`¿Estás seguro de ${actionLabel} a ${usuario?.nombre || 'este empleado'}?`)) {
+            onToggleActive(usuario?.id_usuario, nextState);
         }
     };
 
@@ -195,56 +188,6 @@ const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
                         </Stack>
                     </Card>
 
-                    {/* Estado de documentos */}
-                    <Card
-                        elevation={0}
-                        sx={{
-                            p: 2,
-                            mb: 2,
-                            border: `1px solid ${alpha(
-                                empleado.documentos_verificados ? theme.palette.success.main : theme.palette.warning.main,
-                                0.3
-                            )}`,
-                            bgcolor: alpha(
-                                empleado.documentos_verificados ? theme.palette.success.main : theme.palette.warning.main,
-                                0.05
-                            )
-                        }}
-                    >
-                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: empleado.documentos_verificados ? 0 : 1.5 }}>
-                            {empleado.documentos_verificados ? (
-                                <VerifiedIcon sx={{ fontSize: 28, color: theme.palette.success.main }} />
-                            ) : (
-                                <WarningIcon sx={{ fontSize: 28, color: theme.palette.warning.main }} />
-                            )}
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={600}>
-                                    {empleado.documentos_verificados ? 'Documentos Verificados' : 'Documentos Pendientes'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {empleado.documentos_verificados
-                                        ? 'Documentación revisada y aprobada'
-                                        : 'Requiere verificación'}
-                                </Typography>
-                            </Box>
-                        </Stack>
-                        {!empleado.documentos_verificados && (
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                size="small"
-                                startIcon={<VerifiedIcon />}
-                                onClick={handleVerify}
-                                sx={{
-                                    bgcolor: theme.palette.warning.main,
-                                    '&:hover': { bgcolor: theme.palette.warning.dark }
-                                }}
-                            >
-                                Verificar Documentos
-                            </Button>
-                        )}
-                    </Card>
-
                     {/* Botones de acción */}
                     <Stack spacing={1.5}>
                         <Button
@@ -263,11 +206,11 @@ const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
                             fullWidth
                             variant="outlined"
                             startIcon={<DeleteIcon />}
-                            color="error"
-                            onClick={handleDelete}
+                            color={usuario?.activo ? 'error' : 'success'}
+                            onClick={handleToggleActive}
                             sx={{ fontWeight: 600 }}
                         >
-                            Eliminar
+                            {usuario?.activo ? 'Desactivar' : 'Activar'}
                         </Button>
                     </Stack>
                 </Box>
@@ -277,10 +220,9 @@ const MobileEmployeeCard = ({ empleado, usuario, onDelete, onVerify }) => {
 };
 
 // --- Componente de fila expandible ---
-const EmployeeRow = ({ empleado, onEdit, onDelete, onVerify }) => {
+const EmployeeRow = ({ empleado, onToggleActive, onEdit }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const fullAddress = empleado.direccion?.calle
         ? `${empleado.direccion.calle || ''} ${empleado.direccion.numero_exterior || ''}, ${empleado.direccion.colonia || ''}, ${empleado.direccion.ciudad || ''}, ${empleado.direccion.estado || ''}, C.P. ${empleado.direccion.codigo_postal || ''}`.trim()
@@ -297,20 +239,18 @@ const EmployeeRow = ({ empleado, onEdit, onDelete, onVerify }) => {
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        navigate(`/admin/empleados/editar/${empleado.id_empleado}`);
-    };
-
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${empleado.usuarios?.nombre || empleado.usuario?.nombre}?`)) {
-            onDelete(empleado.id_empleado);
+        if (onEdit) {
+            onEdit(empleado);
         }
     };
 
-    const handleVerify = (e) => {
+    const handleToggleActive = (e) => {
         e.stopPropagation();
-        if (onVerify) {
-            onVerify(empleado.id_empleado);
+        const nextState = !(empleado.usuarios?.activo ?? empleado.usuario?.activo);
+        const actionLabel = nextState ? 'activar' : 'desactivar';
+        if (window.confirm(`¿Seguro que deseas ${actionLabel} a ${empleado.usuarios?.nombre || empleado.usuario?.nombre || 'este empleado'}?`)) {
+            const usuarioId = empleado.usuarios?.id_usuario || empleado.usuario?.id_usuario;
+            onToggleActive(usuarioId, nextState);
         }
     };
 
@@ -615,71 +555,6 @@ const EmployeeRow = ({ empleado, onEdit, onDelete, onVerify }) => {
                                     </Card>
                                 </Grid>
 
-                                {/* Estado de Documentos */}
-                                <Grid item xs={12}>
-                                    <Card
-                                        elevation={0}
-                                        sx={{
-                                            p: 2.5,
-                                            border: `1px solid ${alpha(
-                                                empleado.documentos_verificados 
-                                                    ? theme.palette.success.main 
-                                                    : theme.palette.warning.main, 
-                                                0.2
-                                            )}`,
-                                            borderRadius: 2,
-                                            bgcolor: alpha(
-                                                empleado.documentos_verificados 
-                                                    ? theme.palette.success.main 
-                                                    : theme.palette.warning.main, 
-                                                0.05
-                                            )
-                                        }}
-                                    >
-                                        <Stack 
-                                            direction={{ xs: 'column', sm: 'row' }} 
-                                            justifyContent="space-between" 
-                                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                                            spacing={2}
-                                        >
-                                            <Stack direction="row" spacing={2} alignItems="center">
-                                                {empleado.documentos_verificados ? (
-                                                    <VerifiedIcon sx={{ fontSize: 32, color: theme.palette.success.main }} />
-                                                ) : (
-                                                    <WarningIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
-                                                )}
-                                                <Box>
-                                                    <Typography variant="h6" fontWeight={600} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                                                        {empleado.documentos_verificados 
-                                                            ? 'Documentos Verificados' 
-                                                            : 'Documentos Pendientes de Verificación'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                                                        {empleado.documentos_verificados 
-                                                            ? 'Toda la documentación ha sido revisada y aprobada' 
-                                                            : 'Se requiere verificación de los documentos subidos'}
-                                                    </Typography>
-                                                </Box>
-                                            </Stack>
-                                            {!empleado.documentos_verificados && (
-                                                <Button
-                                                    fullWidth={{ xs: true, sm: false }}
-                                                    variant="contained"
-                                                    size="small"
-                                                    startIcon={<VerifiedIcon />}
-                                                    onClick={handleVerify}
-                                                    sx={{
-                                                        bgcolor: theme.palette.warning.main,
-                                                        '&:hover': { bgcolor: theme.palette.warning.dark }
-                                                    }}
-                                                >
-                                                    Verificar
-                                                </Button>
-                                            )}
-                                        </Stack>
-                                    </Card>
-                                </Grid>
-
                                 {/* Botones de Acción */}
                                 <Grid item xs={12}>
                                     <Divider sx={{ my: 1 }} />
@@ -693,15 +568,15 @@ const EmployeeRow = ({ empleado, onEdit, onDelete, onVerify }) => {
                                             fullWidth={{ xs: true, sm: false }}
                                             variant="outlined"
                                             startIcon={<DeleteIcon />}
-                                            color="error"
-                                            onClick={handleDelete}
+                                            color={usuario?.activo ? 'error' : 'success'}
+                                            onClick={handleToggleActive}
                                             sx={{
                                                 borderRadius: 2,
                                                 fontWeight: 600,
                                                 px: 3
                                             }}
                                         >
-                                            Eliminar
+                                            {usuario?.activo ? 'Desactivar' : 'Activar'}
                                         </Button>
                                         <Button
                                             fullWidth={{ xs: true, sm: false }}
@@ -742,10 +617,23 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [editForm, setEditForm] = useState({
+        nombre: '',
+        correo_electronico: '',
+        telefono: '',
+        calle: '',
+        colonia: '',
+        codigo_postal: '',
+        ciudad: '',
+        estado: '',
+        pais: ''
+    });
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     const fetchEmpleados = async () => {
         const token = localStorage.getItem('authToken');
@@ -809,18 +697,139 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
         }
     }, [searchTerm, empleados]);
 
-    const handleDelete = async (idEmpleado) => {
-        // Aquí implementarías la lógica de eliminación
-        console.log('Eliminar empleado:', idEmpleado);
-        // Después de eliminar, vuelve a cargar la lista
-        fetchEmpleados();
+    const handleToggleActive = async (idUsuario, nextState = false) => {
+        const token = localStorage.getItem('authToken');
+        if (!idUsuario) {
+            setError('No se pudo identificar el usuario del empleado.');
+            return;
+        }
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+
+        try {
+            await axios.put(
+                `${API_URL_BACKEND}/usuarios/actualizar/${idUsuario}`,
+                { activo: nextState },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const updater = (list) =>
+                list.map((emp) => {
+                    const updated = { ...emp };
+                    if (emp.usuarios?.id_usuario === idUsuario) {
+                        updated.usuarios = { ...emp.usuarios, activo: nextState };
+                    }
+                    if (emp.usuario?.id_usuario === idUsuario) {
+                        updated.usuario = { ...emp.usuario, activo: nextState };
+                    }
+                    return updated;
+                });
+
+            setEmpleados(updater);
+            setFilteredEmpleados(updater);
+        } catch (err) {
+            console.error('Error al actualizar estado del empleado:', err);
+            setError('No se pudo actualizar el estado. Verifica permisos o intenta más tarde.');
+        }
     };
 
-    const handleVerify = async (idEmpleado) => {
-        // Aquí implementarías la lógica de verificación de documentos
-        console.log('Verificar documentos del empleado:', idEmpleado);
-        // Después de verificar, vuelve a cargar la lista
-        fetchEmpleados();
+    const openEditDialog = (empleado) => {
+        const usuario = empleado?.usuarios || empleado?.usuario || {};
+        const direccion = empleado?.direccion || {};
+        setSelectedEmployee(empleado);
+        setEditForm({
+            nombre: usuario.nombre || '',
+            correo_electronico: usuario.correo_electronico || '',
+            telefono: empleado.telefono || usuario.telefono || '',
+            calle: direccion.calle || '',
+            colonia: direccion.colonia || '',
+            codigo_postal: direccion.codigo_postal || '',
+            ciudad: direccion.ciudad || '',
+            estado: direccion.estado || '',
+            pais: direccion.pais || ''
+        });
+        setEditDialogOpen(true);
+    };
+
+    const closeEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedEmployee(null);
+    };
+
+    const handleEditChange = (field) => (event) => {
+        setEditForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+    const handleEditSubmit = async () => {
+        if (!selectedEmployee) return;
+
+        const token = localStorage.getItem('authToken');
+        const usuarioId = selectedEmployee?.usuarios?.id_usuario || selectedEmployee?.usuario?.id_usuario;
+        if (!usuarioId) {
+            setError('No se pudo identificar al usuario del empleado para editar.');
+            return;
+        }
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+
+        const payload = { ...editForm };
+
+        try {
+            setSavingEdit(true);
+            await axios.put(
+                `${API_URL_BACKEND}/usuarios/actualizar/${usuarioId}`,
+                payload,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const updater = (list) =>
+                list.map((emp) => {
+                    const match =
+                        emp.usuarios?.id_usuario === usuarioId ||
+                        emp.usuario?.id_usuario === usuarioId;
+                    if (!match) return emp;
+
+                    const usuarioActual = emp.usuarios || emp.usuario || {};
+                    const direccionActual = emp.direccion || {};
+                    const usuarioActualizado = {
+                        ...usuarioActual,
+                        nombre: editForm.nombre,
+                        correo_electronico: editForm.correo_electronico,
+                        telefono: editForm.telefono
+                    };
+                    const direccionActualizada = {
+                        ...direccionActual,
+                        calle: editForm.calle,
+                        colonia: editForm.colonia,
+                        codigo_postal: editForm.codigo_postal,
+                        ciudad: editForm.ciudad,
+                        estado: editForm.estado,
+                        pais: editForm.pais
+                    };
+
+                    const actualizado = {
+                        ...emp,
+                        telefono: editForm.telefono,
+                        direccion: direccionActualizada
+                    };
+                    if (emp.usuarios) actualizado.usuarios = usuarioActualizado;
+                    if (emp.usuario) actualizado.usuario = usuarioActualizado;
+                    return actualizado;
+                });
+
+            setEmpleados(updater);
+            setFilteredEmpleados(updater);
+            closeEditDialog();
+        } catch (err) {
+            console.error('Error al actualizar información de contacto:', err);
+            setError('No se pudo actualizar la información de contacto. Intenta nuevamente.');
+        } finally {
+            setSavingEdit(false);
+        }
     };
 
     if (loading) {
@@ -950,8 +959,8 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                                 key={empleado.id_empleado}
                                 empleado={empleado}
                                 usuario={usuario}
-                                onDelete={handleDelete}
-                                onVerify={handleVerify}
+                                onToggleActive={handleToggleActive}
+                                onEdit={openEditDialog}
                             />
                         );
                     })}
@@ -994,14 +1003,121 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                                 <EmployeeRow
                                     key={empleado.id_empleado}
                                     empleado={empleado}
-                                    onDelete={handleDelete}
-                                    onVerify={handleVerify}
+                                    onToggleActive={handleToggleActive}
+                                    onEdit={openEditDialog}
                                 />
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog
+                open={editDialogOpen}
+                onClose={closeEditDialog}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>
+                    Editar información de contacto
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2.2}>
+                        <TextField
+                            label="Nombre"
+                            value={editForm.nombre}
+                            onChange={handleEditChange('nombre')}
+                            fullWidth
+                        />
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Correo electrónico"
+                                    type="email"
+                                    value={editForm.correo_electronico}
+                                    onChange={handleEditChange('correo_electronico')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Teléfono"
+                                    value={editForm.telefono}
+                                    onChange={handleEditChange('telefono')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Divider />
+
+                        <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+                            Dirección
+                        </Typography>
+
+                        <TextField
+                            label="Calle"
+                            value={editForm.calle}
+                            onChange={handleEditChange('calle')}
+                            fullWidth
+                        />
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Colonia"
+                                    value={editForm.colonia}
+                                    onChange={handleEditChange('colonia')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Código Postal"
+                                    value={editForm.codigo_postal}
+                                    onChange={handleEditChange('codigo_postal')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Ciudad"
+                                    value={editForm.ciudad}
+                                    onChange={handleEditChange('ciudad')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Estado"
+                                    value={editForm.estado}
+                                    onChange={handleEditChange('estado')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+                        <TextField
+                            label="País"
+                            value={editForm.pais}
+                            onChange={handleEditChange('pais')}
+                            fullWidth
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={closeEditDialog} disabled={savingEdit}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleEditSubmit}
+                        disabled={savingEdit}
+                    >
+                        {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

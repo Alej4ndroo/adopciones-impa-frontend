@@ -3,9 +3,10 @@ import axios from 'axios';
 import { 
     Typography, Paper, Table, TableBody, TableCell, TableContainer, 
     TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
-    Stack, alpha, Card, IconButton, Tooltip, Collapse, Avatar,
+    Stack, alpha, Card, IconButton, Collapse, Avatar,
     TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
-    Grid, Divider, Button, useMediaQuery, Badge
+    Grid, Divider, Button, useMediaQuery, Badge, Dialog, DialogTitle,
+    DialogContent, DialogActions, FormControlLabel, Checkbox
 } from '@mui/material';
 import { 
     Pets as PetsIcon,
@@ -18,37 +19,64 @@ import {
     KeyboardArrowUp as ArrowUpIcon,
     Search as SearchIcon,
     FilterList as FilterIcon,
-    Cake as CakeIcon,
     MedicalServices as MedicalIcon,
-    Palette as PaletteIcon,
     CalendarToday as CalendarIcon,
-    Person as PersonIcon,
-    Description as DescriptionIcon,
-    Close as CloseIcon,
-    Image as ImageIcon
+    Close as CloseIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const PETS_ENDPOINT = '/mascotas/listar'; 
 const TAMANO_LABELS = { 'pequeño': 'Pequeño', 'pequeño': 'Pequeño', pequeno: 'Pequeño', mediano: 'Mediano', grande: 'Grande' };
+const ESPECIE_OPTIONS = ['perro', 'gato', 'conejo', 'hamster', 'otro'];
+const TAMANO_OPTIONS = [
+    { value: 'pequeño', label: 'Pequeño' },
+    { value: 'mediano', label: 'Mediano' },
+    { value: 'grande', label: 'Grande' }
+];
+const SEXO_OPTIONS = ['macho', 'hembra'];
+const ESTADO_ADOPCION_OPTIONS = ['disponible', 'en_proceso', 'adoptado'];
+const getEstadoLabel = (estado) => {
+    if (!estado) return 'N/A';
+    if (estado === 'en_proceso') return 'Pendiente';
+    return estado.charAt(0).toUpperCase() + estado.slice(1);
+};
+const resolveEstadoAdopcion = (pet, adoptionMap = {}) => {
+    if (!pet) return 'disponible';
+    const entry = adoptionMap[pet.id_mascota];
+    const adoptionState = typeof entry === 'string' ? entry : entry?.estado;
+    if (adoptionState === 'rechazada') return 'disponible';
+    if (adoptionState) return adoptionState;
+    if (pet.estado_adopcion) return pet.estado_adopcion;
+    if (pet.estado) return pet.estado; // posible nombre alternativo desde adopciones
+    if (pet.estado_solicitud) {
+        if (pet.estado_solicitud === 'aprobada') return 'adoptado';
+        if (pet.estado_solicitud === 'rechazada') return 'disponible';
+        return 'en_proceso';
+    }
+    return 'disponible';
+};
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+};
 
 // Componente de tarjeta para móviles
-const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
+const MobilePetCard = ({ pet, onEdit, onToggleActive, onView, adoptionMap = {} }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const handleEdit = (e) => {
         e.stopPropagation();
         if (onEdit) onEdit(pet.id_mascota);
     };
 
-    const handleDelete = (e) => {
+    const handleToggle = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${pet.nombre}?`)) {
-            if (onDelete) onDelete(pet.id_mascota);
-        }
+        if (onToggleActive) onToggleActive(pet);
     };
 
     const handleView = (e) => {
@@ -129,12 +157,18 @@ const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
                                 {pet.nombre}
                             </Typography>
                             <Chip
-                                label={pet.estado_adopcion}
+                                label={getEstadoLabel(resolveEstadoAdopcion(pet, adoptionMap))}
                                 size="small"
-                                color={getStatusColor(pet.estado_adopcion)}
+                                color={getStatusColor(resolveEstadoAdopcion(pet, adoptionMap))}
                                 sx={{ fontWeight: 600 }}
                             />
                         </Stack>
+                        <Chip
+                            label={pet.activo ? 'Activa' : 'Inactiva'}
+                            size="small"
+                            color={pet.activo ? 'success' : 'default'}
+                            sx={{ mb: 0.5, fontWeight: 600 }}
+                        />
                         <Typography variant="caption" color="text.secondary" display="block">
                             #{pet.id_mascota} • {pet.especie?.charAt(0).toUpperCase() + pet.especie?.slice(1)}
                         </Typography>
@@ -158,169 +192,136 @@ const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
             {/* Contenido expandible */}
             <Collapse in={open} timeout="auto" unmountOnExit>
                 <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
-                    {/* Imágenes */}
-                    {pet.imagenes_base64 && pet.imagenes_base64.length > 0 && (
-                        <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                            <Typography variant="subtitle2" fontWeight={600} color="primary" sx={{ mb: 1.5 }}>
-                                Galería de Imágenes
-                            </Typography>
-                            <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
-                                {pet.imagenes_base64.map((img, idx) => (
-                                    <Box
-                                        key={idx}
-                                        component="img"
-                                        src={img}
-                                        sx={{
-                                            width: 80,
-                                            height: 80,
-                                            borderRadius: 2,
-                                            objectFit: 'cover',
-                                            border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                transform: 'scale(1.05)',
-                                                boxShadow: theme.shadows[4]
-                                            },
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                        alt={`${pet.nombre} ${idx + 1}`}
+                    <Stack spacing={2}>
+                        <Card elevation={0} sx={{ p: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip
+                                    icon={<MedicalIcon fontSize="small" />}
+                                    label={`ID: ${pet.id_mascota}`}
+                                    size="small"
+                                    sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.08), color: theme.palette.primary.main }}
+                                />
+                                <Chip
+                                    icon={<CalendarIcon fontSize="small" />}
+                                    label={formatDate(pet.fecha_ingreso)}
+                                    size="small"
+                                    sx={{ fontWeight: 700 }}
+                                />
+                                {resolveEstadoAdopcion(pet, adoptionMap) && (
+                                    <Chip
+                                        label={getEstadoLabel(resolveEstadoAdopcion(pet, adoptionMap))}
+                                        size="small"
+                                        color={getStatusColor(resolveEstadoAdopcion(pet, adoptionMap))}
+                                        sx={{ fontWeight: 700 }}
                                     />
-                                ))}
+                                )}
                             </Stack>
                         </Card>
-                    )}
 
-                    {/* Características */}
-                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                        <Typography variant="subtitle2" fontWeight={600} color="primary" sx={{ mb: 1.5 }}>
-                            Características
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid item xs={6}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">Edad</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {`${Math.floor(pet.edad_en_meses / 12)}a ${pet.edad_en_meses % 12}m`}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">Sexo</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {pet.sexo?.charAt(0).toUpperCase() + pet.sexo?.slice(1)}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">Tamaño</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {TAMANO_LABELS[pet.tamano] || pet.tamano}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">Color</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {pet.color || 'No especificado'}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </Card>
+                        {pet.imagenes_base64 && pet.imagenes_base64.length > 0 && (
+                            <Card elevation={0} sx={{ p: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}` }}>
+                                <Typography variant="subtitle2" fontWeight={700} color="primary" sx={{ mb: 1 }}>
+                                    Galería
+                                </Typography>
+                                <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5 }}>
+                                    {pet.imagenes_base64.map((img, idx) => (
+                                        <Box
+                                            key={idx}
+                                            component="img"
+                                            src={img}
+                                            sx={{
+                                                width: 80,
+                                                height: 80,
+                                                borderRadius: 2,
+                                                objectFit: 'cover',
+                                                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                                            }}
+                                            alt={`${pet.nombre} ${idx + 1}`}
+                                        />
+                                    ))}
+                                </Stack>
+                            </Card>
+                        )}
 
-                    {/* Salud */}
-                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
-                        <Typography variant="subtitle2" fontWeight={600} color="success.main" sx={{ mb: 1.5 }}>
-                            Estado de Salud
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Chip 
-                                label={pet.vacunado ? 'Vacunado' : 'Sin vacunar'}
-                                size="small"
-                                color={pet.vacunado ? 'success' : 'default'}
-                                icon={<MedicalIcon />}
-                            />
-                            <Chip 
-                                label={pet.esterilizado ? 'Esterilizado' : 'No esterilizado'}
-                                size="small"
-                                color={pet.esterilizado ? 'success' : 'default'}
-                                icon={<MedicalIcon />}
-                            />
-                        </Stack>
-                    </Card>
-
-                    {/* Descripción */}
-                    {pet.descripcion && (
-                        <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                            <Typography variant="subtitle2" fontWeight={600} color="info.main" sx={{ mb: 1 }}>
-                                Descripción
+                        <Card elevation={0} sx={{ p: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}` }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="primary" sx={{ mb: 1 }}>
+                                Datos rápidos
                             </Typography>
-                            <Typography variant="body2">{pet.descripcion}</Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary">Raza</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{pet.raza || 'No especificada'}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary">Edad</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{`${Math.floor(pet.edad_en_meses / 12)}a ${pet.edad_en_meses % 12}m`}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary">Tamaño</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{TAMANO_LABELS[pet.tamano] || pet.tamano}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary">Sexo</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{pet.sexo?.charAt(0).toUpperCase() + pet.sexo?.slice(1)}</Typography>
+                                </Grid>
+                            </Grid>
                         </Card>
-                    )}
 
-                    {/* Información adicional */}
-                    <Card elevation={0} sx={{ p: 2, mb: 2, border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` }}>
-                        <Typography variant="subtitle2" fontWeight={600} color="secondary" sx={{ mb: 1.5 }}>
-                            Información Adicional
-                        </Typography>
-                        <Stack spacing={1.5}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CalendarIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">Fecha de Ingreso</Typography>
-                                    <Typography variant="body2" fontWeight={500}>{formatDate(pet.fecha_ingreso)}</Typography>
-                                </Box>
-                            </Box>
-                            {pet.usuarios && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <PersonIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">Registrado por</Typography>
-                                        <Typography variant="body2" fontWeight={500}>{pet.usuarios.nombre}</Typography>
-                                    </Box>
-                                </Box>
-                            )}
-                        </Stack>
-                    </Card>
+                        <Card elevation={0} sx={{ p: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
+                            <Typography variant="subtitle2" fontWeight={700} color="success.main" sx={{ mb: 1 }}>
+                                Salud
+                            </Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip 
+                                    label={pet.vacunado ? 'Vacunado' : 'Sin vacunar'}
+                                    size="small"
+                                    color={pet.vacunado ? 'success' : 'default'}
+                                    icon={<MedicalIcon />}
+                                />
+                                <Chip 
+                                    label={pet.esterilizado ? 'Esterilizado' : 'No esterilizado'}
+                                    size="small"
+                                    color={pet.esterilizado ? 'success' : 'default'}
+                                    icon={<MedicalIcon />}
+                                />
+                            </Stack>
+                        </Card>
 
-                    {/* Botones de acción */}
-                    <Stack spacing={1.5}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<VisibilityIcon />}
-                            onClick={handleView}
-                            sx={{
-                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
-                                fontWeight: 600
-                            }}
-                        >
-                            Ver Detalles
-                        </Button>
-                        <Stack direction="row" spacing={1.5}>
+                        {/* Botones de acción */}
+                        <Stack spacing={1.25} sx={{ pt: 0.5 }}>
                             <Button
                                 fullWidth
-                                variant="outlined"
-                                startIcon={<EditIcon />}
-                                onClick={handleEdit}
-                                sx={{ fontWeight: 600 }}
+                                variant="contained"
+                                startIcon={<VisibilityIcon />}
+                                onClick={handleView}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                    fontWeight: 600
+                                }}
                             >
-                                Editar
+                                Ver Detalles
                             </Button>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                startIcon={<DeleteIcon />}
-                                color="error"
-                                onClick={handleDelete}
-                                sx={{ fontWeight: 600 }}
-                            >
-                                Eliminar
-                            </Button>
+                            <Stack direction="row" spacing={1.25}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    startIcon={<EditIcon />}
+                                    onClick={handleEdit}
+                                    sx={{ fontWeight: 600 }}
+                                >
+                                    Editar
+                                </Button>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    startIcon={<DeleteIcon />}
+                                    color={pet.activo ? 'error' : 'success'}
+                                    onClick={handleToggle}
+                                    sx={{ fontWeight: 600 }}
+                                >
+                                    {pet.activo ? 'No Activa' : 'Activar'}
+                                </Button>
+                            </Stack>
                         </Stack>
                     </Stack>
                 </Box>
@@ -330,21 +331,13 @@ const MobilePetCard = ({ pet, onEdit, onDelete, onView }) => {
 };
 
 // Componente de fila expandible para tabla
-const PetRow = ({ pet, onEdit, onDelete, onView }) => {
+const PetRow = ({ pet, onEdit, onToggleActive, onView, adoptionMap = {} }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const handleEdit = (e) => {
         e.stopPropagation();
         if (onEdit) onEdit(pet.id_mascota);
-    };
-
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar a ${pet.nombre}?`)) {
-            if (onDelete) onDelete(pet.id_mascota);
-        }
     };
 
     const handleView = (e) => {
@@ -462,12 +455,21 @@ const PetRow = ({ pet, onEdit, onDelete, onView }) => {
                     {pet.sexo?.charAt(0).toUpperCase() + pet.sexo?.slice(1)}
                 </TableCell>
                 <TableCell align="center">
-                    <Chip 
-                        label={pet.estado_adopcion} 
-                        size="small" 
-                        color={getStatusColor(pet.estado_adopcion)}
-                        sx={{ fontWeight: 600 }}
-                    />
+                    <Stack direction="column" spacing={0.5} alignItems="center">
+                        <Chip 
+                            label={getEstadoLabel(resolveEstadoAdopcion(pet, adoptionMap))} 
+                            size="small" 
+                            color={getStatusColor(resolveEstadoAdopcion(pet, adoptionMap))}
+                            sx={{ fontWeight: 600 }}
+                        />
+                        <Chip
+                            label={pet.activo ? 'Activa' : 'Inactiva'}
+                            size="small"
+                            color={pet.activo ? 'success' : 'default'}
+                            variant="outlined"
+                            sx={{ fontWeight: 600 }}
+                        />
+                    </Stack>
                 </TableCell>
             </TableRow>
 
@@ -477,40 +479,30 @@ const PetRow = ({ pet, onEdit, onDelete, onView }) => {
                     <Collapse in={open} timeout="auto" unmountOnExit>
                         <Box sx={{ 
                             py: 3, 
-                            px: 2,
+                            px: { xs: 1.5, sm: 2 },
                             bgcolor: alpha(theme.palette.primary.main, 0.02),
                             borderRadius: 2,
                             my: 1
                         }}>
-                            <Grid container spacing={3}>
-                                {/* Galería de imágenes */}
+                            <Grid container spacing={2.5}>
                                 {pet.imagenes_base64 && pet.imagenes_base64.length > 0 && (
                                     <Grid item xs={12}>
                                         <Card elevation={0} sx={{ p: 2.5, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                                <ImageIcon sx={{ color: theme.palette.primary.main }} />
-                                                <Typography variant="h6" fontWeight={600} color="primary">
-                                                    Galería de Imágenes
-                                                </Typography>
-                                            </Stack>
-                                            <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', pb: 1 }}>
+                                            <Typography variant="h6" fontWeight={700} color="primary" sx={{ mb: 1.5 }}>
+                                                Galería
+                                            </Typography>
+                                            <Stack direction="row" spacing={1.5} sx={{ overflowX: 'auto', pb: 0.5 }}>
                                                 {pet.imagenes_base64.map((img, idx) => (
                                                     <Box
                                                         key={idx}
                                                         component="img"
                                                         src={img}
                                                         sx={{
-                                                            width: 120,
-                                                            height: 120,
+                                                            width: 110,
+                                                            height: 110,
                                                             borderRadius: 2,
                                                             objectFit: 'cover',
-                                                            border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                                                            cursor: 'pointer',
-                                                            '&:hover': {
-                                                                transform: 'scale(1.05)',
-                                                                boxShadow: theme.shadows[8]
-                                                            },
-                                                            transition: 'all 0.2s ease'
+                                                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
                                                         }}
                                                         alt={`${pet.nombre} ${idx + 1}`}
                                                     />
@@ -520,189 +512,121 @@ const PetRow = ({ pet, onEdit, onDelete, onView }) => {
                                     </Grid>
                                 )}
 
-                                {/* Características físicas */}
-                                <Grid item xs={12} md={6}>
-                                    <Card elevation={0} sx={{ p: 2.5, height: '100%', border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                            <Box sx={{ width: 4, height: 20, borderRadius: 2, bgcolor: theme.palette.primary.main }} />
-                                            <Typography variant="h6" fontWeight={600} color="primary">
-                                                Características Físicas
-                                            </Typography>
+                                <Grid item xs={12} md={8}>
+                                    <Card elevation={0} sx={{ p: 2.5, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+                                            <Chip 
+                                                label={`#${pet.id_mascota}`}
+                                                size="small"
+                                                sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }}
+                                            />
+                                            <Chip 
+                                                label={getEstadoLabel(resolveEstadoAdopcion(pet, adoptionMap))}
+                                                size="small"
+                                                color={getStatusColor(resolveEstadoAdopcion(pet, adoptionMap))}
+                                                sx={{ fontWeight: 700 }}
+                                            />
+                                            <Chip 
+                                                label={pet.especie?.charAt(0).toUpperCase() + pet.especie?.slice(1)}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontWeight: 600 }}
+                                            />
                                         </Stack>
-                                        <Stack spacing={2}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                    <CakeIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="caption" color="text.secondary">Edad</Typography>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {`${Math.floor(pet.edad_en_meses / 12)} años ${pet.edad_en_meses % 12} meses`}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                    <PetsIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="caption" color="text.secondary">Tamaño</Typography>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {TAMANO_LABELS[pet.tamano] || pet.tamano}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                    <PersonIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="caption" color="text.secondary">Sexo</Typography>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {pet.sexo?.charAt(0).toUpperCase() + pet.sexo?.slice(1)}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                    <PaletteIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="caption" color="text.secondary">Color</Typography>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {pet.color || 'No especificado'}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        </Stack>
-                                    </Card>
-                                </Grid>
-
-                                {/* Estado de salud */}
-                                <Grid item xs={12} md={6}>
-                                    <Card elevation={0} sx={{ p: 2.5, height: '100%', border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
-                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                            <Box sx={{ width: 4, height: 20, borderRadius: 2, bgcolor: theme.palette.success.main }} />
-                                            <Typography variant="h6" fontWeight={600} color="success.main">
-                                                Estado de Salud
-                                            </Typography>
-                                        </Stack>
-                                        <Stack spacing={2}>
-                                            <Box>
-                                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                                                    Vacunación
-                                                </Typography>
-                                                <Chip 
-                                                    label={pet.vacunado ? 'Vacunado' : 'Sin vacunar'}
-                                                    size="small"
-                                                    color={pet.vacunado ? 'success' : 'default'}
-                                                    icon={<MedicalIcon />}
-                                                />
-                                            </Box>
-                                            <Box>
-                                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                                                    Esterilización
-                                                </Typography>
-                                                <Chip 
-                                                    label={pet.esterilizado ? 'Esterilizado' : 'No esterilizado'}
-                                                    size="small"
-                                                    color={pet.esterilizado ? 'success' : 'default'}
-                                                    icon={<MedicalIcon />}
-                                                />
-                                            </Box>
-                                        </Stack>
-                                    </Card>
-                                </Grid>
-
-                                {/* Descripción */}
-                                {pet.descripcion && (
-                                    <Grid item xs={12}>
-                                        <Card elevation={0} sx={{ p: 2.5, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                                <DescriptionIcon sx={{ color: theme.palette.info.main }} />
-                                                <Typography variant="h6" fontWeight={600} color="info.main">
-                                                    Descripción
-                                                </Typography>
-                                            </Stack>
-                                            <Typography variant="body2">{pet.descripcion}</Typography>
-                                        </Card>
-                                    </Grid>
-                                )}
-
-                                {/* Información adicional */}
-                                <Grid item xs={12}>
-                                    <Card elevation={0} sx={{ p: 2.5, border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` }}>
-                                        <Typography variant="h6" fontWeight={600} color="secondary" sx={{ mb: 2 }}>
-                                            Información Adicional
-                                        </Typography>
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CalendarIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                                    <Box>
-                                                        <Typography variant="caption" color="text.secondary">Fecha de Ingreso</Typography>
-                                                        <Typography variant="body2" fontWeight={500}>{formatDate(pet.fecha_ingreso)}</Typography>
-                                                    </Box>
-                                                </Box>
+                                            <Grid item xs={6} sm={4}>
+                                                <Typography variant="caption" color="text.secondary">Raza</Typography>
+                                                <Typography variant="body2" fontWeight={600}>{pet.raza || 'No especificada'}</Typography>
                                             </Grid>
-                                            {pet.usuarios && (
-                                                <Grid item xs={12} sm={6}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                        <PersonIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                                        <Box>
-                                                            <Typography variant="caption" color="text.secondary">Registrado por</Typography>
-                                                            <Typography variant="body2" fontWeight={500}>{pet.usuarios.nombre}</Typography>
-                                                        </Box>
-                                                    </Box>
-                                                </Grid>
-                                            )}
+                                            <Grid item xs={6} sm={4}>
+                                                <Typography variant="caption" color="text.secondary">Edad</Typography>
+                                                <Typography variant="body2" fontWeight={600}>{`${Math.floor(pet.edad_en_meses / 12)}a ${pet.edad_en_meses % 12}m`}</Typography>
+                                            </Grid>
+                                            <Grid item xs={6} sm={4}>
+                                                <Typography variant="caption" color="text.secondary">Sexo</Typography>
+                                                <Typography variant="body2" fontWeight={600}>{pet.sexo?.charAt(0).toUpperCase() + pet.sexo?.slice(1)}</Typography>
+                                            </Grid>
+                                            <Grid item xs={6} sm={4}>
+                                                <Typography variant="caption" color="text.secondary">Tamaño</Typography>
+                                                <Typography variant="body2" fontWeight={600}>{TAMANO_LABELS[pet.tamano] || pet.tamano}</Typography>
+                                            </Grid>
+                                            <Grid item xs={6} sm={4}>
+                                                <Typography variant="caption" color="text.secondary">Color</Typography>
+                                                <Typography variant="body2" fontWeight={600}>{pet.color || 'No especificado'}</Typography>
+                                            </Grid>
                                         </Grid>
                                     </Card>
                                 </Grid>
 
-                                {/* Botones de acción */}
-                                <Grid item xs={12}>
-                                    <Divider sx={{ my: 1 }} />
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<DeleteIcon />}
-                                            color="error"
-                                            onClick={handleDelete}
-                                            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
-                                        >
-                                            Eliminar
-                                        </Button>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<EditIcon />}
-                                            onClick={handleEdit}
-                                            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
-                                        >
-                                            Editar
-                                        </Button>
-                                        <Button
-                                            variant="contained"
-                                            startIcon={<VisibilityIcon />}
-                                            onClick={handleView}
-                                            sx={{
-                                                borderRadius: 2,
-                                                fontWeight: 600,
-                                                px: 3,
-                                                background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
-                                                boxShadow: theme.shadows[4],
-                                                '&:hover': {
-                                                    boxShadow: theme.shadows[8],
-                                                    transform: 'translateY(-2px)'
-                                                },
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                        >
-                                            Ver Detalles
-                                        </Button>
-                                    </Stack>
+                                <Grid item xs={12} md={4}>
+                                    <Card elevation={0} sx={{ p: 2.5, height: '100%', border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
+                                        <Typography variant="h6" fontWeight={700} color="success.main" sx={{ mb: 1.5 }}>
+                                            Salud y adopción
+                                        </Typography>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <Chip 
+                                                label={pet.vacunado ? 'Vacunado' : 'Sin vacunar'}
+                                                size="small"
+                                                color={pet.vacunado ? 'success' : 'default'}
+                                                icon={<MedicalIcon />}
+                                            />
+                                            <Chip 
+                                                label={pet.esterilizado ? 'Esterilizado' : 'No esterilizado'}
+                                                size="small"
+                                                color={pet.esterilizado ? 'success' : 'default'}
+                                                icon={<MedicalIcon />}
+                                            />
+                                            <Chip 
+                                                label={getEstadoLabel(resolveEstadoAdopcion(pet, adoptionMap))}
+                                                size="small"
+                                                color={getStatusColor(resolveEstadoAdopcion(pet, adoptionMap))}
+                                                sx={{ fontWeight: 700 }}
+                                            />
+                                        </Stack>
+                                    </Card>
                                 </Grid>
+
                             </Grid>
+                            <Divider sx={{ my: 2 }} />
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<DeleteIcon />}
+                                    color={pet.activo ? 'error' : 'success'}
+                                    onClick={() => onToggleActive?.(pet)}
+                                    sx={{ borderRadius: 2, fontWeight: 600, px: 3, flex: 1 }}
+                                >
+                                    {pet.activo ? 'No Activa' : 'Activar'}
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<EditIcon />}
+                                    onClick={handleEdit}
+                                    sx={{ borderRadius: 2, fontWeight: 600, px: 3, flex: 1 }}
+                                >
+                                    Editar
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<VisibilityIcon />}
+                                    onClick={handleView}
+                                    sx={{
+                                        borderRadius: 2,
+                                        fontWeight: 600,
+                                        px: 3,
+                                        flex: 1,
+                                        background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+                                        boxShadow: theme.shadows[4],
+                                        '&:hover': {
+                                            boxShadow: theme.shadows[8],
+                                            transform: 'translateY(-2px)'
+                                        },
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    Ver Detalles
+                                </Button>
+                            </Stack>
                         </Box>
                     </Collapse>
                 </TableCell>
@@ -727,11 +651,28 @@ const MascotasListarPage = ({ isManagementView = false }) => {
     const [showFilters, setShowFilters] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [adoptionMap, setAdoptionMap] = useState({});
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [selectedPet, setSelectedPet] = useState(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [editForm, setEditForm] = useState({
+        nombre: '',
+        especie: '',
+        raza: '',
+        edad_en_meses: '',
+        color: '',
+        tamano: '',
+        sexo: '',
+        descripcion: '',
+        vacunado: false,
+        esterilizado: false,
+        estado_adopcion: 'disponible',
+        activo: true
+    });
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-    const navigate = useNavigate();
 
     const fetchPets = async () => {
         const token = localStorage.getItem('authToken');
@@ -756,8 +697,6 @@ const MascotasListarPage = ({ isManagementView = false }) => {
             if (!receivedPets.length) {
                 setError("No se encontraron mascotas en el sistema.");
             }
-
-            console.log("[MascotasListarPage] Mascotas recibidas:", receivedPets);
             setPets(receivedPets);
             setFilteredPets(receivedPets);
         } catch (err) {
@@ -777,6 +716,40 @@ const MascotasListarPage = ({ isManagementView = false }) => {
 
     useEffect(() => { 
         fetchPets(); 
+    }, []);
+
+    useEffect(() => {
+        const fetchAdoptions = async () => {
+            try {
+                const token = localStorage.getItem('authToken');
+                const resp = await axios.get(`${API_URL_BACKEND}/adopciones/listar`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+                const adopciones = Array.isArray(resp.data) ? resp.data : [];
+                const map = {};
+                adopciones.forEach((adopcion) => {
+                    const idMascota = adopcion.mascota?.id_mascota || adopcion.id_mascota;
+                    if (!idMascota) return;
+                    const estadoSolicitud = adopcion.estado_solicitud;
+                    const estado = adopcion.estado;
+                    let resolved = 'en_proceso';
+                    if (estado === 'adoptado' || estadoSolicitud === 'aprobada') {
+                        resolved = 'adoptado';
+                    } else if (estadoSolicitud === 'rechazada') {
+                        resolved = null;
+                    }
+                    // No sobrescribir adoptado
+                    if (map[idMascota]?.estado === 'adoptado') return;
+                    if (resolved) {
+                        map[idMascota] = { estado: resolved, id_adopcion: adopcion.id_adopcion };
+                    }
+                });
+                setAdoptionMap(map);
+            } catch (err) {
+                console.error('Error al cargar adopciones:', err);
+            }
+        };
+        fetchAdoptions();
     }, []);
 
     // Aplicar filtros
@@ -835,19 +808,159 @@ const MascotasListarPage = ({ isManagementView = false }) => {
     };
 
     const activeFiltersCount = Object.values(filters).filter(v => v !== '').length + (searchTerm ? 1 : 0);
-
-    const handleEdit = (idMascota) => {
-        navigate(`/admin/mascotas/editar/${idMascota}`);
+    const authHeaders = () => {
+        const token = localStorage.getItem('authToken');
+        return token ? { Authorization: `Bearer ${token}` } : null;
     };
 
-    const handleDelete = async (idMascota) => {
-        console.log('Eliminar mascota:', idMascota);
-        // Implementar lógica de eliminación
-        fetchPets();
+    const updatePetOnServer = async (idMascota, payload) => {
+        const headers = authHeaders();
+        if (!headers) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return false;
+        }
+
+        try {
+            await axios.put(
+                `${API_URL_BACKEND}/mascotas/actualizar/${idMascota}`,
+                payload,
+                { headers }
+            );
+            return true;
+        } catch (err) {
+            if (err.response?.status === 404) {
+                setError('Endpoint /mascotas/actualizar/:id no encontrado en backend.');
+                return false;
+            }
+            throw err;
+        }
+    };
+
+    const openEditDialog = (pet) => {
+        if (!pet) return;
+        setSelectedPet(pet);
+        setEditForm({
+            nombre: pet.nombre || '',
+            especie: pet.especie || '',
+            raza: pet.raza || '',
+            edad_en_meses: pet.edad_en_meses || '',
+            color: pet.color || '',
+            tamano: pet.tamano || '',
+            sexo: pet.sexo || '',
+            descripcion: pet.descripcion || '',
+            vacunado: Boolean(pet.vacunado),
+            esterilizado: Boolean(pet.esterilizado),
+            estado_adopcion: pet.estado_adopcion || 'disponible',
+            activo: pet.activo !== false
+        });
+        setEditDialogOpen(true);
+    };
+
+    const closeEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedPet(null);
+    };
+
+    const handleEditChange = (field) => (event) => {
+        const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+        setEditForm((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleEditSubmit = async () => {
+        if (!selectedPet) return;
+        try {
+            setSavingEdit(true);
+            const payload = {
+                ...editForm,
+                edad_en_meses: Number(editForm.edad_en_meses) || 0
+            };
+            const updated = await updatePetOnServer(selectedPet.id_mascota, payload);
+            if (!updated) return;
+
+            const updater = (list) => list.map((pet) => (
+                pet.id_mascota === selectedPet.id_mascota
+                    ? { ...pet, ...payload }
+                    : pet
+            ));
+            setPets(updater);
+            setFilteredPets(updater);
+            closeEditDialog();
+        } catch (err) {
+            console.error('Error al actualizar mascota:', err);
+            setError('No se pudo actualizar la mascota. Intenta nuevamente.');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleEdit = (idMascota) => {
+        const pet = pets.find((p) => p.id_mascota === idMascota);
+        if (pet) openEditDialog(pet);
+    };
+
+    const handleToggleActive = async (pet) => {
+        if (!pet) return;
+        const nextActive = !pet.activo;
+        const adoptionInfo = adoptionMap[pet.id_mascota];
+        const prevAdoptionState = typeof adoptionInfo === 'object' ? adoptionInfo?.estado : adoptionInfo;
+        const actionText = nextActive ? 'activar' : 'poner como No Activa';
+        if (!window.confirm(`¿Quieres ${actionText} a ${pet.nombre}?`)) return;
+        const payload = {
+            activo: nextActive,
+            ...(nextActive && prevAdoptionState === 'rechazada' ? { estado_adopcion: 'disponible' } : {})
+        };
+        try {
+            const updated = await updatePetOnServer(pet.id_mascota, payload);
+            if (!updated) return;
+            const updater = (list) => list.map((p) => (
+                p.id_mascota === pet.id_mascota ? { ...p, ...payload } : p
+            ));
+            setPets(updater);
+            setFilteredPets(updater);
+            // Si hay adopción asociada, rechazarla al desactivar o volverla a pendiente al activar
+            const idAdopcion = typeof adoptionInfo === 'object' ? adoptionInfo?.id_adopcion : null;
+            if (idAdopcion) {
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                // Si venía rechazada y se reactiva, limpiar la asociación local y dejar disponible
+                if (nextActive && prevAdoptionState === 'rechazada') {
+                    setAdoptionMap((prev) => {
+                        const next = { ...prev };
+                        delete next[pet.id_mascota];
+                        return next;
+                    });
+                } else {
+                    const estado_solicitud = nextActive ? 'en_revision' : 'rechazada';
+                    await axios.patch(
+                        `${API_URL_BACKEND}/adopciones/${idAdopcion}/rechazar`,
+                        { estado_solicitud },
+                        { headers }
+                    );
+                    setAdoptionMap((prev) => ({
+                        ...prev,
+                        [pet.id_mascota]: {
+                            id_adopcion: idAdopcion,
+                            estado: nextActive ? 'en_proceso' : 'rechazada'
+                        }
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error('Error al actualizar estado de mascota:', err);
+            setError('No se pudo actualizar el estado de la mascota. Verifica permisos o intenta más tarde.');
+        }
     };
 
     const handleView = (idMascota) => {
-        navigate(`/mascotas/${idMascota}`);
+        const pet = pets.find((p) => p.id_mascota === idMascota);
+        if (!pet) return;
+        setSelectedPet(pet);
+        setViewDialogOpen(true);
+    };
+
+    const closeViewDialog = () => {
+        setViewDialogOpen(false);
+        setSelectedPet(null);
     };
 
     if (loading) {
@@ -1108,8 +1221,9 @@ const MascotasListarPage = ({ isManagementView = false }) => {
                             key={pet.id_mascota}
                             pet={pet}
                             onEdit={handleEdit}
-                            onDelete={handleDelete}
+                            onToggleActive={handleToggleActive}
                             onView={handleView}
+                            adoptionMap={adoptionMap}
                         />
                     ))}
                 </Box>
@@ -1153,14 +1267,213 @@ const MascotasListarPage = ({ isManagementView = false }) => {
                                     key={pet.id_mascota}
                                     pet={pet}
                                     onEdit={handleEdit}
-                                    onDelete={handleDelete}
+                                    onToggleActive={handleToggleActive}
                                     onView={handleView}
+                                    adoptionMap={adoptionMap}
                                 />
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
             )}
+
+            {/* Dialogo de edición */}
+            <Dialog open={editDialogOpen} onClose={closeEditDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Editar Mascota</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        <TextField
+                            label="Nombre"
+                            value={editForm.nombre}
+                            onChange={handleEditChange('nombre')}
+                            fullWidth
+                            required
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Especie</InputLabel>
+                            <Select
+                                value={editForm.especie}
+                                label="Especie"
+                                onChange={handleEditChange('especie')}
+                            >
+                                {ESPECIE_OPTIONS.map((opt) => (
+                                    <MenuItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            label="Raza"
+                            value={editForm.raza}
+                            onChange={handleEditChange('raza')}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Edad (meses)"
+                            type="number"
+                            value={editForm.edad_en_meses}
+                            onChange={handleEditChange('edad_en_meses')}
+                            fullWidth
+                            inputProps={{ min: 0 }}
+                        />
+                        <TextField
+                            label="Color"
+                            value={editForm.color}
+                            onChange={handleEditChange('color')}
+                            fullWidth
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Tamaño</InputLabel>
+                            <Select
+                                value={editForm.tamano}
+                                label="Tamaño"
+                                onChange={handleEditChange('tamano')}
+                            >
+                                {TAMANO_OPTIONS.map((opt) => (
+                                    <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel>Sexo</InputLabel>
+                            <Select
+                                value={editForm.sexo}
+                                label="Sexo"
+                                onChange={handleEditChange('sexo')}
+                            >
+                                {SEXO_OPTIONS.map((opt) => (
+                                    <MenuItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            label="Descripción"
+                            multiline
+                            minRows={3}
+                            value={editForm.descripcion}
+                            onChange={handleEditChange('descripcion')}
+                            fullWidth
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Estado de adopción</InputLabel>
+                            <Select
+                                value={editForm.estado_adopcion}
+                                label="Estado de adopción"
+                                onChange={handleEditChange('estado_adopcion')}
+                            >
+                                {ESTADO_ADOPCION_OPTIONS.map((opt) => (
+                                    <MenuItem key={opt} value={opt}>{opt.replace('_', ' ')}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <Stack direction="row" spacing={2}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={editForm.vacunado}
+                                        onChange={handleEditChange('vacunado')}
+                                    />
+                                }
+                                label="Vacunado"
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={editForm.esterilizado}
+                                        onChange={handleEditChange('esterilizado')}
+                                    />
+                                }
+                                label="Esterilizado"
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={editForm.activo}
+                                        onChange={handleEditChange('activo')}
+                                    />
+                                }
+                                label="Activo"
+                            />
+                        </Stack>
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeEditDialog}>Cancelar</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleEditSubmit}
+                        disabled={savingEdit}
+                    >
+                        {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Dialogo de detalles */}
+            <Dialog open={viewDialogOpen} onClose={closeViewDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Detalles de la mascota</DialogTitle>
+                <DialogContent dividers>
+                    {selectedPet && (
+                        <Stack spacing={2}>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip label={`#${selectedPet.id_mascota}`} />
+                                <Chip label={getEstadoLabel(selectedPet.estado_adopcion)} color={selectedPet.estado_adopcion === 'disponible' ? 'success' : selectedPet.estado_adopcion === 'en_proceso' ? 'warning' : 'default'} />
+                                <Chip label={selectedPet.activo === false ? 'Inactivo' : 'Activo'} color={selectedPet.activo === false ? 'default' : 'success'} />
+                            </Stack>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Nombre</Typography>
+                                    <Typography variant="body1" fontWeight={600}>{selectedPet.nombre}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Especie</Typography>
+                                    <Typography variant="body1">{selectedPet.especie}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Raza</Typography>
+                                    <Typography variant="body1">{selectedPet.raza || 'No especificada'}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Edad</Typography>
+                                    <Typography variant="body1">{`${Math.floor(selectedPet.edad_en_meses / 12)}a ${selectedPet.edad_en_meses % 12}m`}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Color</Typography>
+                                    <Typography variant="body1">{selectedPet.color}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Tamaño</Typography>
+                                    <Typography variant="body1">{TAMANO_LABELS[selectedPet.tamano] || selectedPet.tamano}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Sexo</Typography>
+                                    <Typography variant="body1">{selectedPet.sexo}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Vacunado</Typography>
+                                    <Typography variant="body1">{selectedPet.vacunado ? 'Sí' : 'No'}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Esterilizado</Typography>
+                                    <Typography variant="body1">{selectedPet.esterilizado ? 'Sí' : 'No'}</Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Fecha de ingreso</Typography>
+                                    <Typography variant="body1">{formatDate(selectedPet.fecha_ingreso)}</Typography>
+                                </Grid>
+                                {selectedPet.descripcion && (
+                                    <Grid item xs={12}>
+                                        <Typography variant="caption" color="text.secondary">Descripción</Typography>
+                                        <Typography variant="body1">{selectedPet.descripcion}</Typography>
+                                    </Grid>
+                                )}
+                            </Grid>
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeViewDialog}>Cerrar</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

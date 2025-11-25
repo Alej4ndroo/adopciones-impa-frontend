@@ -3,7 +3,7 @@ import axios from 'axios'; // ◀Importado para las citas
 import { 
     Grid, Typography, Box, Paper, CircularProgress, 
     Divider, Chip, Stack, Dialog, DialogTitle, 
-    DialogContent, DialogActions, Button
+    DialogContent, DialogActions, Button, useMediaQuery
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { 
@@ -37,6 +37,7 @@ const API_URLS = {
 // -------------------------------------------------------------------
 const KpiCard = ({ title, value, icon: IconComponent, color, subtitle, loading = false, isCurrency = false }) => {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     
     // Si el valor es null, undefined, o 0, mostramos 'N/A' si no está cargando
     const displayValue = loading ? value : (value === null || value === undefined ? 'N/A' : value);
@@ -55,27 +56,54 @@ const KpiCard = ({ title, value, icon: IconComponent, color, subtitle, loading =
                 flexDirection: 'column', 
                 justifyContent: 'space-between',
                 transition: '0.3s',
-                borderLeft: `5px solid ${color}`
+                borderLeft: `5px solid ${color}`,
+                ...(isMobile && {
+                    p: 1.5,
+                    height: 'auto',
+                    gap: 1.1,
+                    borderLeft: 'none',
+                    borderTop: `4px solid ${color}`,
+                    backgroundColor: alpha(color, 0.05),
+                    boxShadow: '0px 12px 28px rgba(15, 23, 42, 0.14)'
+                })
             }}
         >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: isMobile ? 1.4 : 0 }}>
                 <Box>
                     {loading ? (
-                        <CircularProgress size={24} sx={{ color: color }} />
+                        <CircularProgress size={isMobile ? 22 : 24} sx={{ color: color }} />
                     ) : (
-                        <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: color }}>
+                        <Typography 
+                            variant="h4" 
+                            component="div" 
+                            sx={{ 
+                                fontWeight: 700, 
+                                color: color,
+                                ...(isMobile && { fontSize: '1.65rem', lineHeight: 1.1 })
+                            }}
+                        >
                             {formattedValue}
                         </Typography>
                     )}
-                    <Typography variant="subtitle1" color="text.primary" sx={{ fontWeight: 600 }}>
+                    <Typography 
+                        variant="subtitle1" 
+                        color="text.primary" 
+                        sx={{ fontWeight: isMobile ? 700 : 600, ...(isMobile && { fontSize: '0.95rem' }) }}
+                    >
                         {title}
                     </Typography>
                 </Box>
-                {IconComponent && <IconComponent size={40} color={color} />}
+                {IconComponent && (
+                    isMobile ? (
+                        <IconComponent sx={{ fontSize: 30, color }} />
+                    ) : (
+                        <IconComponent size={40} color={color} />
+                    )
+                )}
             </Box>
             
             {subtitle && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: isMobile ? 0.5 : 1 }}>
                     {subtitle}
                 </Typography>
             )}
@@ -95,6 +123,7 @@ const KpiCard = ({ title, value, icon: IconComponent, color, subtitle, loading =
 // -------------------------------------------------------------------
 const DashboardContentMUI = () => {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     // 1. ESTADO PARA LOS KPIS
     const [kpiMetrics, setKpiMetrics] = useState({
@@ -345,7 +374,7 @@ const DashboardContentMUI = () => {
             {/* ------------------------------------------------------------------- */}
             {/* 🔑 FILA SUPERIOR: Métricas Clave (KPIs) - Se mantiene                  */}
             {/* ------------------------------------------------------------------- */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 4 }}>
                 
                 {/* 1. Mascotas Disponibles */}
                 <Grid item xs={12} sm={6} lg={3}>
@@ -413,6 +442,29 @@ const DashboardContentMUI = () => {
                             overflow: 'hidden',
                             background: theme.palette.background.paper,
                             boxShadow: 'none',
+                            ...(isMobile && {
+                                p: 1.25,
+                                minHeight: 'auto',
+                                '& .fc-toolbar': {
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    gap: 1
+                                },
+                                '& .fc-toolbar-title': {
+                                    fontSize: '1.05rem',
+                                    mb: 0.5
+                                },
+                                '& .fc .fc-button-primary': {
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.78rem',
+                                    borderRadius: '10px'
+                                },
+                                '& .fc .fc-col-header-cell-cushion': {
+                                    padding: '6px 4px',
+                                    fontSize: '0.8rem'
+                                },
+                                '& .fc .fc-daygrid-day-frame': { padding: '4px' }
+                            }),
                             // Estilos para que FullCalendar se integre con MUI
                             '& .fc': { zIndex: 1 },
                             '& .fc-toolbar-title': {
@@ -501,16 +553,16 @@ const DashboardContentMUI = () => {
                             </Box>
                         ) : (
                             <>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2.5 }}>
-                                    <Box sx={{ maxWidth: 600 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 1.5 : 2, mb: 2.5, flexDirection: isMobile ? 'column' : 'row' }}>
+                                    <Box sx={{ maxWidth: 600, width: isMobile ? '100%' : 'auto' }}>
                                         <Typography variant="subtitle2" sx={{ textTransform: 'uppercase', letterSpacing: 1.5, color: theme.palette.primary.main, fontWeight: 700 }}>
                                             Agenda
                                         </Typography>
-                                        <Typography variant="h5" sx={{ fontWeight: 800, color: theme.palette.text.primary, mb: 0.5 }}>
+                                        <Typography variant="h5" sx={{ fontWeight: 800, color: theme.palette.text.primary, mb: 0.5, fontSize: isMobile ? '1.25rem' : undefined }}>
                                             Calendario de citas
                                         </Typography>
                                     </Box>
-                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ width: isMobile ? '100%' : 'auto' }}>
                                         {statusLegend.map(({ key, label, icon: IconComp }) => (
                                             <Chip
                                                 key={key}
@@ -522,6 +574,11 @@ const DashboardContentMUI = () => {
                                                     fontWeight: 700,
                                                     borderRadius: 999,
                                                     border: `1px solid ${alpha(statusColors[key], 0.3)}`,
+                                                    ...(isMobile && {
+                                                        height: 28,
+                                                        fontSize: '0.78rem',
+                                                        '& .MuiChip-label': { px: 0.5 }
+                                                    })
                                                 }}
                                             />
                                         ))}
@@ -531,18 +588,18 @@ const DashboardContentMUI = () => {
                                 <Box sx={{ width: '100%' }}>
                                     <FullCalendar
                                         plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
-                                        headerToolbar={{
-                                            left: 'prev,next today',
-                                            center: 'title',
-                                            right: 'dayGridMonth,timeGridWeek,listWeek'
-                                        }}
+                                        headerToolbar={
+                                            isMobile
+                                                ? { left: 'prev,next', center: 'title', right: 'today' }
+                                                : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' }
+                                        }
                                         buttonText={{
                                             today: 'Hoy',
                                             month: 'Mes',
                                             week: 'Semana',
                                             list: 'Agenda',
                                         }}
-                                        initialView="dayGridMonth"
+                                        initialView={isMobile ? 'listWeek' : 'dayGridMonth'}
                                         locale={esLocale} // Español
                                         firstDay={1}
                                         events={calendarEvents}
@@ -572,6 +629,9 @@ const DashboardContentMUI = () => {
                                                         meridiem: false
                                                     }
                                                 ],
+                                            },
+                                            listWeek: {
+                                                listDayFormat: { weekday: 'short', month: 'short', day: 'numeric' }
                                             }
                                         }}
                                         eventClick={handleEventClick}

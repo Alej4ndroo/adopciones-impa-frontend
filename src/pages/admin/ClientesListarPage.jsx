@@ -6,8 +6,8 @@ import {
     Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Box, CircularProgress, Alert, Chip,
     IconButton, useTheme, Button, Stack, alpha, Avatar,
-    Collapse, TextField, InputAdornment, Tooltip, Grid, Card,
-    useMediaQuery, Divider
+    Collapse, TextField, InputAdornment, Grid, Card,
+    useMediaQuery, Divider, Dialog, DialogTitle, DialogContent, DialogActions, Link
 } from '@mui/material';
 import {
     Person as PersonIcon,
@@ -22,16 +22,14 @@ import {
     CalendarToday as CalendarIcon,
     Search as SearchIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CLIENTES_ENDPOINT = '/usuarios/listar-clientes';
 
 // --- Componente de tarjeta para móviles ---
-const MobileClientCard = ({ cliente, onDelete }) => {
+const MobileClientCard = ({ cliente, onDelete, onEdit }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const fullAddress = cliente.direccion?.calle
         ? `${cliente.direccion.calle || ''} ${cliente.direccion.numero_exterior || ''}, ${cliente.direccion.colonia || ''}, ${cliente.direccion.ciudad || ''}, ${cliente.direccion.estado || ''}, C.P. ${cliente.direccion.codigo_postal || ''}`.trim()
@@ -48,17 +46,20 @@ const MobileClientCard = ({ cliente, onDelete }) => {
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        navigate(`/admin/clientes/editar/${cliente.id_usuario}`);
+        if (onEdit) {
+            onEdit(cliente);
+        }
     };
 
     const handleDelete = (e) => {
         e.stopPropagation();
         const nextState = !cliente.activo;
-        const actionLabel = nextState ? 'activar' : 'desactivar';
-        if (window.confirm(`¿Seguro que deseas ${actionLabel} a ${cliente.nombre}?`)) {
-            onDelete(cliente.id_usuario, nextState);
-        }
+        onDelete(cliente.id_usuario, nextState);
     };
+
+    const fotoSrc = cliente.foto_perfil_base64
+        ? `data:image/jpeg;base64,${cliente.foto_perfil_base64}`
+        : undefined;
 
     return (
         <Card
@@ -84,7 +85,7 @@ const MobileClientCard = ({ cliente, onDelete }) => {
             >
                 <Stack direction="row" spacing={2} alignItems="center">
                     <Avatar
-                        src={cliente.foto_perfil_base64 || undefined}
+                        src={fotoSrc}
                         sx={{
                             bgcolor: cliente.activo ? '#1976d2' : theme.palette.grey[400],
                             width: 56,
@@ -203,6 +204,17 @@ const MobileClientCard = ({ cliente, onDelete }) => {
                         >
                             {cliente.activo ? 'Desactivar' : 'Activar'}
                         </Button>
+                        <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDocs && onViewDocs(cliente);
+                            }}
+                            sx={{ fontWeight: 600 }}
+                        >
+                            Ver documentación
+                        </Button>
                     </Stack>
                 </Box>
             </Collapse>
@@ -211,10 +223,9 @@ const MobileClientCard = ({ cliente, onDelete }) => {
 };
 
 // --- Componente de fila expandible ---
-const ClientRow = ({ cliente, onDelete }) => {
+const ClientRow = ({ cliente, onDelete, onEdit, onViewDocs }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
 
     const fullAddress = cliente.direccion?.calle
         ? `${cliente.direccion.calle || ''} ${cliente.direccion.numero_exterior || ''}, ${cliente.direccion.colonia || ''}, ${cliente.direccion.ciudad || ''}, ${cliente.direccion.estado || ''}, C.P. ${cliente.direccion.codigo_postal || ''}`.trim()
@@ -231,21 +242,37 @@ const ClientRow = ({ cliente, onDelete }) => {
 
     const handleEdit = (e) => {
         e.stopPropagation();
-        navigate(`/admin/clientes/editar/${cliente.id_usuario}`);
+        if (onEdit) {
+            onEdit(cliente);
+        }
     };
 
     const handleDelete = (e) => {
         e.stopPropagation();
         const nextState = !cliente.activo;
-        const actionLabel = nextState ? 'activar' : 'desactivar';
-        if (window.confirm(`¿Seguro que deseas ${actionLabel} a ${cliente.nombre}?`)) {
-            onDelete(cliente.id_usuario, nextState);
-        }
+        onDelete(cliente.id_usuario, nextState);
     };
+
+        const getVerificationInfo = () => {
+            const raw = cliente.documentos_verificados ?? cliente.verificado ?? cliente.documentacion_verificada ?? cliente.estado_verificacion;
+            const normalized = typeof raw === 'string' ? raw.toLowerCase() : raw;
+
+        if (normalized === true || normalized === 'verificado' || normalized === 'verificada' || normalized === 'aprobado') {
+            return { label: 'Verificado', color: 'success' };
+        }
+
+        return { label: 'En revisión', color: 'warning' };
+    };
+
+    const verification = getVerificationInfo();
 
     const toggleRow = () => {
         setOpen(!open);
     };
+
+    const fotoSrc = cliente.foto_perfil_base64
+        ? `data:image/jpeg;base64,${cliente.foto_perfil_base64}`
+        : undefined;
 
     return (
         <>
@@ -285,7 +312,7 @@ const ClientRow = ({ cliente, onDelete }) => {
                 </TableCell>
                 <TableCell sx={{ width: 60 }}>
                     <Avatar
-                        src={cliente.foto_perfil_base64 || undefined}
+                        src={fotoSrc}
                         sx={{
                             bgcolor: cliente.activo ? '#1976d2' : theme.palette.grey[400],
                             width: 45,
@@ -314,12 +341,21 @@ const ClientRow = ({ cliente, onDelete }) => {
                     </Typography>
                 </TableCell>
                 <TableCell align="center">
-                    <Chip
-                        label={cliente.activo ? 'Activo' : 'Inactivo'}
-                        size="small"
-                        color={cliente.activo ? 'success' : 'default'}
-                        sx={{ fontWeight: 600 }}
-                    />
+                    <Stack spacing={0.5} alignItems="center">
+                        <Chip
+                            label={cliente.activo ? 'Activo' : 'Inactivo'}
+                            size="small"
+                            color={cliente.activo ? 'success' : 'default'}
+                            sx={{ fontWeight: 600 }}
+                        />
+                        <Chip
+                            label={verification.label}
+                            size="small"
+                            color={verification.color}
+                            variant="outlined"
+                            sx={{ fontWeight: 600 }}
+                        />
+                    </Stack>
                 </TableCell>
             </TableRow>
 
@@ -510,6 +546,21 @@ const ClientRow = ({ cliente, onDelete }) => {
                                         <Button
                                             fullWidth={{ xs: true, sm: false }}
                                             variant="outlined"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onViewDocs && onViewDocs(cliente);
+                                            }}
+                                            sx={{
+                                                borderRadius: 2,
+                                                fontWeight: 600,
+                                                px: 3
+                                            }}
+                                        >
+                                            Ver documentación
+                                        </Button>
+                                        <Button
+                                            fullWidth={{ xs: true, sm: false }}
+                                            variant="outlined"
                                             startIcon={<DeleteIcon />}
                                             color={cliente.activo ? 'error' : 'success'}
                                             onClick={handleDelete}
@@ -560,6 +611,24 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedCliente, setSelectedCliente] = useState(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [docsDialogOpen, setDocsDialogOpen] = useState(false);
+    const [docsCliente, setDocsCliente] = useState(null);
+    const [docsList, setDocsList] = useState([]);
+    const [docsLoading, setDocsLoading] = useState(false);
+    const [editForm, setEditForm] = useState({
+        nombre: '',
+        correo_electronico: '',
+        telefono: '',
+        calle: '',
+        colonia: '',
+        codigo_postal: '',
+        ciudad: '',
+        estado: '',
+        pais: ''
+    });
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -652,6 +721,211 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         } catch (err) {
             console.error('Error al desactivar cliente:', err);
             setError('No se pudo actualizar el estado. Verifica permisos o intenta más tarde.');
+        }
+    };
+
+    const openEditDialog = (cliente) => {
+        const direccion = cliente?.direccion || {};
+        setSelectedCliente(cliente);
+        setEditForm({
+            nombre: cliente.nombre || '',
+            correo_electronico: cliente.correo_electronico || '',
+            telefono: cliente.telefono || '',
+            calle: direccion.calle || '',
+            colonia: direccion.colonia || '',
+            codigo_postal: direccion.codigo_postal || '',
+            ciudad: direccion.ciudad || '',
+            estado: direccion.estado || '',
+            pais: direccion.pais || ''
+        });
+        setEditDialogOpen(true);
+    };
+
+    const closeEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedCliente(null);
+    };
+
+    const handleEditChange = (field) => (event) => {
+        setEditForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+    const handleEditSubmit = async () => {
+        if (!selectedCliente) return;
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+
+        try {
+            setSavingEdit(true);
+            await axios.put(
+                `${API_URL_BACKEND}/usuarios/actualizar/${selectedCliente.id_usuario}`,
+                { ...editForm },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const updater = (list) =>
+                list.map((c) => {
+                    if (c.id_usuario !== selectedCliente.id_usuario) return c;
+                    const direccionActual = c.direccion || {};
+                    return {
+                        ...c,
+                        nombre: editForm.nombre,
+                        correo_electronico: editForm.correo_electronico,
+                        telefono: editForm.telefono,
+                        direccion: {
+                            ...direccionActual,
+                            calle: editForm.calle,
+                            colonia: editForm.colonia,
+                            codigo_postal: editForm.codigo_postal,
+                            ciudad: editForm.ciudad,
+                            estado: editForm.estado,
+                            pais: editForm.pais
+                        }
+                    };
+                });
+
+            setClientes(updater);
+            setFilteredClientes(updater);
+            closeEditDialog();
+        } catch (err) {
+            console.error('Error al actualizar cliente:', err);
+            setError('No se pudo actualizar el cliente. Intenta nuevamente.');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const guessMimeFromBase64 = (value) => {
+        if (!value || typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        if (trimmed.startsWith('data:')) {
+            const mime = trimmed.slice(5).split(';')[0];
+            return mime || null;
+        }
+        if (trimmed.startsWith('/9j/')) return 'image/jpeg'; // jpg
+        if (trimmed.startsWith('iVBORw0KGgo')) return 'image/png'; // png
+        if (trimmed.startsWith('JVBER')) return 'application/pdf'; // pdf
+        return 'application/octet-stream';
+    };
+
+    const asDataUrl = (value) => {
+        if (!value || typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        if (trimmed.startsWith('data:')) return trimmed;
+        const mime = guessMimeFromBase64(trimmed) || 'application/octet-stream';
+        // Si ya viene en base64 sin prefijo, añadimos data URL
+        return `data:${mime};base64,${trimmed}`;
+    };
+
+    const buildDocsList = (cliente) => {
+        const docs = [];
+        const posibles = [
+            { key: 'identificacion_frontal', label: 'Identificación (frente)' },
+            { key: 'identificacion_reverso', label: 'Identificación (reverso)' },
+            { key: 'comprobante_domicilio', label: 'Comprobante de domicilio' },
+            { key: 'url_ine', label: 'INE' },
+            { key: 'url_acta', label: 'Acta de Nacimiento' },
+            { key: 'url_comprobante', label: 'Comprobante de domicilio' },
+            { key: 'documento1', label: 'Documento 1' },
+            { key: 'documento2', label: 'Documento 2' },
+            { key: 'documento3', label: 'Documento 3' },
+        ];
+
+        const fromColeccion = Array.isArray(cliente.documentos) ? cliente.documentos : [];
+        fromColeccion.forEach((doc, idx) => {
+            if (doc?.archivo_base64 || doc?.url) {
+                docs.push({
+                    label: doc.nombre || `Documento ${idx + 1}`,
+                    url: doc.url || asDataUrl(doc.archivo_base64)
+                });
+            }
+        });
+
+        posibles.forEach(({ key, label }) => {
+            const valor = cliente[key];
+            if (valor) {
+                const url = typeof valor === 'string' && valor.startsWith('http')
+                    ? valor
+                    : asDataUrl(valor);
+                docs.push({ label, url });
+            }
+        });
+
+        return docs.slice(0, 3);
+    };
+
+    const openDocsDialog = async (cliente) => {
+        setDocsDialogOpen(true);
+        setDocsCliente(cliente);
+        setDocsLoading(true);
+
+        const token = localStorage.getItem('authToken');
+        const fallbackDocs = buildDocsList(cliente);
+
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            setDocsList(fallbackDocs);
+            setDocsLoading(false);
+            return;
+        }
+
+        try {
+            const detail = await axios.get(`${API_URL_BACKEND}/usuarios/${cliente.id_usuario}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = detail.data || {};
+            setDocsList(buildDocsList({ ...cliente, ...data }));
+        } catch (err) {
+            console.error('Error al obtener documentos del cliente:', err);
+            setError('No se pudieron cargar los documentos del cliente.');
+            setDocsList(fallbackDocs);
+        } finally {
+            setDocsLoading(false);
+        }
+    };
+
+    const closeDocsDialog = () => {
+        setDocsDialogOpen(false);
+        setDocsCliente(null);
+        setDocsList([]);
+        setDocsLoading(false);
+    };
+
+    const handleMarkDocsVerified = async () => {
+        if (!docsCliente) return;
+        const confirm = window.confirm(`¿Seguro que quieres verificar a ${docsCliente.nombre || 'este cliente'}?`);
+        if (!confirm) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+        try {
+            await axios.put(
+                `${API_URL_BACKEND}/usuarios/actualizar/${docsCliente.id_usuario}`,
+                {
+                    documentacion_verificada: 'verificada',
+                    activo: docsCliente.activo
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const updater = (list) =>
+                list.map((c) =>
+                    c.id_usuario === docsCliente.id_usuario
+                        ? { ...c, documentacion_verificada: 'verificada' }
+                        : c
+                );
+            setClientes(updater);
+            setFilteredClientes(updater);
+            closeDocsDialog();
+        } catch (err) {
+            console.error('Error al marcar documentos verificados:', err);
+            setError('No se pudo marcar la documentación como verificada.');
         }
     };
 
@@ -780,6 +1054,8 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                             key={cliente.id_usuario}
                             cliente={cliente}
                             onDelete={handleDelete}
+                            onEdit={openEditDialog}
+                            onViewDocs={openDocsDialog}
                         />
                     ))}
                 </Box>
@@ -822,12 +1098,204 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                                     key={cliente.id_usuario}
                                     cliente={cliente}
                                     onDelete={handleDelete}
+                                    onEdit={openEditDialog}
+                                    onViewDocs={openDocsDialog}
                                 />
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog
+                open={editDialogOpen}
+                onClose={closeEditDialog}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>
+                    Editar información de cliente
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2.2}>
+                        <TextField
+                            label="Nombre"
+                            value={editForm.nombre}
+                            onChange={handleEditChange('nombre')}
+                            fullWidth
+                        />
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Correo electrónico"
+                                    type="email"
+                                    value={editForm.correo_electronico}
+                                    onChange={handleEditChange('correo_electronico')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Teléfono"
+                                    value={editForm.telefono}
+                                    onChange={handleEditChange('telefono')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Divider />
+
+                        <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+                            Dirección
+                        </Typography>
+
+                        <TextField
+                            label="Calle"
+                            value={editForm.calle}
+                            onChange={handleEditChange('calle')}
+                            fullWidth
+                        />
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Colonia"
+                                    value={editForm.colonia}
+                                    onChange={handleEditChange('colonia')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Código Postal"
+                                    value={editForm.codigo_postal}
+                                    onChange={handleEditChange('codigo_postal')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Ciudad"
+                                    value={editForm.ciudad}
+                                    onChange={handleEditChange('ciudad')}
+                                    fullWidth
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    label="Estado"
+                                    value={editForm.estado}
+                                    onChange={handleEditChange('estado')}
+                                    fullWidth
+                                />
+                            </Grid>
+                        </Grid>
+                        <TextField
+                            label="País"
+                            value={editForm.pais}
+                            onChange={handleEditChange('pais')}
+                            fullWidth
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={closeEditDialog} disabled={savingEdit}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleEditSubmit}
+                        disabled={savingEdit}
+                    >
+                        {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={docsDialogOpen}
+                onClose={closeDocsDialog}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>
+                    Documentación del cliente
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        {[
+                            { label: 'INE', key: 'ine', idx: 0 },
+                            { label: 'Acta de Nacimiento', key: 'acta', idx: 1 },
+                            { label: 'Comprobante de domicilio', key: 'comprobante', idx: 2 },
+                        ].map((item) => {
+                            const doc = docsList[item.idx];
+                            const hasDoc = !!doc?.url;
+                            return (
+                                <Card
+                                    key={item.label}
+                                    variant="outlined"
+                                    sx={{ p: 2, borderRadius: 2, borderColor: alpha('#1976d2', 0.2) }}
+                                >
+                                    <Typography fontWeight={700} sx={{ mb: 1 }}>
+                                        {item.label}
+                                    </Typography>
+                                    {docsLoading ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Cargando documento...
+                                        </Typography>
+                                    ) : hasDoc ? (
+                                        <Box
+                                            sx={{
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                bgcolor: alpha('#1976d2', 0.04),
+                                                border: `1px solid ${alpha('#1976d2', 0.15)}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                minHeight: 140,
+                                                maxHeight: 220,
+                                                p: 1
+                                            }}
+                                        >
+                                            <Box
+                                                component="img"
+                                                src={doc.url}
+                                                alt={item.label}
+                                                sx={{
+                                                    maxWidth: '100%',
+                                                    maxHeight: 200,
+                                                    objectFit: 'contain',
+                                                    borderRadius: 1
+                                                }}
+                                            />
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Sin documento cargado.
+                                        </Typography>
+                                    )}
+                                </Card>
+                            );
+                        })}
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={closeDocsDialog}>Cerrar</Button>
+                    <Button variant="outlined" disabled>
+                        Notificar error al usuario
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleMarkDocsVerified}
+                        disabled={!docsCliente}
+                    >
+                        Marcar como verificado
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

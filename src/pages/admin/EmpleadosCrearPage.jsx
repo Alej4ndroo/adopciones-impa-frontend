@@ -21,7 +21,7 @@ const ROL_OPTIONS = [
     { id: 4, nombre: 'Recepcionista' }
 ];
 
-const ESTADO_DOCUMENTACION_OPTIONS = ['pendiente', 'verificado', 'rechazado'];
+const ESTADO_DOCUMENTACION_OPTIONS = ['pendiente', 'verificada', 'rechazada'];
 
 // --- FUNCIONES DE UTILIDAD ---
 
@@ -70,6 +70,8 @@ const EmpleadosCrearPage = () => {
         fecha_nacimiento: '', 
         telefono: '',
         calle: '', 
+        numero_exterior: '',
+        numero_interior: '',
         colonia: '',
         codigo_postal: '',
         ciudad: '',
@@ -91,6 +93,19 @@ const EmpleadosCrearPage = () => {
     const [success, setSuccess] = useState(null);
     const [error, setError] = useState(null);
     const [passwordError, setPasswordError] = useState(null); // Nuevo estado para error de contraseña
+    const [emailError, setEmailError] = useState(null);
+
+    const todayMinus18 = (() => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - 18);
+        return d.toISOString().split('T')[0];
+    })();
+
+    const sanitizeDigits = (value, maxLength) => value.replace(/\D/g, '').slice(0, maxLength);
+    const sanitizePhone = (value) => sanitizeDigits(value, 10);
+    const sanitizeCp = (value) => sanitizeDigits(value, 5);
+    const sanitizeNumero = (value) => sanitizeDigits(value, 5);
+    const isValidEmail = (val) => /^[\w.-]+@([\w-]+\.)+[\w-]{2,}$/i.test(val);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -99,6 +114,28 @@ const EmpleadosCrearPage = () => {
         if (name === 'contrasena') {
             const validationError = validatePassword(value);
             setPasswordError(validationError);
+        }
+
+        if (name === 'telefono') {
+            const digits = sanitizePhone(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'codigo_postal') {
+            const digits = sanitizeCp(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'numero_exterior' || name === 'numero_interior') {
+            const digits = sanitizeNumero(value);
+            setFormData((prev) => ({ ...prev, [name]: digits }));
+            return;
+        }
+
+        if (name === 'correo_electronico') {
+            setEmailError(value && !isValidEmail(value) ? 'Correo no válido' : null);
         }
 
         setFormData({
@@ -132,6 +169,17 @@ const EmpleadosCrearPage = () => {
             return;
         }
 
+        if (formData.fecha_nacimiento) {
+            const born = new Date(formData.fecha_nacimiento);
+            const today = new Date();
+            const age = today.getFullYear() - born.getFullYear() - (today < new Date(today.getFullYear(), born.getMonth(), born.getDate()) ? 1 : 0);
+            if (age < 18) {
+                setError('El empleado debe ser mayor de 18 años.');
+                setLoading(false);
+                return;
+            }
+        }
+
         const token = localStorage.getItem('authToken');
         if (!token) {
             setError("No autenticado. Por favor, inicie sesión.");
@@ -152,8 +200,14 @@ const EmpleadosCrearPage = () => {
         }
 
         // 3. Preparar Payload
+        const addressLine = [formData.calle, formData.numero_exterior, formData.numero_interior ? `Int ${formData.numero_interior}` : '']
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
         const payload = {
             ...formData,
+            calle: addressLine || formData.calle,
             foto_perfil_base64: fotoPerfilBase64, 
             id_rol: parseInt(formData.id_rol, 10),
         };
@@ -177,7 +231,7 @@ const EmpleadosCrearPage = () => {
             // 5. Resetear
             setFormData({
                 nombre: '', correo_electronico: '', contrasena: '', 
-                fecha_nacimiento: '', telefono: '', calle: '', colonia: '', 
+                fecha_nacimiento: '', telefono: '', calle: '', numero_exterior: '', numero_interior: '', colonia: '', 
                 codigo_postal: '', ciudad: '', numero_empleado: '', 
                 cedula_profesional: '', licenciatura: '', especialidad: '',
                 id_rol: ROL_OPTIONS[0].id,
@@ -307,8 +361,28 @@ const EmpleadosCrearPage = () => {
                             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
                         />
 
-                        <TextField fullWidth label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={handleChange} InputLabelProps={{ shrink: true }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField
+                            fullWidth
+                            label="Fecha de Nacimiento"
+                            name="fecha_nacimiento"
+                            type="date"
+                            value={formData.fecha_nacimiento}
+                            onChange={handleChange}
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{ max: todayMinus18 }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
+                        <TextField
+                            fullWidth
+                            required
+                            label="Teléfono"
+                            name="telefono"
+                            value={formData.telefono}
+                            onChange={handleChange}
+                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 10 }}
+                            helperText="10 dígitos, solo números"
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
                     </Stack>
                 </Box>
 
@@ -328,9 +402,42 @@ const EmpleadosCrearPage = () => {
                         </Typography>
                     </Stack>
                     <Stack spacing={3}>
-                        <TextField fullWidth required label="Calle y Número" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth required label="Calle" name="calle" value={formData.calle} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="Número Exterior"
+                                name="numero_exterior"
+                                value={formData.numero_exterior}
+                                onChange={handleChange}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                                helperText="Solo números"
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Número Interior (Opcional)"
+                                name="numero_interior"
+                                value={formData.numero_interior}
+                                onChange={handleChange}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                                helperText="Solo números"
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
+                        </Stack>
                         <TextField fullWidth required label="Colonia" name="colonia" value={formData.colonia} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="C.P." name="codigo_postal" value={formData.codigo_postal} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField
+                            fullWidth
+                            required
+                            label="C.P."
+                            name="codigo_postal"
+                            value={formData.codigo_postal}
+                            onChange={handleChange}
+                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 5 }}
+                            helperText="5 dígitos"
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
                         <TextField fullWidth required label="Ciudad" name="ciudad" value={formData.ciudad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Stack>
                 </Box>
@@ -351,7 +458,20 @@ const EmpleadosCrearPage = () => {
                         </Typography>
                     </Stack>
                     <Stack spacing={3}>
-                        <TextField fullWidth required label="Número de Empleado" name="numero_empleado" value={formData.numero_empleado} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField
+                            fullWidth
+                            required
+                            label="Número de Empleado"
+                            name="numero_empleado"
+                            value={formData.numero_empleado}
+                            onChange={(e) => {
+                                const digits = e.target.value.replace(/\\D/g, '').slice(0, 6);
+                                setFormData((prev) => ({ ...prev, numero_empleado: digits }));
+                            }}
+                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 6 }}
+                            helperText="Solo números"
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
                         <FormControl fullWidth required>
                             <InputLabel>Rol</InputLabel>
                             <Select 
@@ -384,7 +504,14 @@ const EmpleadosCrearPage = () => {
                         size="large"
                         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                         // Deshabilitado si hay un error de contraseña
-                        disabled={loading || !!passwordError || !formData.nombre || !formData.correo_electronico || !formData.contrasena || !formData.numero_empleado}
+                        disabled={
+                            loading || !!passwordError || !!emailError ||
+                            !formData.nombre || !formData.correo_electronico || !formData.contrasena ||
+                            !formData.numero_empleado || !formData.telefono || formData.telefono.length !== 10 ||
+                            !formData.calle || !formData.numero_exterior ||
+                            !formData.colonia || !formData.codigo_postal || formData.codigo_postal.length !== 5 ||
+                            !formData.ciudad
+                        }
                         sx={{ 
                             borderRadius: 2, 
                             px: 5, 
