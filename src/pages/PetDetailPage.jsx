@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Container, Box, Grid, CardMedia,
+    Container, Box,
     Typography, Button, CssBaseline, Chip, CircularProgress, Alert,
     Stack
 } from '@mui/material';
@@ -73,6 +73,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [mainImage, setMainImage] = useState(null);
+    const [docWarning, setDocWarning] = useState(null);
 
     useEffect(() => {
         if (!petId) {
@@ -100,8 +101,20 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
     }, [petId]);
 
     // 🔑 3. CREA LA FUNCIÓN HANDLER PARA EL BOTÓN
+    const isDocVerified = (currentUser?.documentacion_verificada || '').toLowerCase() === 'verificada';
+
+    useEffect(() => {
+        if (isDocVerified) {
+            setDocWarning(null);
+        }
+    }, [isDocVerified]);
+
     const handleAdoptionClick = () => {
         if (isAuthenticated) {
+            if (!isDocVerified) {
+                setDocWarning('Debes tener tu documentación verificada para solicitar una adopción.');
+                return;
+            }
             navigate(`/solicitar-adopcion/${petId}`);
         } else {
             // Usuario NO LOGUEADO: Abrir el modal de login
@@ -177,160 +190,180 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                 onOpenLoginModal={onOpenLoginModal}
             />
 
-            <Box sx={{ bgcolor: 'background.default', py: { xs: 5, md: 10 } }}>
-                <Container maxWidth="lg">
-                    {/* Cabecera ligera */}
-                    <Stack spacing={1.2} sx={{ mb: 2 }}>
-                        <Chip label={mascota.estado_adopcion === 'disponible' ? 'Disponible' : 'En proceso'} color={mascota.estado_adopcion === 'disponible' ? 'success' : 'warning'} sx={{ width: 'fit-content', fontWeight: 700 }} />
+            <Box sx={{ bgcolor: '#eef2ff', py: { xs: 6, md: 10 }, position: 'relative', overflow: 'hidden' }}>
+                <Box sx={{ position: 'absolute', width: 260, height: 260, bgcolor: 'primary.main', borderRadius: '50%', filter: 'blur(110px)', opacity: 0.18, top: -60, left: -80 }} />
+                <Box sx={{ position: 'absolute', width: 220, height: 220, bgcolor: 'secondary.main', borderRadius: '50%', filter: 'blur(120px)', opacity: 0.16, bottom: -70, right: -60 }} />
+
+                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+                    <Stack spacing={1.4} alignItems="flex-start" sx={{ mb: { xs: 4, md: 5 } }}>
+                        <Chip 
+                            label={mascota.estado_adopcion === 'disponible' ? 'Disponible' : 'En proceso'} 
+                            color={mascota.estado_adopcion === 'disponible' ? 'success' : 'warning'} 
+                            sx={{ px: 1, height: 30, fontWeight: 700, borderRadius: 2 }}
+                        />
                         <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main', lineHeight: 1.05 }}>
                             {mascota.nombre}
                         </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Conoce a {mascota.nombre}: datos claros, salud verificada y acompañamiento.
+                        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 800 }}>
+                            Conoce a {mascota.nombre}: salud verificada, acompañamiento y toda la información que necesitas para tomar una decisión informada.
                         </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                            <Chip icon={mascota.sexo === 'macho' ? <Male /> : <Female />} label={mascota.sexo} color={mascota.sexo === 'macho' ? 'primary' : 'secondary'} />
-                            <Chip icon={<Cake />} label={calcularEdad(mascota.edad_en_meses)} variant="outlined" />
-                            <Chip icon={<PawPrint size={18} />} label={mascota.raza || 'Raza desconocida'} variant="outlined" />
-                            <Chip icon={<Heart />} label={mascota.especie} variant="outlined" />
+                        <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                            <Chip icon={mascota.sexo === 'macho' ? <Male /> : <Female />} label={mascota.sexo} color={mascota.sexo === 'macho' ? 'primary' : 'secondary'} sx={{ fontWeight: 600 }} />
+                            <Chip icon={<Cake />} label={calcularEdad(mascota.edad_en_meses)} variant="outlined" sx={{ fontWeight: 600 }} />
+                            <Chip icon={<PawPrint size={18} />} label={mascota.raza || 'Raza desconocida'} variant="outlined" sx={{ fontWeight: 600 }} />
+                            <Chip icon={<Heart />} label={mascota.especie} variant="outlined" sx={{ fontWeight: 600 }} />
                             {mascota.tamano && (
-                                <Chip label={`Tamaño: ${mascota.tamano}`} variant="outlined" />
+                                <Chip label={`Tamaño: ${mascota.tamano}`} variant="outlined" sx={{ fontWeight: 600 }} />
                             )}
                         </Stack>
                     </Stack>
 
-                    <Grid container spacing={3} alignItems="flex-start">
-                        {/* Galería vertical con miniaturas alineadas */}
-                        <Grid item xs={12} md={6}>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 110px' }, gap: 1.5, alignItems: 'stretch' }}>
-                                <Box sx={{ position: 'relative', borderRadius: 4, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.08)', aspectRatio: '4 / 5', minHeight: 360 }}>
-                                    <Box
-                                        component="img"
-                                        src={mainImage || getImageUrl(mascota.imagenes_base64?.[0])}
-                                        alt={mascota.nombre}
-                                        sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.05fr 0.95fr' }, gap: { xs: 3, md: 4 } }}>
+                        <Box sx={{ bgcolor: 'white', borderRadius: 4, p: { xs: 2, md: 2.5 }, boxShadow: '0 24px 60px rgba(15,23,42,0.08)', border: '1px solid #e7e9f4' }}>
+                            <Box sx={{ position: 'relative', borderRadius: 3, overflow: 'hidden', aspectRatio: '4 / 5', mb: 2.5, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)' }}>
+                                <Box
+                                    component="img"
+                                    src={mainImage || getImageUrl(mascota.imagenes_base64?.[0])}
+                                    alt={mascota.nombre}
+                                    sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                <Stack direction="row" spacing={1} sx={{ position: 'absolute', top: 14, left: 14 }}>
+                                    <Chip 
+                                        label={mascota.especie || 'Mascota'} 
+                                        size="small" 
+                                        color="primary" 
+                                        sx={{ fontWeight: 700, bgcolor: 'rgba(0,123,255,0.9)', color: 'white', borderRadius: 2 }}
                                     />
-                                </Box>
-                                <Stack spacing={1} sx={{ maxHeight: 520, overflow: 'auto', pr: 0.5 }}>
-                                    {mascota.imagenes_base64 && mascota.imagenes_base64.map((base64, index) => (
+                                    <Chip 
+                                        label={mascota.estado_adopcion ? mascota.estado_adopcion.charAt(0).toUpperCase() + mascota.estado_adopcion.slice(1) : 'Estado'} 
+                                        size="small" 
+                                        color={mascota.estado_adopcion === 'disponible' ? 'success' : 'warning'} 
+                                        variant={mascota.estado_adopcion === 'disponible' ? 'filled' : 'outlined'}
+                                        sx={{ fontWeight: 700, borderRadius: 2, bgcolor: mascota.estado_adopcion === 'disponible' ? undefined : 'rgba(255,255,255,0.9)' }}
+                                    />
+                                </Stack>
+                            </Box>
+                            <Stack direction="row" spacing={1.2} sx={{ overflowX: 'auto', pb: 0.5 }}>
+                                {mascota.imagenes_base64 && mascota.imagenes_base64.map((base64, index) => {
+                                    const url = getImageUrl(base64, index);
+                                    const active = mainImage === url;
+                                    return (
                                         <Box
                                             key={index}
                                             onClick={() => handleImageClick(base64)}
                                             sx={{
-                                                height: 100,
+                                                width: 110,
+                                                height: 90,
                                                 borderRadius: 2,
                                                 overflow: 'hidden',
-                                                border: mainImage === getImageUrl(base64) ? '3px solid #007BFF' : '1px solid #e6e9f0',
-                                                cursor: 'pointer'
+                                                border: active ? '3px solid #007BFF' : '1px solid #e6e9f0',
+                                                cursor: 'pointer',
+                                                flexShrink: 0,
+                                                boxShadow: active ? '0 10px 25px rgba(0,123,255,0.25)' : 'none'
                                             }}
                                         >
                                             <img
-                                                src={getImageUrl(base64, index)}
+                                                src={url}
                                                 alt={`Miniatura ${index + 1}`}
                                                 loading="lazy"
                                                 style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                                             />
                                         </Box>
-                                    ))}
-                                </Stack>
+                                    );
+                                })}
+                            </Stack>
+                        </Box>
+
+                        <Box sx={{ bgcolor: 'white', borderRadius: 4, p: { xs: 2.5, md: 3.5 }, boxShadow: '0 24px 60px rgba(15,23,42,0.08)', border: '1px solid #e7e9f4', display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' }, gap: 1.5 }}>
+                                <Box sx={{ p: 2.4, borderRadius: 3, bgcolor: '#f6f8ff', border: '1px solid #e6e9f0' }}>
+                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, letterSpacing: 0.5 }}>Datos rápidos</Typography>
+                                    <Stack spacing={0.6}>
+                                        <Typography variant="body2"><strong>Especie:</strong> {mascota.especie || 'N/D'}</Typography>
+                                        <Typography variant="body2"><strong>Edad:</strong> {calcularEdad(mascota.edad_en_meses)}</Typography>
+                                        <Typography variant="body2"><strong>Raza:</strong> {mascota.raza || 'N/D'}</Typography>
+                                        <Typography variant="body2"><strong>Tamaño:</strong> {mascota.tamano || 'N/D'}</Typography>
+                                        <Typography variant="body2"><strong>Estado:</strong> {mascota.estado_adopcion || 'N/D'}</Typography>
+                                    </Stack>
+                                </Box>
+                                <Box sx={{ p: 2.4, borderRadius: 3, bgcolor: '#ffffff', border: '1px solid #e6e9f0' }}>
+                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, letterSpacing: 0.5 }}>Salud</Typography>
+                                    <Stack spacing={1}>
+                                        <Chip
+                                            icon={<CheckCircleRounded />}
+                                            label={mascota.vacunado ? 'Vacunación al día' : 'Vacunación pendiente'}
+                                            color={mascota.vacunado ? 'success' : 'warning'}
+                                            variant={mascota.vacunado ? 'filled' : 'outlined'}
+                                            sx={{ fontWeight: 700, borderRadius: 2 }}
+                                        />
+                                        <Chip
+                                            icon={<LocalHospital />}
+                                            label={mascota.esterilizado ? 'Esterilizado/a' : 'Esterilización pendiente'}
+                                            color={mascota.esterilizado ? 'success' : 'warning'}
+                                            variant={mascota.esterilizado ? 'filled' : 'outlined'}
+                                            sx={{ borderRadius: 2 }}
+                                        />
+                                    </Stack>
+                                </Box>
                             </Box>
-                        </Grid>
 
-                        {/* Panel informativo */}
-                        <Grid item xs={12} md={6}>
-                            <Stack spacing={2.6}>
-                                <Box sx={{ p: 2.5, bgcolor: 'white', borderRadius: 3, border: '1px solid #e6e9f0', boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}>
-                                    <Typography variant="subtitle2" sx={{ textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary', mb: 1 }}>
-                                        Cuota de adopción
-                                    </Typography>
-                                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
-                                        Gratis
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Incluye revisión veterinaria y guía de adaptación.
-                                    </Typography>
-                                </Box>
+                            <Box sx={{ p: 2.6, borderRadius: 3, border: '1px solid #e6e9f0', bgcolor: '#fbfcff' }}>
+                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, letterSpacing: 0.5 }}>Sobre {mascota.nombre}</Typography>
+                                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                                    {mascota.descripcion || 'Esta mascota está lista para encontrar un hogar lleno de cariño.'}
+                                </Typography>
+                            </Box>
 
-                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.2 }}>
-                                    <Box sx={{ p: 2.3, bgcolor: '#f7f9ff', borderRadius: 3, border: '1px solid #e6e9f0' }}>
-                                    <Typography variant="subtitle2" color="text.secondary">Datos rápidos</Typography>
-                                    <Stack spacing={0.6} sx={{ mt: 1 }}>
-                                        <Typography variant="body1"><strong>Especie:</strong> {mascota.especie}</Typography>
-                                        <Typography variant="body1"><strong>Edad:</strong> {calcularEdad(mascota.edad_en_meses)}</Typography>
-                                        <Typography variant="body1"><strong>Raza:</strong> {mascota.raza || 'N/D'}</Typography>
-                                        <Typography variant="body1"><strong>Tamaño:</strong> {mascota.tamano || 'N/D'}</Typography>
-                                        <Typography variant="body1"><strong>Peso:</strong> {mascota.peso || 'N/D'}</Typography>
-                                        <Typography variant="body1"><strong>Estado:</strong> {mascota.estado_adopcion}</Typography>
-                                    </Stack>
-                                </Box>
-                                    <Box sx={{ p: 2.3, bgcolor: 'white', borderRadius: 3, border: '1px solid #e6e9f0' }}>
-                                        <Typography variant="subtitle2" color="text.secondary">Salud</Typography>
-                                        <Stack spacing={0.8} sx={{ mt: 1 }}>
-                                            <Chip
-                                                icon={<CheckCircleRounded />}
-                                                label={mascota.vacunado ? 'Vacunación al día' : 'Vacunación pendiente'}
-                                                color={mascota.vacunado ? 'success' : 'warning'}
-                                                variant={mascota.vacunado ? 'filled' : 'outlined'}
-                                                sx={{ fontWeight: 700 }}
-                                            />
-                                            <Chip
-                                                icon={<LocalHospital />}
-                                                label={mascota.esterilizado ? 'Esterilizado/a' : 'Esterilización pendiente'}
-                                                color={mascota.esterilizado ? 'success' : 'warning'}
-                                                variant={mascota.esterilizado ? 'filled' : 'outlined'}
-                                            />
-                                        </Stack>
-                                    </Box>
-                                </Box>
+                            {!isDocVerified && (
+                                <Alert severity="warning" sx={{ borderRadius: 2, fontWeight: 600 }}>
+                                    Debes tener la documentación verificada para adoptar. Actualiza tus documentos en tu perfil.
+                                </Alert>
+                            )}
+                            {docWarning && (
+                                <Alert severity="warning" sx={{ borderRadius: 2, fontWeight: 600 }}>
+                                    {docWarning}
+                                </Alert>
+                            )}
 
-                                <Box sx={{ p: 2.5, bgcolor: 'white', borderRadius: 3, border: '1px solid #e6e9f0', boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                                        Sobre {mascota.nombre}
-                                    </Typography>
-                                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                                        {mascota.descripcion || 'Esta mascota está lista para encontrar un hogar lleno de cariño.'}
-                                    </Typography>
-                                </Box>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.4}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="large"
+                                    startIcon={<Favorite />}
+                                    onClick={handleAdoptionClick}
+                                    disabled={!isDocVerified}
+                                    sx={{ py: 1.3, fontWeight: 800, borderRadius: 2.5, flex: 1 }}
+                                >
+                                    Solicitar adopción
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    size="large"
+                                    sx={{ py: 1.3, fontWeight: 700, borderRadius: 2.5, flex: 1 }}
+                                    onClick={() => window.history.back()}
+                                >
+                                    Volver al catálogo
+                                </Button>
+                            </Stack>
 
-                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.2 }}>
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        size="large"
-                                        startIcon={<Favorite />}
-                                        onClick={handleAdoptionClick}
-                                        sx={{ py: 1.3, fontWeight: 800, borderRadius: 2, boxShadow: '0 10px 25px rgba(0,123,255,0.25)' }}
-                                    >
-                                        Solicitar adopción
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        size="large"
-                                        sx={{ py: 1.3, fontWeight: 700, borderRadius: 2 }}
-                                        onClick={() => window.history.back()}
-                                    >
-                                        Volver al catálogo
-                                    </Button>
-                                </Box>
-
-                                <Stack spacing={1} sx={{ p: 2.3, borderRadius: 3, border: '1px dashed #e6e9f0', bgcolor: '#f9fbff' }}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Shield size={18} />
-                                        <Typography variant="body2">Proceso transparente y seguimiento post-adopción.</Typography>
-                                    </Stack>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Stethoscope size={18} />
-                                        <Typography variant="body2">Revisión veterinaria previa a la entrega.</Typography>
-                                    </Stack>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <HeartHandshake size={18} />
-                                        <Typography variant="body2">Acompañamiento para adaptación en casa.</Typography>
-                                    </Stack>
+                            <Stack spacing={1.1} sx={{ p: 2.2, borderRadius: 3, border: '1px dashed #d8deff', bgcolor: 'rgba(0,123,255,0.04)' }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Shield size={18} />
+                                    <Typography variant="body2">Proceso transparente y seguimiento post-adopción.</Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Stethoscope size={18} />
+                                    <Typography variant="body2">Revisión veterinaria previa a la entrega.</Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <HeartHandshake size={18} />
+                                    <Typography variant="body2">Acompañamiento para adaptación en casa.</Typography>
                                 </Stack>
                             </Stack>
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
                 </Container>
             </Box>
 

@@ -56,6 +56,7 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
         email: '',
         password: '',
         nombre: '',
+        nombre_completo: '',
         confirmPassword: '',
         fecha_nacimiento: ''
     });
@@ -83,6 +84,12 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
             });
             const { token, usuario } = response.data; 
 
+            if (usuario && usuario.activo === false) {
+                setError('Tu cuenta está inactiva. Contacta al administrador.');
+                setLoading(false);
+                return;
+            }
+
             if (!token) {
                 throw new Error("El servidor no proporcionó un token.");
             }
@@ -92,8 +99,14 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
 
         } catch (err) {
             console.error('Error de autenticación:', err);
-            if (err.response && (err.response.status === 401 || err.response.status === 400)) {
-                setError('Usuario o contraseña incorrectos.');
+            if (err.response) {
+                if (err.response.status === 403) {
+                    setError(err.response.data?.message || 'Tu cuenta está inactiva. Contacta al administrador.');
+                } else if (err.response.status === 401 || err.response.status === 400) {
+                    setError('Usuario o contraseña incorrectos.');
+                } else {
+                    setError(err.response.data?.message || 'Ocurrió un error inesperado al iniciar sesión.');
+                }
             } else if (err.request) {
                 setError(`No se pudo conectar con el servidor en ${VITE_API_URL_BACKEND}.`);
             } else {
@@ -140,9 +153,24 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
     const handleRecoverySubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setSuccessMsg('');
         try {
-            await axios.post(`${VITE_API_URL_BACKEND}/auth/contrasena-olvidada`, { email: formData.email });
-            setSuccessMsg('Si el correo existe, recibirás instrucciones.');
+            if (!formData.nombre_completo || !formData.email || !formData.recoveryPassword || !formData.recoveryConfirmPassword) {
+                setError('Completa nombre completo, correo y la nueva contraseña.');
+                setLoading(false);
+                return;
+            }
+            if (formData.recoveryPassword !== formData.recoveryConfirmPassword) {
+                setError('Las contraseñas no coinciden.');
+                setLoading(false);
+                return;
+            }
+            await axios.post(`${VITE_API_URL_BACKEND}/auth/contrasena-olvidada`, { 
+                email: formData.email,
+                nombre_completo: formData.nombre_completo,
+                nueva_contrasena: formData.recoveryPassword
+            });
+            setSuccessMsg('Contraseña restablecida con éxito.');
             setError('');
         } catch (err) {
             setError('Hubo un problema al procesar la solicitud.');
@@ -567,9 +595,9 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                             boxShadow: '0 8px 20px rgba(0, 123, 255, 0.3)'
                         }}
                     >
-                        <Pets sx={{ fontSize: 45, color: 'white' }} />
+                        <Lock sx={{ fontSize: 45, color: 'white' }} />
                     </Box>
-                    <Typography variant="h5" fontWeight="bold"
+                    <Typography variant="h4" fontWeight="bold"
                         sx={{ 
                             background: 'linear-gradient(135deg, #007BFF 0%, #0056b3 100%)',
                             WebkitBackgroundClip: 'text',
@@ -580,7 +608,7 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                         Recuperar Contraseña
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Ingresa tu correo y te enviaremos un enlace
+                        Ingresa tu nombre, correo y define tu nueva contraseña.
                     </Typography>
                 </Box>
 
@@ -600,6 +628,30 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                         {error}
                     </Alert>
                 )}
+
+                <TextField
+                    fullWidth 
+                    label="Nombre completo" 
+                    name="nombre_completo" 
+                    value={formData.nombre_completo}
+                    onChange={handleChange} 
+                    required
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            '&:hover fieldset': {
+                                borderColor: '#007BFF',
+                            },
+                        }
+                    }}
+                    InputProps={{ 
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Person sx={{ color: '#007BFF' }}/>
+                            </InputAdornment>
+                        ) 
+                    }}
+                />
 
                 <TextField
                     fullWidth 
@@ -626,6 +678,56 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                     }}
                 />
 
+                <TextField
+                    fullWidth 
+                    label="Nueva contraseña" 
+                    name="recoveryPassword" 
+                    type="password"
+                    value={formData.recoveryPassword} 
+                    onChange={handleChange} 
+                    required
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            '&:hover fieldset': {
+                                borderColor: '#007BFF',
+                            },
+                        }
+                    }}
+                    InputProps={{ 
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Lock sx={{ color: '#007BFF' }}/>
+                            </InputAdornment>
+                        ) 
+                    }}
+                />
+
+                <TextField
+                    fullWidth 
+                    label="Confirmar contraseña" 
+                    name="recoveryConfirmPassword" 
+                    type="password"
+                    value={formData.recoveryConfirmPassword} 
+                    onChange={handleChange} 
+                    required
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            '&:hover fieldset': {
+                                borderColor: '#007BFF',
+                            },
+                        }
+                    }}
+                    InputProps={{ 
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Lock sx={{ color: '#007BFF' }}/>
+                            </InputAdornment>
+                        ) 
+                    }}
+                />
+
                 <Button 
                     fullWidth 
                     variant="contained" 
@@ -645,7 +747,7 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                         }
                     }}
                 >
-                    {loading ? 'Enviando...' : 'Enviar Enlace'}
+                    {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
                 </Button>
 
                 <Button 

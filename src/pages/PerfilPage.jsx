@@ -1339,17 +1339,17 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                         </Typography>
                                                     </Box>
                                                 </Stack>
-                                                    <Stack direction="row" spacing={1.5} alignItems="center">
-                                                        <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
-                                                            <Badge fontSize="small" />
-                                                        </Avatar>
-                                                        <Box>
-                                                            <Typography variant="body2" color="text.secondary">Fecha de nacimiento</Typography>
-                                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
-                                                                {formatDate(userData.fecha_nacimiento)}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Stack>
+                                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                                    <Avatar sx={{ bgcolor: '#eef2ff', color: 'primary.main', width: 40, height: 40 }}>
+                                                        <Badge fontSize="small" />
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" color="text.secondary">Fecha de nacimiento</Typography>
+                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, ...ellipsisText }}>
+                                                            {formatDate(userData.fecha_nacimiento)}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
                                             </Stack>
                                         </Stack>
 
@@ -1408,35 +1408,35 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                         alignItems: 'flex-start'
                                                     }}
                                                 >
-                                                        <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                                                            <Home fontSize="small" />
-                                                        </Avatar>
-                                                        <Box sx={{ flex: 1 }}>
-                                                            <Typography
-                                                                variant="subtitle1"
-                                                                sx={{
-                                                                    fontWeight: 700,
-                                                                    ...ellipsisText,
-                                                                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                                                                    wordBreak: 'break-word'
-                                                                }}
-                                                            >
-                                                                {`${dir.calle} ${dir.numero_exterior}${dir.numero_interior ? ' Int. ' + dir.numero_interior : ''}`}
-                                                            </Typography>
-                                                            <Typography
-                                                                variant="body2"
-                                                                color="text.secondary"
-                                                                sx={{
-                                                                    ...ellipsisText,
-                                                                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                                                                    wordBreak: 'break-word'
-                                                                }}
-                                                            >
-                                                                {`${dir.colonia}, ${dir.ciudad}, ${dir.estado} - CP ${dir.codigo_postal}`}
-                                                            </Typography>
-                                                        </Box>
+                                                    <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                                                        <Home fontSize="small" />
+                                                    </Avatar>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography
+                                                            variant="subtitle1"
+                                                            sx={{
+                                                                fontWeight: 700,
+                                                                ...ellipsisText,
+                                                                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                                                wordBreak: 'break-word'
+                                                            }}
+                                                        >
+                                                            {`${dir.calle} ${dir.numero_exterior}${dir.numero_interior ? ' Int. ' + dir.numero_interior : ''}`}
+                                                        </Typography>
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="text.secondary"
+                                                            sx={{
+                                                                ...ellipsisText,
+                                                                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                                                wordBreak: 'break-word'
+                                                            }}
+                                                        >
+                                                            {`${dir.colonia}, ${dir.ciudad}, ${dir.estado} - CP ${dir.codigo_postal}`}
+                                                        </Typography>
                                                     </Box>
-                                                ))}
+                                                </Box>
+                                            ))}
                                         </Stack>
                                     )}
                                 </CardContent>
@@ -1448,25 +1448,25 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
                                         <Box>
                                             <Typography sx={mutedLabelSx}>Agenda</Typography>
-                                                    <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Citas</Typography>
-                                                </Box>
-                                                <Button
-                                                    variant="contained"
-                                                    sx={{ fontWeight: 700, boxShadow: 'none' }}
-                                                    onClick={() => {
-                                                        setBookingError(null);
-                                                        setOpenBookCita(true);
-                                                        setBookingForm({ fecha_cita: '', motivo: '', observaciones: '', id_servicio: '', id_mascota: '' });
-                                                        fetchServicios();
-                                                    }}
-                                                >
-                                                    Agendar nueva cita
-                                                </Button>
-                                            </Stack>
-                                            {loading ? (
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
-                                            ) : misCitas.length === 0 ? (
-                                                <Alert severity="info">No tienes citas programadas.</Alert>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Citas</Typography>
+                                        </Box>
+                                        <Button
+                                            variant="contained"
+                                            sx={{ fontWeight: 700, boxShadow: 'none' }}
+                                            onClick={() => {
+                                                setBookingError(null);
+                                                setOpenBookCita(true);
+                                                setBookingForm({ fecha_cita: '', motivo: '', observaciones: '', id_servicio: '', id_mascota: '' });
+                                                fetchServicios();
+                                            }}
+                                        >
+                                            Agendar nueva cita
+                                        </Button>
+                                    </Stack>
+                                    {loading ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}> <CircularProgress /> </Box>
+                                    ) : misCitas.length === 0 ? (
+                                        <Alert severity="info">No tienes citas programadas.</Alert>
                                     ) : (
                                         <Stack spacing={1.1}>
                                             {misCitas.map((cita) => {
@@ -1504,22 +1504,22 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                             </Box>
                                                         </Stack>
 
-                                                <Stack direction="row" spacing={1.5} alignItems="center">
-                                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
-                                                        {formatStatusLabel(cita.estado)}
-                                                    </Typography>
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={() => handleOpenReschedule(cita)}
-                                                    >
-                                                        Reagendar
-                                                    </Button>
-                                                    {cita.estado === 'pendiente' && (
-                                                        <Button size="small" variant="outlined" color="error">Cancelar</Button>
-                                                    )}
-                                                </Stack>
-                                            </Box>
+                                                        <Stack direction="row" spacing={1.5} alignItems="center">
+                                                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                                                                {formatStatusLabel(cita.estado)}
+                                                            </Typography>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                onClick={() => handleOpenReschedule(cita)}
+                                                            >
+                                                                Reagendar
+                                                            </Button>
+                                                            {cita.estado === 'pendiente' && (
+                                                                <Button size="small" variant="outlined" color="error">Cancelar</Button>
+                                                            )}
+                                                        </Stack>
+                                                    </Box>
                                                 );
                                             })}
                                         </Stack>
@@ -1591,6 +1591,77 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                     )}
                                 </CardContent>
                             </Card>
+
+                            {/* Mascotas adoptadas */}
+                            <Card sx={{ ...cardBaseSx, background: 'linear-gradient(180deg, #f7fbff 0%, #ffffff 100%)', border: '1px solid #e6eaf2' }}>
+                                <CardContent sx={{ ...sectionContentSx, p: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
+                                        <Box>
+                                            <Typography sx={mutedLabelSx}>Mascotas adoptadas</Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Tu familia peluda</Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Las mascotas que ya son parte de tu hogar.
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+
+                                    {loading ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box>
+                                    ) : (() => {
+                                        const adoptadas = misAdopciones.filter((a) => {
+                                            const estado = (a.estado || '').toLowerCase();
+                                            const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                                            return estado === 'adoptado' || estadoSol === 'aprobada';
+                                        });
+                                        if (!adoptadas.length) {
+                                            return <Alert severity="info">Aún no tienes mascotas adoptadas.</Alert>;
+                                        }
+                                        return (
+                                            <Grid container spacing={2.4} sx={{ mt: 1 }}>
+                                                {adoptadas.map((adopcion) => {
+                                                    const mascota = adopcion.mascota || {};
+                                                    const rawImg = mascota.imagen_base64 || mascota.imagenes_base64?.[0] || mascota.imagen;
+                                                    const img = asDataUrlImage(rawImg);
+                                                    const fechaEntrega = adopcion.fecha_entrega ? new Date(adopcion.fecha_entrega).toLocaleDateString() : 'Pendiente';
+                                                    return (
+                                                        <Grid item xs={12} sm={6} md={4} key={adopcion.id_adopcion}>
+                                                            <Box
+                                                                sx={{
+                                                                    border: '1px solid #e3e7ef',
+                                                                    borderRadius: 3,
+                                                                    overflow: 'hidden',
+                                                                    backgroundColor: '#fff',
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
+                                                                    height: '100%'
+                                                                }}
+                                                            >
+                                                                <Box sx={{ p: 2.2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                                                                        {mascota.nombre || 'Sin nombre'}
+                                                                    </Typography>
+                                                                    <Typography variant="body2" color="text.secondary">
+                                                                        {mascota.especie || 'Mascota'} · {mascota.raza || 'Raza desconocida'}
+                                                                    </Typography>
+                                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                                        <Chip
+                                                                            icon={<Pets fontSize="small" />}
+                                                                            label={`Entrega: ${fechaEntrega}`}
+                                                                            size="small"
+                                                                            sx={{ fontWeight: 600 }}
+                                                                        />
+                                                                    </Stack>
+                                                                </Box>
+                                                            </Box>
+                                                        </Grid>
+                                                    );
+                                                })}
+                                            </Grid>
+                                        );
+                                    })()}
+                                </CardContent>
+                            </Card>
+
                             {/* Documentos oficiales */}
                             <Card sx={{ ...cardBaseSx, background: '#ffffff' }}>
                                 <CardContent sx={{ ...sectionContentSx, p: 3 }}>

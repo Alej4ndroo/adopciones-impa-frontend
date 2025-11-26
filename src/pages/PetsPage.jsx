@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Container, Box, Grid, Card, CardContent, CardMedia, CardActions,
-    Fade, Typography, Button, CssBaseline, Chip, CircularProgress, Alert
+    Fade, Typography, Button, CssBaseline, Chip, CircularProgress, Alert, Stack
 } from '@mui/material';
 import { 
     Favorite, Male, Female, Cake
@@ -53,6 +53,15 @@ const calcularEdad = (meses) => {
 const PetCard = ({ pet }) => {
     let base64String = pet.imagenes_base64?.[0];
     const prefix = 'data:image/jpeg;base64,';
+    const estado = (pet.estado_adopcion || '').toLowerCase();
+    const estadoLabel = estado
+        ? estado.charAt(0).toUpperCase() + estado.slice(1)
+        : 'Estado desconocido';
+    const estadoColor = estado === 'disponible'
+        ? 'success'
+        : estado === 'adoptado'
+            ? 'default'
+            : 'warning';
     
     if (base64String && base64String.startsWith(prefix)) {
         base64String = base64String.substring(prefix.length);
@@ -76,13 +85,34 @@ const PetCard = ({ pet }) => {
                 textDecoration: 'none',
                 color: 'inherit'
             }}>
-            <CardMedia
-                component="img"
-                height="240"
-                image={dataUrl} 
-                alt={pet.nombre}
-                sx={{ objectFit: 'cover' }}
-            />
+            <Box sx={{ position: 'relative' }}>
+                <CardMedia
+                    component="img"
+                    height="240"
+                    image={dataUrl} 
+                    alt={pet.nombre}
+                    sx={{ objectFit: 'cover' }}
+                />
+                <Stack direction="row" spacing={1} sx={{ position: 'absolute', top: 12, left: 12, right: 12, justifyContent: 'space-between' }}>
+                    <Chip 
+                        label={pet.especie?.charAt(0).toUpperCase() + pet.especie?.slice(1) || 'Mascota'}
+                        size="small"
+                        color="primary"
+                        sx={{ 
+                            bgcolor: 'rgba(0,123,255,0.9)', 
+                            color: 'white',
+                            fontWeight: 700
+                        }}
+                    />
+                    <Chip 
+                        label={estadoLabel}
+                        size="small"
+                        color={estadoColor}
+                        variant={estado === 'disponible' ? 'filled' : 'outlined'}
+                        sx={{ fontWeight: 700, bgcolor: estado === 'disponible' ? undefined : 'rgba(255,255,255,0.9)' }}
+                    />
+                </Stack>
+            </Box>
             <CardContent sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -148,9 +178,12 @@ const PetCard = ({ pet }) => {
 const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
     
     // 6. Estado para esta página
+    const [allPets, setAllPets] = useState([]);
     const [mascotas, setMascotas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [blockedPetIds, setBlockedPetIds] = useState([]);
+    const [adoptedPetIds, setAdoptedPetIds] = useState([]);
 
     // 7. useEffect para cargar las mascotas disponibles
     useEffect(() => {
@@ -163,7 +196,8 @@ const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogo
                     throw new Error(errorData.message || 'Error al cargar las mascotas');
                 }
                 const data = await response.json();
-                setMascotas(data);
+                const lista = Array.isArray(data) ? data : [];
+                setAllPets(lista);
                 setError(null);
             } catch (err) {
                 setError(err.message);
@@ -175,6 +209,59 @@ const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogo
 
         fetchMascotasDisponibles();
     }, []);
+
+    // 7.1 Obtener adopciones para ocultar mascotas ya adoptadas (aunque no haya sesión)
+    useEffect(() => {
+        const fetchAdoptions = async () => {
+            const token = localStorage.getItem('authToken');
+            try {
+                const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+                const resp = await fetch(`${API_URL_BACKEND}/adopciones/listar`, headers ? { headers } : undefined);
+                const data = await resp.json();
+                const adopciones = Array.isArray(data) ? data : [];
+
+                const allAdopted = adopciones
+                    .filter(a => {
+                        const estado = (a.estado || '').toLowerCase();
+                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                        return estado === 'adoptado' || estadoSol === 'aprobada';
+                    })
+                    .map(a => a.mascota?.id_mascota || a.id_mascota)
+                    .filter(Boolean);
+
+                const ownAdopted = adopciones
+                    .filter(a => {
+                        const userId = a.usuario?.id_usuario || a.id_usuario;
+                        const estado = (a.estado || '').toLowerCase();
+                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                        return currentUser?.id_usuario && userId === currentUser.id_usuario && (estado === 'adoptado' || estadoSol === 'aprobada');
+                    })
+                    .map(a => a.mascota?.id_mascota || a.id_mascota)
+                    .filter(Boolean);
+
+                setAdoptedPetIds(Array.from(new Set(allAdopted)));
+                setBlockedPetIds(Array.from(new Set(ownAdopted)));
+            } catch (err) {
+                console.error('Error al cargar adopciones del usuario:', err);
+                setAdoptedPetIds([]);
+                setBlockedPetIds([]);
+            }
+        };
+        fetchAdoptions();
+    }, [currentUser]);
+
+    // 7.2 Combinar filtros locales con adopciones
+    useEffect(() => {
+        const filtradas = allPets.filter((m) => {
+            const estado = (m.estado_adopcion || '').toLowerCase();
+            const activo = m.activo !== false; // true si null/undefined
+            const noAdoptadoFlag = estado !== 'adoptado';
+            const noAdoptadoGlobal = !adoptedPetIds.includes(m.id_mascota);
+            const noPropia = !blockedPetIds.includes(m.id_mascota);
+            return activo && noAdoptadoFlag && noAdoptadoGlobal && noPropia;
+        });
+        setMascotas(filtradas);
+    }, [allPets, blockedPetIds, adoptedPetIds]);
 
     return (
         <ThemeProvider theme={customTheme}>
@@ -252,14 +339,48 @@ const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogo
                         </Alert>
                     </Box>
                 ) : (
-                    // 11. El Grid con las mascotas
-                    <Grid container spacing={4} justifyContent="center">
-                        {mascotas.map((pet) => (
-                            <Grid item key={pet.id_mascota}> {/* Quitamos xs/sm/md para que PetCard controle su tamaño */}
-                                <PetCard pet={pet} />
-                            </Grid>
-                        ))}
-                    </Grid>
+                    (() => {
+                        const perros = mascotas.filter(m => (m.especie || '').toLowerCase() === 'perro');
+                        const gatos = mascotas.filter(m => (m.especie || '').toLowerCase() === 'gato');
+                        const otros = mascotas.filter(m => {
+                            const especie = (m.especie || '').toLowerCase();
+                            return especie !== 'perro' && especie !== 'gato';
+                        });
+
+                        const renderSection = (titulo, lista, color, alwaysShow = false) => (
+                            (alwaysShow || lista.length > 0) && (
+                                <Box key={titulo} sx={{ width: '100%', mb: 6 }}>
+                                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                                        <Box sx={{ width: 10, height: 32, borderRadius: 3, bgcolor: color, boxShadow: `0 6px 14px ${color}33` }} />
+                                        <Typography variant="h5" sx={{ fontWeight: 800, color }}>
+                                            {titulo}
+                                        </Typography>
+                                    </Stack>
+                                    {lista.length > 0 ? (
+                                        <Grid container spacing={4} justifyContent="center">
+                                            {lista.map((pet) => (
+                                                <Grid item key={pet.id_mascota} xs={12} sm={6} md={4}>
+                                                    <PetCard pet={pet} />
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            No hay mascotas en esta categoría.
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )
+                        );
+
+                        return (
+                            <>
+                                {renderSection('Perros', perros, '#1976d2', true)}
+                                {renderSection('Gatos', gatos, '#9c27b0', true)}
+                                {renderSection('Otros', otros, '#ff9800', true)}
+                            </>
+                        );
+                    })()
                 )}
             </Container>
 
