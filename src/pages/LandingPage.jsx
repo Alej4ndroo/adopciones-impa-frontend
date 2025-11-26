@@ -44,12 +44,15 @@ const customTheme = createTheme({
 });
 
 const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, onOpenLoginModal }) => {
+    const [allPets, setAllPets] = useState([]);
     const [mascotas, setMascotas] = useState([]);
     const [servicios, setServicios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingServicios, setLoadingServicios] = useState(true);
     const [error, setError] = useState(null);
     const [errorServicios, setErrorServicios] = useState(null);
+    const [blockedPetIds, setBlockedPetIds] = useState([]);
+    const [adoptedPetIds, setAdoptedPetIds] = useState([]);
 
     // ARRAYS DE DATOS
     const features = [
@@ -93,7 +96,8 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                     throw new Error('Error al cargar las mascotas');
                 }
                 const data = await response.json();
-                setMascotas(data);
+                const lista = Array.isArray(data) ? data : [];
+                setAllPets(lista);
                 setError(null);
             } catch (err) {
                 setError(err.message);
@@ -106,6 +110,57 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
         fetchMascotas();
     }, []);
 
+    useEffect(() => {
+        const fetchAdoptions = async () => {
+            const token = localStorage.getItem('authToken');
+            try {
+                const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+                const resp = await fetch(`${API_URL_BACKEND}/adopciones/listar`, headers ? { headers } : undefined);
+                const data = await resp.json();
+                const adopciones = Array.isArray(data) ? data : [];
+
+                const allAdopted = adopciones
+                    .filter(a => {
+                        const estado = (a.estado || '').toLowerCase();
+                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                        return estado === 'adoptado' || estadoSol === 'aprobada';
+                    })
+                    .map(a => a.mascota?.id_mascota || a.id_mascota)
+                    .filter(Boolean);
+
+                const ownAdopted = adopciones
+                    .filter(a => {
+                        const userId = a.usuario?.id_usuario || a.id_usuario;
+                        const estado = (a.estado || '').toLowerCase();
+                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                        return currentUser?.id_usuario && userId === currentUser.id_usuario && (estado === 'adoptado' || estadoSol === 'aprobada');
+                    })
+                    .map(a => a.mascota?.id_mascota || a.id_mascota)
+                    .filter(Boolean);
+
+                setAdoptedPetIds(Array.from(new Set(allAdopted)));
+                setBlockedPetIds(Array.from(new Set(ownAdopted)));
+            } catch (err) {
+                console.error('Error al cargar adopciones del usuario:', err);
+                setAdoptedPetIds([]);
+                setBlockedPetIds([]);
+            }
+        };
+        fetchAdoptions();
+    }, [currentUser]);
+
+    useEffect(() => {
+        const filtradas = allPets.filter((m) => {
+            const estado = (m.estado_adopcion || '').toLowerCase();
+            const activo = m.activo !== false;
+            const noAdoptadoFlag = estado !== 'adoptado';
+            const noAdoptadoGlobal = !adoptedPetIds.includes(m.id_mascota);
+            const noPropia = !blockedPetIds.includes(m.id_mascota);
+            return activo && noAdoptadoFlag && noAdoptadoGlobal && noPropia;
+        });
+        setMascotas(filtradas);
+    }, [allPets, blockedPetIds, adoptedPetIds]);
+
     // Consultar servicios del backend
     useEffect(() => {
         const fetchServicios = async () => {
@@ -116,7 +171,9 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                     throw new Error('Error al cargar los servicios');
                 }
                 const data = await response.json();
-                setServicios(data);
+                const lista = Array.isArray(data) ? data : [];
+                const activos = lista.filter((srv) => srv.activo !== false);
+                setServicios(activos);
                 setErrorServicios(null);
             } catch (err) {
                 setErrorServicios(err.message);
@@ -130,8 +187,8 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
     }, []);
 
     // Filtrar mascotas por especie y disponibilidad
-    const perros = mascotas.filter(m => m.especie === 'perro' && m.estado_adopcion === 'disponible');
-    const gatos = mascotas.filter(m => m.especie === 'gato' && m.estado_adopcion === 'disponible');
+    const perros = mascotas.filter(m => (m.especie || '').toLowerCase() === 'perro' && (m.estado_adopcion || '').toLowerCase() === 'disponible');
+    const gatos = mascotas.filter(m => (m.especie || '').toLowerCase() === 'gato' && (m.estado_adopcion || '').toLowerCase() === 'disponible');
 
     // Función para calcular años desde meses
     const calcularEdad = (meses) => {

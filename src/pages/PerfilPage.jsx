@@ -373,6 +373,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     const [servicios, setServicios] = useState([]);
     const [serviciosLoading, setServiciosLoading] = useState(false);
     const filteredServicios = servicios.filter((srv) => {
+        if (srv?.activo === false) return false;
         if (hasMascotas) return true;
         const nombre = (srv?.nombre || '').toLowerCase();
         return nombre.includes('adop') && !nombre.includes('seguimiento');
@@ -1380,7 +1381,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                     <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1.5}>
                                         <Box>
                                             <Typography sx={mutedLabelSx}>Ubicaciones</Typography>
-                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Mis Direcciones</Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Mi Dirección</Typography>
                                         </Box>
                                         <Button
                                             variant="outlined"
