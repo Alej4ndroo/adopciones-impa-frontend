@@ -609,6 +609,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     const [clientes, setClientes] = useState([]);
     const [filteredClientes, setFilteredClientes] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filters, setFilters] = useState({ activo: '', docs: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -618,6 +619,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     const [docsCliente, setDocsCliente] = useState(null);
     const [docsList, setDocsList] = useState([]);
     const [docsLoading, setDocsLoading] = useState(false);
+    const handleFilterChange = (name, value) => setFilters((prev) => ({ ...prev, [name]: value }));
     const [editForm, setEditForm] = useState({
         nombre: '',
         correo_electronico: '',
@@ -680,17 +682,31 @@ const ClientesListarPage = ({ isManagementView = false }) => {
 
     // Filtro de búsqueda
     useEffect(() => {
-        if (searchTerm.trim() === '') {
-            setFilteredClientes(clientes);
-        } else {
-            const filtered = clientes.filter(cliente =>
+        let filtered = clientes;
+
+        if (searchTerm.trim() !== '') {
+            filtered = filtered.filter(cliente => 
                 cliente.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cliente.id_usuario?.toString().includes(searchTerm) ||
                 cliente.correo_electronico?.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            setFilteredClientes(filtered);
         }
-    }, [searchTerm, clientes]);
+
+        if (filters.activo !== '') {
+            filtered = filtered.filter((c) => !!c.activo === (filters.activo === 'true'));
+        }
+
+        if (filters.docs !== '') {
+            filtered = filtered.filter((c) => {
+                const estado = c.documentacion_verificada || c.documentacion;
+                if (filters.docs === 'verificada') return estado === 'verificada';
+                if (filters.docs === 'pendiente') return estado !== 'verificada';
+                return true;
+            });
+        }
+
+        setFilteredClientes(filtered);
+    }, [searchTerm, filters, clientes]);
 
     const handleDelete = async (idCliente, nextState = false) => {
         const token = localStorage.getItem('authToken');
@@ -1011,6 +1027,44 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                             ),
                         }}
                     />
+                </Stack>
+            </Paper>
+
+            <Paper elevation={1} sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, minWidth: 140 }}>
+                        Filtros rápidos
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Chip
+                            label="Todos"
+                            color={filters.activo === '' && filters.docs === '' ? 'primary' : 'default'}
+                            onClick={() => {
+                                handleFilterChange('activo', '');
+                                handleFilterChange('docs', '');
+                            }}
+                        />
+                        <Chip
+                            label="Activos"
+                            color={filters.activo === 'true' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('activo', 'true')}
+                        />
+                        <Chip
+                            label="Inactivos"
+                            color={filters.activo === 'false' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('activo', 'false')}
+                        />
+                        <Chip
+                            label="Docs verificados"
+                            color={filters.docs === 'verificada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('docs', 'verificada')}
+                        />
+                        <Chip
+                            label="Docs pendientes"
+                            color={filters.docs === 'pendiente' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('docs', 'pendiente')}
+                        />
+                    </Stack>
                 </Stack>
             </Paper>
 

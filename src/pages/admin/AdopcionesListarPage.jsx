@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
+import {
     Typography, Paper, Table, TableBody, TableCell, TableContainer, 
     TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
-    Stack, alpha, Card, IconButton, Tooltip, Collapse, Avatar,
+    Stack, alpha, Card, IconButton, Tooltip, Avatar,
     TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
-    Grid, Divider, Button, useMediaQuery, Badge
+    Grid, Divider, Button, useMediaQuery, Collapse,
+    Dialog, DialogTitle, DialogContent, DialogActions, RadioGroup, Radio, FormControlLabel
 } from '@mui/material';
-import { 
+import {
     Pets as PetsIcon,
     Visibility as VisibilityIcon,
     Edit as EditIcon,
@@ -24,8 +25,6 @@ import {
     KeyboardArrowDown as ArrowDownIcon,
     KeyboardArrowUp as ArrowUpIcon,
     Search as SearchIcon,
-    FilterList as FilterIcon,
-    Close as CloseIcon,
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
     HourglassEmpty as HourglassEmptyIcon,
@@ -38,6 +37,7 @@ import { useNavigate } from 'react-router-dom';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const ADOPCIONES_ENDPOINT = '/adopciones/listar';
+const CLIENTES_ENDPOINT = '/usuarios/listar-clientes';
 
 // Componente de tarjeta para móviles
 const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
@@ -51,9 +51,7 @@ const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
 
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar la adopción #${adopcion.id_adopcion}?`)) {
-            if (onDelete) onDelete(adopcion.id_adopcion);
-        }
+        if (onDelete) onDelete(adopcion.id_adopcion);
     };
 
     const handleView = (e) => {
@@ -203,14 +201,46 @@ const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
                                 <AttachFileIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">Documentos</Typography>
-                                    <Chip 
-                                        label={adopcion.documentos_verificados ? 'Verificados' : 'Pendientes'}
-                                        color={adopcion.documentos_verificados ? 'success' : 'warning'}
-                                        size="small"
-                                        sx={{ fontWeight: 500, mt: 0.5 }}
-                                    />
+                                    {(() => {
+                                        const docEstado = adopcion.usuario?.documentacion_verificada;
+                                        const docOk = adopcion.documentos_verificados || docEstado === 'verificada';
+                                        const docLabel = docOk ? 'Verificados' : 'Pendientes';
+                                        const docColor = docOk ? 'success' : 'warning';
+                                        return (
+                                            <Chip 
+                                                label={docLabel}
+                                                color={docColor}
+                                                size="small"
+                                                sx={{ fontWeight: 500, mt: 0.5 }}
+                                            />
+                                        );
+                                    })()}
+                                    {adopcion.usuario?.documentacion_verificada && (
+                                        <Chip 
+                                            label={`Perfil: ${adopcion.usuario.documentacion_verificada}`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ fontWeight: 600, mt: 0.5 }}
+                                            color={
+                                                adopcion.usuario.documentacion_verificada === 'verificada'
+                                                    ? 'success'
+                                                    : adopcion.usuario.documentacion_verificada === 'rechazada'
+                                                        ? 'error'
+                                                        : 'warning'
+                                            }
+                                        />
+                                    )}
                                 </Box>
                             </Box>
+                            {adopcion.motivo_adopcion && (
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                    <InfoIcon sx={{ fontSize: 18, color: theme.palette.primary.main, mt: 0.3 }} />
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">Motivo de adopción</Typography>
+                                        <Typography variant="body2">{adopcion.motivo_adopcion}</Typography>
+                                    </Box>
+                                </Box>
+                            )}
                             {adopcion.fecha_aprobacion && (
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                                     <CalendarTodayIcon sx={{ fontSize: 18, color: theme.palette.success.main, mt: 0.3 }} />
@@ -280,16 +310,56 @@ const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
                                     <PersonIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
                                     <Typography variant="body2" fontWeight={500}>{adopcion.usuario.nombre}</Typography>
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <EmailIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                    <Typography variant="body2">{adopcion.usuario.correo_electronico}</Typography>
-                                </Box>
-                                {adopcion.usuario.telefono && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                        <PhoneIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
-                                        <Typography variant="body2">{adopcion.usuario.telefono}</Typography>
+                                {adopcion.usuario.documentacion_verificada && (
+                                    <Chip
+                                        label={`Documentación: ${adopcion.usuario.documentacion_verificada}`}
+                                        size="small"
+                                        color={
+                                            adopcion.usuario.documentacion_verificada === 'verificada'
+                                                ? 'success'
+                                                : adopcion.usuario.documentacion_verificada === 'rechazada'
+                                                    ? 'error'
+                                                    : 'warning'
+                                        }
+                                        sx={{ fontWeight: 600, alignSelf: 'flex-start' }}
+                                    />
+                                )}
+                                {adopcion.motivo_adopcion && (
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                        <InfoIcon sx={{ fontSize: 18, color: theme.palette.secondary.main, mt: 0.3 }} />
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary">Motivo de adopción</Typography>
+                                            <Typography variant="body2">{adopcion.motivo_adopcion}</Typography>
+                                        </Box>
                                     </Box>
                                 )}
+                                <Grid container spacing={1.5}>
+                                    <Grid item xs={12} sm={4}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <EmailIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
+                                            <Typography variant="body2">{adopcion.usuario.correo_electronico}</Typography>
+                                        </Box>
+                                    </Grid>
+                                    {adopcion.usuario.telefono && (
+                                        <Grid item xs={12} sm={4}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <PhoneIcon sx={{ fontSize: 18, color: theme.palette.secondary.main }} />
+                                                <Typography variant="body2">{adopcion.usuario.telefono}</Typography>
+                                            </Box>
+                                        </Grid>
+                                    )}
+                                    {adopcion.motivo_adopcion && (
+                                        <Grid item xs={12}>
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                <InfoIcon sx={{ fontSize: 18, color: theme.palette.secondary.main, mt: 0.3 }} />
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">Motivo de adopción</Typography>
+                                                    <Typography variant="body2">{adopcion.motivo_adopcion}</Typography>
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+                                    )}
+                                </Grid>
                             </Stack>
                         </Card>
                     )}
@@ -312,21 +382,12 @@ const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
                             <Button
                                 fullWidth
                                 variant="outlined"
-                                startIcon={<EditIcon />}
-                                onClick={handleEdit}
-                                sx={{ fontWeight: 600 }}
-                            >
-                                Editar
-                            </Button>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                startIcon={<DeleteIcon />}
-                                color="error"
+                                startIcon={<CheckCircleIcon />}
+                                color="secondary"
                                 onClick={handleDelete}
                                 sx={{ fontWeight: 600 }}
                             >
-                                Eliminar
+                                Tomar decisión
                             </Button>
                         </Stack>
                     </Stack>
@@ -337,20 +398,13 @@ const MobileAdopcionCard = ({ adopcion, onEdit, onDelete, onView }) => {
 };
 
 // Componente de fila expandible para tabla
-const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
+const AdopcionRow = ({ adopcion, onDelete, onView }) => {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
 
-    const handleEdit = (e) => {
-        e.stopPropagation();
-        if (onEdit) onEdit(adopcion.id_adopcion);
-    };
-
     const handleDelete = (e) => {
         e.stopPropagation();
-        if (window.confirm(`¿Estás seguro de eliminar la adopción #${adopcion.id_adopcion}?`)) {
-            if (onDelete) onDelete(adopcion.id_adopcion);
-        }
+        if (onDelete) onDelete(adopcion.id_adopcion);
     };
 
     const handleView = (e) => {
@@ -536,17 +590,6 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                             </Typography>
                                         </Stack>
                                         <Stack spacing={2}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                    <CalendarTodayIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="caption" color="text.secondary">Fecha de Solicitud</Typography>
-                                                    <Typography variant="body2" fontWeight={500}>
-                                                        {formatDateLong(adopcion.fecha_solicitud)}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
                                             {adopcion.fecha_aprobacion && (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                                     <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
@@ -585,8 +628,8 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                                     <Typography variant="caption" color="text.secondary">Documentos</Typography>
                                                     <Box sx={{ mt: 0.5 }}>
                                                         <Chip 
-                                                            label={adopcion.documentos_verificados ? 'Verificados' : 'Pendientes'}
-                                                            color={adopcion.documentos_verificados ? 'success' : 'warning'}
+                                                            label={adopcion.usuario.documentacion_verificada ? 'Verificados' : 'Pendientes'}
+                                                            color={adopcion.usuario.documentacion_verificada ? 'success' : 'warning'}
                                                             size="small"
                                                             sx={{ fontWeight: 500 }}
                                                         />
@@ -622,17 +665,6 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                             </Stack>
                                             <Stack spacing={2}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar
-                                                        src={adopcion.mascota.imagen_url}
-                                                        sx={{
-                                                            bgcolor: alpha(theme.palette.success.main, 0.2),
-                                                            color: theme.palette.success.main,
-                                                            width: 56,
-                                                            height: 56
-                                                        }}
-                                                    >
-                                                        <PetsIcon />
-                                                    </Avatar>
                                                     <Box>
                                                         <Typography variant="caption" color="text.secondary">Nombre</Typography>
                                                         <Typography variant="body2" fontWeight={600}>
@@ -641,9 +673,6 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                                     </Box>
                                                 </Box>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                        <InfoIcon sx={{ fontSize: 18, color: theme.palette.success.main }} />
-                                                    </Box>
                                                     <Box>
                                                         <Typography variant="caption" color="text.secondary">Especie y Raza</Typography>
                                                         <Typography variant="body2" fontWeight={500}>
@@ -730,6 +759,19 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                                         </Box>
                                                     </Grid>
                                                 )}
+                                                {adopcion.motivo_adopcion && (
+                                                    <Grid item xs={12}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                            <Box sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                                                                <InfoIcon sx={{ fontSize: 18, color: theme.palette.secondary.main, mt: 0.3 }} />
+                                                            </Box>
+                                                            <Box>
+                                                                <Typography variant="caption" color="text.secondary">Motivo de adopción</Typography>
+                                                                <Typography variant="body2">{adopcion.motivo_adopcion}</Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </Grid>
+                                                )}
                                             </Grid>
                                         </Card>
                                     </Grid>
@@ -741,20 +783,12 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                                         <Button
                                             variant="outlined"
-                                            startIcon={<DeleteIcon />}
-                                            color="error"
+                                            startIcon={<CheckCircleIcon />}
+                                            color="secondary"
                                             onClick={handleDelete}
-                                            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
+                                            sx={{ borderRadius: 2, fontWeight: 600, px: 20 }}
                                         >
-                                            Eliminar
-                                        </Button>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<EditIcon />}
-                                            onClick={handleEdit}
-                                            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
-                                        >
-                                            Editar
+                                            Tomar decisión
                                         </Button>
                                         <Button
                                             variant="contained"
@@ -763,7 +797,7 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
                                             sx={{
                                                 borderRadius: 2,
                                                 fontWeight: 600,
-                                                px: 3,
+                                                px: 20,
                                                 background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
                                                 boxShadow: theme.shadows[4],
                                                 '&:hover': {
@@ -790,6 +824,7 @@ const AdopcionRow = ({ adopcion, onEdit, onDelete, onView }) => {
 const AdopcionesListarPage = ({ isManagementView = false }) => {
     const [adopciones, setAdopciones] = useState([]);
     const [filteredAdopciones, setFilteredAdopciones] = useState([]);
+    const [clientesMap, setClientesMap] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         estado: '',
@@ -800,14 +835,56 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
         fechaDesde: '',
         fechaHasta: ''
     });
-    const [showFilters, setShowFilters] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [decisionDialogOpen, setDecisionDialogOpen] = useState(false);
+    const [decision, setDecision] = useState('rechazar');
+    const [selectedId, setSelectedId] = useState(null);
+    const [decisionLoading, setDecisionLoading] = useState(false);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [selectedAdopcion, setSelectedAdopcion] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.down('md'));
     const navigate = useNavigate();
+
+    const formatEstado = (estado = '') => {
+        if (!estado) return 'N/A';
+        return estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ');
+    };
+
+    const getEstadoColor = (estado) => {
+        const colorMap = {
+            'en_proceso': 'warning',
+            'completada': 'success',
+            'rechazada': 'error',
+            'cancelada': 'default',
+            'devuelta': 'error',
+            'adoptado': 'success',
+            'en_revision': 'info',
+            'disponible': 'info'
+        };
+        return colorMap[estado] || 'default';
+    };
+
+    const getSolicitudColor = (estado) => {
+        const colorMap = {
+            'en_revision': 'info',
+            'aprobada': 'success',
+            'rechazada': 'error',
+            'cancelada': 'default'
+        };
+        return colorMap[estado] || 'default';
+    };
+
+    const formatDateLong = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleString('es-MX', {
+            dateStyle: 'long',
+            timeStyle: 'short'
+        });
+    };
 
     const fetchAdopciones = async () => {
         const token = localStorage.getItem('authToken');
@@ -819,21 +896,47 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
         }
 
         try {
-            const response = await axios.get(`${API_URL_BACKEND}${ADOPCIONES_ENDPOINT}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const headers = { Authorization: `Bearer ${token}` };
+            const [adopRes, clientesRes] = await Promise.all([
+                axios.get(`${API_URL_BACKEND}${ADOPCIONES_ENDPOINT}`, { headers }),
+                axios.get(`${API_URL_BACKEND}${CLIENTES_ENDPOINT}`, { headers }).catch(() => ({ data: [] }))
+            ]);
 
-            const receivedAdopciones = Array.isArray(response.data) 
-                ? response.data 
+            const receivedAdopciones = Array.isArray(adopRes.data) 
+                ? adopRes.data 
                 : [];
+            const clientes = Array.isArray(clientesRes.data)
+                ? clientesRes.data
+                : clientesRes.data?.usuarios || [];
+
+            const mapClientes = {};
+            clientes.forEach((c) => {
+                if (c.id_usuario) mapClientes[c.id_usuario] = c;
+            });
+            setClientesMap(mapClientes);
 
             if (!receivedAdopciones.length) {
                 setError("No se encontraron adopciones en el sistema.");
             }
 
-            console.log('Adopciones recibidas:', receivedAdopciones);
-            setAdopciones(receivedAdopciones);
-            setFilteredAdopciones(receivedAdopciones);
+            const enriched = receivedAdopciones.map((a) => {
+                const cliente = mapClientes[a.usuario?.id_usuario];
+                if (cliente) {
+                    return {
+                        ...a,
+                        usuario: {
+                            ...a.usuario,
+                            documentacion_verificada: a.usuario?.documentacion_verificada || cliente.documentacion_verificada,
+                            telefono: a.usuario?.telefono || cliente.telefono
+                        }
+                    };
+                }
+                return a;
+            });
+
+            console.log('Adopciones recibidas:', enriched);
+            setAdopciones(enriched);
+            setFilteredAdopciones(enriched);
         } catch (err) {
             if (err.response) {
                 setError(
@@ -936,18 +1039,64 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
 
     const activeFiltersCount = Object.values(filters).filter(v => v !== '').length + (searchTerm ? 1 : 0);
 
-    const handleEdit = (idAdopcion) => {
-        navigate(`/admin/adopciones/editar/${idAdopcion}`);
-    };
+    // Edición deshabilitada; se mantiene manejador vacío para evitar errores de referencia
+    const handleEdit = () => {};
 
-    const handleDelete = async (idAdopcion) => {
-        console.log('Eliminar adopción:', idAdopcion);
-        // Implementar lógica de eliminación
-        fetchAdopciones();
+    const handleDelete = (idAdopcion) => {
+        setSelectedId(idAdopcion);
+        setDecision('rechazar');
+        setDecisionDialogOpen(true);
     };
 
     const handleView = (idAdopcion) => {
-        navigate(`/adopciones/${idAdopcion}`);
+        const adopcion = adopciones.find((a) => a.id_adopcion === idAdopcion);
+        if (!adopcion) return;
+        setSelectedAdopcion(adopcion);
+        setViewDialogOpen(true);
+    };
+
+    const submitDecision = async () => {
+        if (!selectedId) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+        setDecisionLoading(true);
+        const approve = decision === 'aprobar';
+        const url = approve
+            ? `${API_URL_BACKEND}/adopciones/${selectedId}/aprobar`
+            : `${API_URL_BACKEND}/adopciones/${selectedId}/rechazar`;
+        const body = approve
+            ? { estado: 'adoptado', estado_solicitud: 'aprobada' }
+            : { estado: 'en_proceso', estado_solicitud: 'rechazada' };
+        try {
+            const resp = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+                throw new Error(`Error ${resp.status}`);
+            }
+            const data = await resp.json();
+            const updater = (list) =>
+                list.map((a) =>
+                    a.id_adopcion === selectedId ? { ...a, ...body, ...data } : a
+                );
+            setAdopciones(updater);
+            setFilteredAdopciones(updater);
+            setDecisionDialogOpen(false);
+            setSelectedId(null);
+        } catch (err) {
+            console.error('Error al resolver adopción:', err);
+            setError('No se pudo actualizar la adopción. Intenta nuevamente.');
+        } finally {
+            setDecisionLoading(false);
+        }
     };
 
     // Obtener listas únicas para los filtros
@@ -1039,138 +1188,59 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
                 </Stack>
             </Paper>
 
-            {/* Botón de filtros */}
-            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
-                <Button
-                    variant={showFilters ? "contained" : "outlined"}
-                    startIcon={<FilterIcon />}
-                    onClick={() => setShowFilters(!showFilters)}
-                    sx={{
-                        borderRadius: 2,
-                        fontWeight: 600
-                    }}
-                >
-                    Filtros
-                    {activeFiltersCount > 0 && (
-                        <Badge 
-                            badgeContent={activeFiltersCount} 
-                            color="error" 
-                            sx={{ ml: 1 }}
-                        />
-                    )}
-                </Button>
-                {activeFiltersCount > 0 && (
-                    <Button
-                        variant="text"
-                        startIcon={<CloseIcon />}
-                        onClick={clearFilters}
-                        sx={{ fontWeight: 600 }}
-                    >
-                        Limpiar filtros
-                    </Button>
-                )}
-            </Stack>
-
-            {/* Panel de filtros */}
-            <Collapse in={showFilters}>
-                <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                        Filtros Avanzados
+            {/* Filtros rápidos estilo Servicios */}
+            <Paper elevation={1} sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, minWidth: 140 }}>
+                        Filtros rápidos
                     </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Estado de Adopción</InputLabel>
-                                <Select
-                                    value={filters.estado}
-                                    label="Estado de Adopción"
-                                    onChange={(e) => handleFilterChange('estado', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    {estadosUnicos.map(estado => (
-                                        <MenuItem key={estado} value={estado}>
-                                            {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Estado de Solicitud</InputLabel>
-                                <Select
-                                    value={filters.estadoSolicitud}
-                                    label="Estado de Solicitud"
-                                    onChange={(e) => handleFilterChange('estadoSolicitud', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    {estadosSolicitudUnicos.map(estado => (
-                                        <MenuItem key={estado} value={estado}>
-                                            {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Documentos</InputLabel>
-                                <Select
-                                    value={filters.documentosVerificados}
-                                    label="Documentos"
-                                    onChange={(e) => handleFilterChange('documentosVerificados', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="true">Verificados</MenuItem>
-                                    <MenuItem value="false">Pendientes</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Mascota"
-                                value={filters.mascota}
-                                onChange={(e) => handleFilterChange('mascota', e.target.value)}
-                                placeholder="Buscar por mascota..."
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Adoptante"
-                                value={filters.adoptante}
-                                onChange={(e) => handleFilterChange('adoptante', e.target.value)}
-                                placeholder="Buscar por adoptante..."
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                type="date"
-                                label="Desde"
-                                value={filters.fechaDesde}
-                                onChange={(e) => handleFilterChange('fechaDesde', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                type="date"
-                                label="Hasta"
-                                value={filters.fechaHasta}
-                                onChange={(e) => handleFilterChange('fechaHasta', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                    </Grid>
-                </Paper>
-            </Collapse>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Chip
+                            label="Todas"
+                            color={filters.estado === '' && filters.estadoSolicitud === '' ? 'primary' : 'default'}
+                            onClick={() => {
+                                handleFilterChange('estado', '');
+                                handleFilterChange('estadoSolicitud', '');
+                            }}
+                        />
+                        <Chip
+                            label="En proceso"
+                            color={filters.estado === 'en_proceso' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'en_proceso')}
+                        />
+                        <Chip
+                            label="Adoptado"
+                            color={filters.estado === 'adoptado' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'adoptado')}
+                        />
+                        <Chip
+                            label="En revisión"
+                            color={filters.estadoSolicitud === 'en_revision' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estadoSolicitud', 'en_revision')}
+                        />
+                        <Chip
+                            label="Aprobada"
+                            color={filters.estadoSolicitud === 'aprobada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estadoSolicitud', 'aprobada')}
+                        />
+                        <Chip
+                            label="Rechazada"
+                            color={filters.estadoSolicitud === 'rechazada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estadoSolicitud', 'rechazada')}
+                        />
+                        <Chip
+                            label="Docs verificados"
+                            color={filters.documentosVerificados === 'true' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('documentosVerificados', 'true')}
+                        />
+                        <Chip
+                            label="Docs pendientes"
+                            color={filters.documentosVerificados === 'false' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('documentosVerificados', 'false')}
+                        />
+                    </Stack>
+                </Stack>
+            </Paper>
 
             {/* Alertas */}
             {error && (
@@ -1265,6 +1335,109 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog open={decisionDialogOpen} onClose={() => setDecisionDialogOpen(false)} fullWidth maxWidth="xs">
+                <DialogTitle>Resolver solicitud</DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                        Elige si apruebas o rechazas esta solicitud de adopción.
+                    </Typography>
+                    <RadioGroup
+                        value={decision}
+                        onChange={(e) => setDecision(e.target.value)}
+                    >
+                        <FormControlLabel value="aprobar" control={<Radio />} label="Aprobar adopción" />
+                        <FormControlLabel value="rechazar" control={<Radio />} label="Rechazar adopción" />
+                    </RadioGroup>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDecisionDialogOpen(false)}>Cancelar</Button>
+                    <Button
+                        onClick={submitDecision}
+                        variant="contained"
+                        disabled={decisionLoading}
+                    >
+                        {decisionLoading ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} fullWidth maxWidth="sm">
+                <DialogTitle>Detalle de solicitud</DialogTitle>
+                <DialogContent dividers>
+                    {selectedAdopcion ? (
+                        <Stack spacing={2.5}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Chip label={`#${selectedAdopcion.id_adopcion}`} />
+                                <Chip label={formatEstado(selectedAdopcion.estado)} color={getEstadoColor(selectedAdopcion.estado)} />
+                                <Chip
+                                    label={formatEstado(selectedAdopcion.estado_solicitud)}
+                                    color={getSolicitudColor(selectedAdopcion.estado_solicitud)}
+                                    variant="outlined"
+                                />
+                            </Stack>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6}>
+                                    <Typography variant="caption" color="text.secondary">Fecha solicitud</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{formatDateLong(selectedAdopcion.fecha_solicitud)}</Typography>
+                                </Grid>
+                                {selectedAdopcion.fecha_entrega && (
+                                    <Grid item xs={12} sm={6}>
+                                        <Typography variant="caption" color="text.secondary">Fecha entrega</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{formatDateLong(selectedAdopcion.fecha_entrega)}</Typography>
+                                    </Grid>
+                                )}
+                            </Grid>
+                                <Stack spacing={1}>
+                                    <Typography variant="subtitle2" color="primary">Motivo y observaciones</Typography>
+                                    {selectedAdopcion.motivo_adopcion && (
+                                        <Typography variant="body2">Motivo: {selectedAdopcion.motivo_adopcion}</Typography>
+                                    )}
+                                    {selectedAdopcion.observaciones && (
+                                        <Typography variant="body2" color="text.secondary">Obs: {selectedAdopcion.observaciones}</Typography>
+                                    )}
+                                    {selectedAdopcion.ubicacion_en_hogar && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            Ubicación en el hogar: {selectedAdopcion.ubicacion_en_hogar}
+                                        </Typography>
+                                    )}
+                                    {selectedAdopcion.documentacion_verificada && (
+                                        <Chip
+                                            label={`Perfil: ${selectedAdopcion.documentacion_verificada}`}
+                                            size="small"
+                                            color={selectedAdopcion.documentacion_verificada === 'verificada' ? 'success' : selectedAdopcion.documentacion_verificada === 'rechazada' ? 'error' : 'warning'}
+                                        sx={{ width: 'fit-content' }}
+                                    />
+                                )}
+                            </Stack>
+                            {selectedAdopcion.usuario && (
+                                <Stack spacing={0.5}>
+                                    <Typography variant="subtitle2" color="secondary">Adoptante</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{selectedAdopcion.usuario.nombre}</Typography>
+                                    <Typography variant="body2">{selectedAdopcion.usuario.correo_electronico}</Typography>
+                                    {selectedAdopcion.usuario.telefono && (
+                                        <Typography variant="body2">{selectedAdopcion.usuario.telefono}</Typography>
+                                    )}
+                                </Stack>
+                            )}
+                            {selectedAdopcion.mascota && (
+                                <Stack spacing={0.5}>
+                                    <Typography variant="subtitle2" color="success.main">Mascota</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{selectedAdopcion.mascota.nombre}</Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {[selectedAdopcion.mascota.especie, selectedAdopcion.mascota.raza].filter(Boolean).join(' - ')}
+                                    </Typography>
+                                </Stack>
+                            )}
+                        </Stack>
+                    ) : (
+                        <Typography variant="body2">Sin datos de adopción.</Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setViewDialogOpen(false)}>Cerrar</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

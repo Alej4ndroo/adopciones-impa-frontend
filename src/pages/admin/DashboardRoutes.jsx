@@ -17,6 +17,8 @@ import AdopcionesListarPage from './AdopcionesListarPage';
 import AdopcionesCrearPage from './AdopcionesCrearPage';
 import ConsultasListarPage from './ConsultasListarPage';
 import ConsultasCrearPage from './ConsultasCrearPage';
+import ServiciosListarPage from './ServiciosListarPage';
+import ServiciosCrearPage from './ServiciosCrearPage';
 
 // Este componente devuelve un fragmento de rutas, NO <Routes>
 const DashboardRoutes = () => (
@@ -50,6 +52,10 @@ const DashboardRoutes = () => (
     {/* Consultas */}
     <Route path="consultas/ver" element={<ConsultasListarPage />} />
     <Route path="consultas/crear" element={<ConsultasCrearPage />} />
+
+    {/* Servicios */}
+    <Route path="servicios/ver" element={<ServiciosListarPage />} />
+    <Route path="servicios/crear" element={<ServiciosCrearPage />} />
 
   </>
 );

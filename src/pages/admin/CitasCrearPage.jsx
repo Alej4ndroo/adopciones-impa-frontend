@@ -15,7 +15,7 @@ import {
 // --- CONFIGURACIÓN ---
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_CITA_ENDPOINT = '/citas/crear';
-const USUARIOS_ENDPOINT = '/usuarios/listar';
+const USUARIOS_ENDPOINT = '/usuarios/listar-clientes';
 const MASCOTAS_ENDPOINT = '/mascotas/listar';
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
 const SERVICIOS_ENDPOINT = '/servicios/listar';
@@ -40,6 +40,7 @@ const CitasCrearPage = () => {
     // Estados para los datos de los selects
     const [usuarios, setUsuarios] = useState([]);
     const [mascotas, setMascotas] = useState([]);
+    const [filteredMascotas, setFilteredMascotas] = useState([]);
     const [empleados, setEmpleados] = useState([]);
     const [servicios, setServicios] = useState([]);
     
@@ -83,6 +84,24 @@ const CitasCrearPage = () => {
 
         fetchData();
     }, []);
+
+    // Filtrar mascotas según el usuario seleccionado
+    useEffect(() => {
+        if (!formData.id_usuario) {
+            setFilteredMascotas(mascotas);
+            return;
+        }
+        const filtradas = mascotas.filter((m) => {
+            const usuarioId = m.usuarios?.id_usuario || m.usuario?.id_usuario || m.id_usuario || m.creado_por || null;
+            return usuarioId === parseInt(formData.id_usuario, 10);
+        });
+        setFilteredMascotas(filtradas);
+
+        // Si la mascota seleccionada ya no pertenece al usuario, limpiar selección
+        if (formData.id_mascota && !filtradas.some((m) => m.id_mascota === formData.id_mascota)) {
+            setFormData((prev) => ({ ...prev, id_mascota: '' }));
+        }
+    }, [formData.id_usuario, mascotas]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -273,7 +292,7 @@ const CitasCrearPage = () => {
                                     <TextField 
                                         fullWidth
                                         {...params} 
-                                        label="Usuario (Cliente)" 
+                                        label="Cliente" 
                                         required
                                         sx={{ 
                                             '& .MuiOutlinedInput-root': { 
@@ -293,9 +312,9 @@ const CitasCrearPage = () => {
                         <FormControl fullWidth>
                             <Autocomplete
                                 fullWidth
-                                options={mascotas}
+                                options={filteredMascotas}
                                 getOptionLabel={(option) => `${option.nombre} - ${option.especie} (${option.raza || 'Sin raza'})`}
-                                value={mascotas.find(m => m.id_mascota === formData.id_mascota) || null}
+                                value={filteredMascotas.find(m => m.id_mascota === formData.id_mascota) || null}
                                 onChange={(e, newValue) => handleAutocompleteChange('id_mascota', newValue?.id_mascota || '')}
                                 renderInput={(params) => (
                                     <TextField 
@@ -390,7 +409,12 @@ const CitasCrearPage = () => {
                             <Autocomplete
                                 fullWidth
                                 options={empleados.filter(e => e.activo)}
-                                getOptionLabel={(option) => `${option.nombre} - ${option.numero_empleado}`}
+                                getOptionLabel={(option) => {
+                                    if (!option) return '';
+                                    const nombre = option.nombre || option.usuarios?.nombre || option.usuario?.nombre || 'Sin nombre';
+                                    const numero = option.numero_empleado || option.usuarios?.numero_empleado || '';
+                                    return numero ? `${nombre} - ${numero}` : nombre;
+                                }}
                                 value={empleados.find(e => e.id_empleado === formData.id_empleado) || null}
                                 onChange={(e, newValue) => handleAutocompleteChange('id_empleado', newValue?.id_empleado || '')}
                                 renderInput={(params) => (

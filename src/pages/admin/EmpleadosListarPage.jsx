@@ -615,6 +615,7 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
     const [empleados, setEmpleados] = useState([]);
     const [filteredEmpleados, setFilteredEmpleados] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filters, setFilters] = useState({ activo: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -680,12 +681,12 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
         fetchEmpleados(); 
     }, []);
 
-    // Filtro de búsqueda
+    // Filtro de búsqueda + estado
     useEffect(() => {
-        if (searchTerm.trim() === '') {
-            setFilteredEmpleados(empleados);
-        } else {
-            const filtered = empleados.filter(emp => {
+        let filtered = empleados;
+
+        if (searchTerm.trim() !== '') {
+            filtered = filtered.filter(emp => {
                 const usuario = emp.usuarios || emp.usuario;
                 return (
                     usuario?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -693,9 +694,17 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                     usuario?.correo_electronico?.toLowerCase().includes(searchTerm.toLowerCase())
                 );
             });
-            setFilteredEmpleados(filtered);
         }
-    }, [searchTerm, empleados]);
+
+        if (filters.activo !== '') {
+            filtered = filtered.filter((emp) => {
+                const usuario = emp.usuarios || emp.usuario;
+                return !!usuario?.activo === (filters.activo === 'true');
+            });
+        }
+
+        setFilteredEmpleados(filtered);
+    }, [searchTerm, filters, empleados]);
 
     const handleToggleActive = async (idUsuario, nextState = false) => {
         const token = localStorage.getItem('authToken');
@@ -733,6 +742,10 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
             console.error('Error al actualizar estado del empleado:', err);
             setError('No se pudo actualizar el estado. Verifica permisos o intenta más tarde.');
         }
+    };
+
+    const handleFilterChange = (name, value) => {
+        setFilters((prev) => ({ ...prev, [name]: value }));
     };
 
     const openEditDialog = (empleado) => {
@@ -914,6 +927,31 @@ const EmpleadosListarPage = ({ isManagementView = false }) => {
                             ),
                         }}
                     />
+                </Stack>
+            </Paper>
+
+            <Paper elevation={1} sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, minWidth: 140 }}>
+                        Filtros rápidos
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Chip
+                            label="Todos"
+                            color={filters.activo === '' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('activo', '')}
+                        />
+                        <Chip
+                            label="Activos"
+                            color={filters.activo === 'true' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('activo', 'true')}
+                        />
+                        <Chip
+                            label="Inactivos"
+                            color={filters.activo === 'false' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('activo', 'false')}
+                        />
+                    </Stack>
                 </Stack>
             </Paper>
 

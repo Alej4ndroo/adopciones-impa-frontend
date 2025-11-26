@@ -7,7 +7,7 @@ import {
     TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
     Stack, alpha, Card, IconButton, Tooltip, Collapse, Avatar,
     TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
-    Grid, Divider, Button, useMediaQuery, Badge,
+    Grid, Divider, Button, useMediaQuery,
     Dialog, DialogTitle, DialogContent, DialogActions,
     RadioGroup, Radio, FormControlLabel
 } from '@mui/material';
@@ -28,8 +28,6 @@ import {
     KeyboardArrowDown as ArrowDownIcon,
     KeyboardArrowUp as ArrowUpIcon,
     Search as SearchIcon,
-    FilterList as FilterIcon,
-    Close as CloseIcon,
     Schedule as ScheduleIcon,
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
@@ -708,32 +706,30 @@ const CitaRow = ({ cita, onEdit, onReschedule, onView }) => {
                                                         </Typography>
                                                     </Box>
                                                 </Box>
-                                                {cita.servicio.descripcion && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                                        <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                            <DescriptionIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
-                                                        </Box>
-                                                        <Box sx={{ flex: 1 }}>
-                                                            <Typography variant="caption" color="text.secondary">Descripción</Typography>
-                                                            <Typography variant="body2" fontWeight={500}>
-                                                                {cita.servicio.descripcion}
-                                                            </Typography>
-                                                        </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                    <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                                                        <DescriptionIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
                                                     </Box>
-                                                )}
-                                                {cita.servicio.costo_base && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                        <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                                                            <AttachMoneyIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
-                                                        </Box>
-                                                        <Box>
-                                                            <Typography variant="caption" color="text.secondary">Costo Base</Typography>
-                                                            <Typography variant="body2" fontWeight={600}>
-                                                                ${parseFloat(cita.servicio.costo_base).toFixed(2)} MXN
-                                                            </Typography>
-                                                        </Box>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography variant="caption" color="text.secondary">Descripción</Typography>
+                                                        <Typography variant="body2" fontWeight={500}>
+                                                            {cita.servicio.descripcion || 'Sin descripción'}
+                                                        </Typography>
                                                     </Box>
-                                                )}
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                                                        <AttachMoneyIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
+                                                    </Box>
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary">Costo Base</Typography>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {cita.servicio.costo_base != null && cita.servicio.costo_base !== ''
+                                                                ? `$${parseFloat(cita.servicio.costo_base).toFixed(2)} MXN`
+                                                                : 'No especificado'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
                                             </Stack>
                                         </Card>
                                     </Grid>
@@ -861,7 +857,6 @@ const CitasListarPage = ({ isManagementView = false }) => {
         fechaDesde: '',
         fechaHasta: ''
     });
-    const [showFilters, setShowFilters] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
@@ -1240,7 +1235,7 @@ const CitasListarPage = ({ isManagementView = false }) => {
     }
 
     return (
-        <Box sx={{ maxWidth: 'auto', mx: 'auto' }}>
+        <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 1, md: 2 } }}>
             {/* Header */}
             <Paper
                 elevation={0}
@@ -1306,107 +1301,50 @@ const CitasListarPage = ({ isManagementView = false }) => {
                 </Stack>
             </Paper>
 
-            {/* Botón de filtros */}
-            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
-                <Button
-                    variant={showFilters ? "contained" : "outlined"}
-                    startIcon={<FilterIcon />}
-                    onClick={() => setShowFilters(!showFilters)}
-                    sx={{
-                        borderRadius: 2,
-                        fontWeight: 600
-                    }}
-                >
-                    Filtros
-                    {activeFiltersCount > 0 && (
-                        <Badge 
-                            badgeContent={activeFiltersCount} 
-                            color="error" 
-                            sx={{ ml: 1 }}
+            {/* Filtros rápidos estilo Servicios */}
+            <Paper elevation={1} sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, minWidth: 140 }}>
+                        Filtros rápidos
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Chip
+                            label="Todas"
+                            color={filters.estado === '' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', '')}
                         />
-                    )}
-                </Button>
+                        <Chip
+                            label="Programadas"
+                            color={filters.estado === 'programada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'programada')}
+                        />
+                        <Chip
+                            label="Completadas"
+                            color={filters.estado === 'completada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'completada')}
+                        />
+                        <Chip
+                            label="Canceladas"
+                            color={filters.estado === 'cancelada' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'cancelada')}
+                        />
+                        <Chip
+                            label="En proceso"
+                            color={filters.estado === 'en_proceso' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'en_proceso')}
+                        />
+                    </Stack>
+                </Stack>
+            </Paper>
+
+            {/* Limpieza de filtros */}
+            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
                 {activeFiltersCount > 0 && (
-                    <Button
-                        variant="text"
-                        startIcon={<CloseIcon />}
-                        onClick={clearFilters}
-                        sx={{ fontWeight: 600 }}
-                    >
+                    <Button variant="text" onClick={clearFilters} sx={{ fontWeight: 600 }}>
                         Limpiar filtros
                     </Button>
                 )}
             </Stack>
-
-            {/* Panel de filtros */}
-            <Collapse in={showFilters}>
-                <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                        Filtros Avanzados
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Estado</InputLabel>
-                                <Select
-                                    value={filters.estado}
-                                    label="Estado"
-                                    onChange={(e) => handleFilterChange('estado', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    {estadosUnicos.map(estado => (
-                                        <MenuItem key={estado} value={estado}>
-                                            {estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ')}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Servicio"
-                                value={filters.servicio}
-                                onChange={(e) => handleFilterChange('servicio', e.target.value)}
-                                placeholder="Buscar por servicio..."
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Empleado"
-                                value={filters.empleado}
-                                onChange={(e) => handleFilterChange('empleado', e.target.value)}
-                                placeholder="Buscar por empleado..."
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                type="date"
-                                label="Desde"
-                                value={filters.fechaDesde}
-                                onChange={(e) => handleFilterChange('fechaDesde', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                type="date"
-                                label="Hasta"
-                                value={filters.fechaHasta}
-                                onChange={(e) => handleFilterChange('fechaHasta', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                    </Grid>
-                </Paper>
-            </Collapse>
 
             {/* Alertas */}
             {error && (
@@ -1462,7 +1400,7 @@ const CitasListarPage = ({ isManagementView = false }) => {
                     elevation={3}
                     sx={{
                         borderRadius: 3,
-                        overflow: 'hidden'
+                        overflowX: 'auto'
                     }}
                 >
                     <Table stickyHeader>
@@ -1613,17 +1551,15 @@ const CitasListarPage = ({ isManagementView = false }) => {
                             label="Costo"
                             type="number"
                             value={editForm.costo}
-                            onChange={(e) => setEditForm((prev) => ({ ...prev, costo: e.target.value }))}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, costo: Math.max(0, Number(e.target.value)) }))}
                             fullWidth
+                            inputProps={{ min: 0 }}
                         />
                         {editError && (
                             <Alert severity="error" onClose={() => setEditError('')}>
                                 {editError}
                             </Alert>
                         )}
-                        <Typography variant="body2" color="text.secondary">
-                            El horario no se modifica aquí. Usa “Finalizar / Reagendar” para cambiar fecha/hora.
-                        </Typography>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

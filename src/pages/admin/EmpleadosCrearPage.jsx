@@ -16,9 +16,10 @@ import {
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CREATE_EMPLOYEE_ENDPOINT = '/empleados/crear'; 
 
+// Roles disponibles en la BD: 1 admin, 2 director, 3 veterinario, 4 persona.
+// Para evitar que empleados aparezcan como clientes, no usar rol 4 (persona).
 const ROL_OPTIONS = [
-    { id: 3, nombre: 'veterinario' },
-    { id: 4, nombre: 'Recepcionista' }
+    { id: 3, nombre: 'veterinario' }
 ];
 
 const ESTADO_DOCUMENTACION_OPTIONS = ['pendiente', 'verificada', 'rechazada'];
@@ -77,7 +78,6 @@ const EmpleadosCrearPage = () => {
         ciudad: '',
         
         // CAMPOS DE EMPLEADO
-        numero_empleado: '', 
         cedula_profesional: '',
         licenciatura: '',
         especialidad: '', 
@@ -458,20 +458,6 @@ const EmpleadosCrearPage = () => {
                         </Typography>
                     </Stack>
                     <Stack spacing={3}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Número de Empleado"
-                            name="numero_empleado"
-                            value={formData.numero_empleado}
-                            onChange={(e) => {
-                                const digits = e.target.value.replace(/\\D/g, '').slice(0, 6);
-                                setFormData((prev) => ({ ...prev, numero_empleado: digits }));
-                            }}
-                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 6 }}
-                            helperText="Solo números"
-                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
                         <FormControl fullWidth required>
                             <InputLabel>Rol</InputLabel>
                             <Select 
@@ -489,8 +475,8 @@ const EmpleadosCrearPage = () => {
                             </Select>
                         </FormControl>
                         <TextField fullWidth required label="Licenciatura / Grado" name="licenciatura" value={formData.licenciatura} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="Cédula Profesional (Solo si aplica)" name="cedula_profesional" value={formData.cedula_profesional} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                        <TextField fullWidth required label="Especialidad (Ej: Cirugía, Medicina Interna)" name="especialidad" value={formData.especialidad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth label="Cédula Profesional (Solo si aplica)" name="cedula_profesional" value={formData.cedula_profesional} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                        <TextField fullWidth label="Especialidad (Ej: Cirugía, Medicina Interna)" name="especialidad" value={formData.especialidad} onChange={handleChange} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                     </Stack>
                 </Box>
 
@@ -507,7 +493,7 @@ const EmpleadosCrearPage = () => {
                         disabled={
                             loading || !!passwordError || !!emailError ||
                             !formData.nombre || !formData.correo_electronico || !formData.contrasena ||
-                            !formData.numero_empleado || !formData.telefono || formData.telefono.length !== 10 ||
+                            !formData.telefono || formData.telefono.length !== 10 ||
                             !formData.calle || !formData.numero_exterior ||
                             !formData.colonia || !formData.codigo_postal || formData.codigo_postal.length !== 5 ||
                             !formData.ciudad

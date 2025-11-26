@@ -5,7 +5,7 @@ import {
     TableHead, TableRow, Box, CircularProgress, Alert, Chip, useTheme,
     Stack, alpha, Card, IconButton, Collapse, Avatar,
     TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem,
-    Grid, Divider, Button, useMediaQuery, Badge, Dialog, DialogTitle,
+    Grid, Divider, Button, useMediaQuery, Dialog, DialogTitle,
     DialogContent, DialogActions, FormControlLabel, Checkbox
 } from '@mui/material';
 import { 
@@ -18,10 +18,8 @@ import {
     KeyboardArrowDown as ArrowDownIcon,
     KeyboardArrowUp as ArrowUpIcon,
     Search as SearchIcon,
-    FilterList as FilterIcon,
     MedicalServices as MedicalIcon,
-    CalendarToday as CalendarIcon,
-    Close as CloseIcon
+    CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
@@ -648,7 +646,6 @@ const MascotasListarPage = ({ isManagementView = false }) => {
         vacunado: '',
         esterilizado: ''
     });
-    const [showFilters, setShowFilters] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [adoptionMap, setAdoptionMap] = useState({});
@@ -1048,136 +1045,44 @@ const MascotasListarPage = ({ isManagementView = false }) => {
                 </Stack>
             </Paper>
 
-            {/* Botón de filtros */}
-            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
-                <Button
-                    variant={showFilters ? "contained" : "outlined"}
-                    startIcon={<FilterIcon />}
-                    onClick={() => setShowFilters(!showFilters)}
-                    sx={{
-                        borderRadius: 2,
-                        fontWeight: 600
-                    }}
-                >
-                    Filtros
-                    {activeFiltersCount > 0 && (
-                        <Badge 
-                            badgeContent={activeFiltersCount} 
-                            color="error" 
-                            sx={{ ml: 1 }}
+            <Paper elevation={1} sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, minWidth: 140 }}>
+                        Filtros rápidos
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        <Chip
+                            label="Todas"
+                            color={filters.estado === '' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', '')}
                         />
-                    )}
-                </Button>
+                        <Chip
+                            label="Disponibles"
+                            color={filters.estado === 'disponible' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'disponible')}
+                        />
+                        <Chip
+                            label="Pendientes"
+                            color={filters.estado === 'pendiente' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'pendiente')}
+                        />
+                        <Chip
+                            label="Adoptadas"
+                            color={filters.estado === 'adoptado' ? 'primary' : 'default'}
+                            onClick={() => handleFilterChange('estado', 'adoptado')}
+                        />
+                    </Stack>
+                </Stack>
+            </Paper>
+
+                        {/* Limpieza de filtros */}
+            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
                 {activeFiltersCount > 0 && (
-                    <Button
-                        variant="text"
-                        startIcon={<CloseIcon />}
-                        onClick={clearFilters}
-                        sx={{ fontWeight: 600 }}
-                    >
+                    <Button variant="text" onClick={clearFilters} sx={{ fontWeight: 600 }}>
                         Limpiar filtros
                     </Button>
                 )}
             </Stack>
-
-            {/* Panel de filtros */}
-            <Collapse in={showFilters}>
-                <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                        Filtros Avanzados
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Especie</InputLabel>
-                                <Select
-                                    value={filters.especie}
-                                    label="Especie"
-                                    onChange={(e) => handleFilterChange('especie', e.target.value)}
-                                >
-                                    <MenuItem value="">Todas</MenuItem>
-                                    <MenuItem value="perro">Perro</MenuItem>
-                                    <MenuItem value="gato">Gato</MenuItem>
-                                    <MenuItem value="conejo">Conejo</MenuItem>
-                                    <MenuItem value="otro">Otro</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Sexo</InputLabel>
-                                <Select
-                                    value={filters.sexo}
-                                    label="Sexo"
-                                    onChange={(e) => handleFilterChange('sexo', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="macho">Macho</MenuItem>
-                                    <MenuItem value="hembra">Hembra</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Tamaño</InputLabel>
-                                <Select
-                                    value={filters.tamano}
-                                    label="Tamaño"
-                                    onChange={(e) => handleFilterChange('tamano', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="pequeño">Pequeño</MenuItem>
-                                    <MenuItem value="mediano">Mediano</MenuItem>
-                                    <MenuItem value="grande">Grande</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Estado de Adopción</InputLabel>
-                                <Select
-                                    value={filters.estado}
-                                    label="Estado de Adopción"
-                                    onChange={(e) => handleFilterChange('estado', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="disponible">Disponible</MenuItem>
-                                    <MenuItem value="en_proceso">En Proceso</MenuItem>
-                                    <MenuItem value="adoptado">Adoptado</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Vacunado</InputLabel>
-                                <Select
-                                    value={filters.vacunado}
-                                    label="Vacunado"
-                                    onChange={(e) => handleFilterChange('vacunado', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="true">Sí</MenuItem>
-                                    <MenuItem value="false">No</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Esterilizado</InputLabel>
-                                <Select
-                                    value={filters.esterilizado}
-                                    label="Esterilizado"
-                                    onChange={(e) => handleFilterChange('esterilizado', e.target.value)}
-                                >
-                                    <MenuItem value="">Todos</MenuItem>
-                                    <MenuItem value="true">Sí</MenuItem>
-                                    <MenuItem value="false">No</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-                </Paper>
-            </Collapse>
 
             {/* Alertas */}
             {error && (

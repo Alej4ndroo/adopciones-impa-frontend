@@ -31,6 +31,8 @@ const routeMap = {
     'Crear Adopción': '/dashboard/adopciones/crear',
     'Ver Consultas': '/dashboard/consultas/ver',
     'Crear Consulta': '/dashboard/consultas/crear',
+    'Ver Servicios': '/dashboard/servicios/ver',
+    'Nuevo Servicio': '/dashboard/servicios/crear',
     'Ver Documentos': '/dashboard/documentos/ver',
     'Verificar Documento': '/dashboard/documentos/verificar',
 };
@@ -77,6 +79,10 @@ const menuItems = [
     { name: 'Consultas Médicas', icon: BarChart2, requiredPermissions: ['ver_consulta', 'crear_consulta'], subMenu: [
       { name: 'Ver Consultas', requiredPermissions: ['ver_consulta'] },
       { name: 'Crear Consulta', requiredPermissions: ['crear_consulta'] }
+    ] },
+    { name: 'Servicios', icon: FileText, requiredPermissions: [], subMenu: [
+      { name: 'Ver Servicios', requiredPermissions: [] },
+      { name: 'Nuevo Servicio', requiredPermissions: [] }
     ] },
 ];
 

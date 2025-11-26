@@ -366,7 +366,7 @@ const DashboardContentMUI = () => {
             
             <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 700, color: theme.palette.primary.dark }}>
                 <LayoutDashboard size={30} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-                Panel de Control - Resumen Operativo IMPA
+                Panel de Control
             </Typography>
             
             <Divider sx={{ mb: 4 }} />
@@ -544,6 +544,18 @@ const DashboardContentMUI = () => {
                             '& .fc .fc-timegrid-event': {
                                 margin: '0 2px',
                             },
+                            '& .fc .fc-no-events': {
+                                minHeight: 220,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: alpha(theme.palette.grey[200], 0.6),
+                                borderRadius: 3,
+                                textAlign: 'center',
+                                border: `1px solid ${alpha(theme.palette.grey[400], 0.5)}`,
+                                mx: 2,
+                                my: 1.5
+                            }
                         }}
                     >
                         {calendarLoading ? (
@@ -599,23 +611,45 @@ const DashboardContentMUI = () => {
                                             week: 'Semana',
                                             list: 'Agenda',
                                         }}
-                                        initialView={isMobile ? 'listWeek' : 'dayGridMonth'}
+                                        initialView={isMobile ? 'dayGridMonth' : 'dayGridMonth'}
                                         locale={esLocale} // Español
                                         firstDay={1}
                                         events={calendarEvents}
                                         weekends={true}
                                         editable={false} // Citas no se pueden arrastrar
                                         selectable={false}
-                                        height="auto" // Se ajusta al Paper
+                                        height="auto"
                                         contentHeight="auto"
                                         handleWindowResize={true} // Clave para responsividad
                                         nowIndicator
                                         eventDisplay="block"
                                         eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: false }}
                                         eventContent={renderEventContent}
+                                        noEventsContent={() => (
+                                            <Box
+                                                sx={{
+                                                    width: '100%',
+                                                    minHeight: 300,
+                                                    minWidth: 1100,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    bgcolor: alpha(theme.palette.grey[200], 0.7),
+                                                    borderRadius: 3,
+                                                    mx: 'auto',
+                                                    my: 2
+                                                }}
+                                            >
+                                                <Stack spacing={0.5} alignItems="center">
+                                                    <Typography variant="body1" fontWeight={700}>No hay eventos para mostrar</Typography>
+                                                    <Typography variant="body2" color="text.secondary">Selecciona otra fecha o agrega una cita.</Typography>
+                                                </Stack>
+                                            </Box>
+                                        )}
                                         views={{
                                             dayGridMonth: {
-                                                dayMaxEventRows: 1,
+                                                dayMaxEventRows: isMobile ? 0 : 2,
+                                                dayMaxEvents: isMobile ? 0 : undefined,
                                                 moreLinkContent: renderMoreLink,
                                                 moreLinkClick: 'popover',
                                             },
