@@ -220,21 +220,22 @@ const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogo
                 const data = await resp.json();
                 const adopciones = Array.isArray(data) ? data : [];
 
-                const allAdopted = adopciones
-                    .filter(a => {
-                        const estado = (a.estado || '').toLowerCase();
-                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
-                        return estado === 'adoptado' || estadoSol === 'aprobada';
-                    })
+                const adopcionesActivas = adopciones.filter((a) => {
+                    const estado = (a.estado || '').toLowerCase();
+                    const estadoSol = (a.estado_solicitud || '').toLowerCase();
+                    const solicitudActiva = estadoSol && !['rechazada', 'cancelada'].includes(estadoSol);
+                    const adopcionActiva = ['adoptado', 'en_proceso'].includes(estado);
+                    return solicitudActiva || adopcionActiva;
+                });
+
+                const allAdopted = adopcionesActivas
                     .map(a => a.mascota?.id_mascota || a.id_mascota)
                     .filter(Boolean);
 
-                const ownAdopted = adopciones
+                const ownAdopted = adopcionesActivas
                     .filter(a => {
                         const userId = a.usuario?.id_usuario || a.id_usuario;
-                        const estado = (a.estado || '').toLowerCase();
-                        const estadoSol = (a.estado_solicitud || '').toLowerCase();
-                        return currentUser?.id_usuario && userId === currentUser.id_usuario && (estado === 'adoptado' || estadoSol === 'aprobada');
+                        return currentUser?.id_usuario && userId === currentUser.id_usuario;
                     })
                     .map(a => a.mascota?.id_mascota || a.id_mascota)
                     .filter(Boolean);
@@ -255,10 +256,10 @@ const CatalogoMascotas = ({ isAuthenticated, currentUser, onLoginSuccess, onLogo
         const filtradas = allPets.filter((m) => {
             const estado = (m.estado_adopcion || '').toLowerCase();
             const activo = m.activo !== false; // true si null/undefined
-            const noAdoptadoFlag = estado !== 'adoptado';
+            const disponible = estado === 'disponible';
             const noAdoptadoGlobal = !adoptedPetIds.includes(m.id_mascota);
             const noPropia = !blockedPetIds.includes(m.id_mascota);
-            return activo && noAdoptadoFlag && noAdoptadoGlobal && noPropia;
+            return activo && disponible && noAdoptadoGlobal && noPropia;
         });
         setMascotas(filtradas);
     }, [allPets, blockedPetIds, adoptedPetIds]);

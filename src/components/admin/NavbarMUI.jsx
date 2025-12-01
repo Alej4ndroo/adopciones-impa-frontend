@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     AppBar, Toolbar, Typography, IconButton, Box, Button, Avatar,
@@ -18,7 +18,79 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
     const [anchorElNotif, setAnchorElNotif] = useState(null);
     const [notifications, setNotifications] = useState([]);
     const [loadingNotif, setLoadingNotif] = useState(false);
-    const badgeContent = notifications.length; // Contador dinámico
+    const [readNotificationIds, setReadNotificationIds] = useState([]);
+    const storageKey = currentUser?.id_usuario ? `notif-read-${currentUser.id_usuario}` : null;
+    const historyKey = currentUser?.id_usuario ? `notif-history-${currentUser.id_usuario}` : null;
+    const persistReadNotifications = useCallback((ids) => {
+        if (storageKey) {
+            localStorage.setItem(storageKey, JSON.stringify(ids));
+        }
+    }, [storageKey]);
+    const persistNotificationsHistory = useCallback((items) => {
+        if (historyKey) {
+            localStorage.setItem(historyKey, JSON.stringify(items));
+        }
+    }, [historyKey]);
+    useEffect(() => {
+        if (!storageKey) {
+            setReadNotificationIds([]);
+            return;
+        }
+        try {
+            const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            setReadNotificationIds(Array.isArray(saved) ? saved : []);
+        } catch {
+            setReadNotificationIds([]);
+        }
+    }, [storageKey]);
+    useEffect(() => {
+        if (!historyKey) {
+            setNotifications([]);
+            return;
+        }
+        try {
+            const saved = JSON.parse(localStorage.getItem(historyKey) || '[]');
+            setNotifications(Array.isArray(saved) ? saved : []);
+        } catch {
+            setNotifications([]);
+        }
+    }, [historyKey]);
+    const mergeNotifications = useCallback((prevList, incomingList) => {
+        const map = new Map();
+        (prevList || []).forEach((item) => {
+            if (item?.id_notificacion) {
+                map.set(item.id_notificacion, item);
+            }
+        });
+        (incomingList || []).forEach((item) => {
+            if (item?.id_notificacion) {
+                map.set(item.id_notificacion, item);
+            }
+        });
+        const merged = Array.from(map.values()).sort((a, b) => {
+            const dateA = new Date(a.creada_at || a.fecha || 0).getTime();
+            const dateB = new Date(b.creada_at || b.fecha || 0).getTime();
+            if (Number.isNaN(dateA) || Number.isNaN(dateB)) {
+                return (b.id_notificacion || 0) - (a.id_notificacion || 0);
+            }
+            return dateB - dateA;
+        });
+        return merged;
+    }, []);
+    const markNotificationAsRead = useCallback((notifId) => {
+        if (!notifId) return;
+        setReadNotificationIds((prev) => {
+            if (prev.includes(notifId)) return prev;
+            const updated = [...prev, notifId];
+            persistReadNotifications(updated);
+            return updated;
+        });
+    }, [persistReadNotifications]);
+    const readSet = useMemo(() => new Set(readNotificationIds), [readNotificationIds]);
+    const badgeContent = useMemo(() => notifications.reduce(
+        (acc, notif) => acc + (readSet.has(notif.id_notificacion) ? 0 : 1),
+        0
+    ), [notifications, readSet]);
     const openNotif = Boolean(anchorElNotif);
 
     // Efecto para la foto de perfil (sin cambios)
@@ -72,17 +144,20 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
             }
 
             const data = await response.json();
-            setNotifications(data);
+            setNotifications((prev) => {
+                const merged = mergeNotifications(prev, data);
+                persistNotificationsHistory(merged);
+                return merged;
+            });
 
         } catch (error) {
             console.error("Fallo al obtener notificaciones:", error);
-            setNotifications([]);
         } finally {
             if (showSpinner) {
                 setLoadingNotif(false);
             }
         }
-    }, [currentUser]); // Depende de currentUser
+    }, [currentUser, mergeNotifications, persistNotificationsHistory]); // Depende de currentUser
 
 
     // -----------------------------------------------------------------
@@ -104,6 +179,7 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
         } else {
             // Limpia notificaciones si el usuario se desloguea
             setNotifications([]);
+            setReadNotificationIds([]);
         }
     }, [currentUser, fetchNotifications]);
 
@@ -116,6 +192,10 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
 
     const handleNotifClose = () => {
         setAnchorElNotif(null);
+    };
+    const handleNotificationItemClick = (notifId) => {
+        markNotificationAsRead(notifId);
+        handleNotifClose();
     };
 
 
@@ -193,10 +273,20 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
                             notifications.map((notif) => (
                                 <MenuItem
                                     key={notif.id_notificacion}
-                                    onClick={handleNotifClose}
-                                    sx={{ whiteSpace: 'normal', display: 'block', py: 1.5, px: 2 }}
+                                    onClick={() => handleNotificationItemClick(notif.id_notificacion)}
+                                    sx={{
+                                        whiteSpace: 'normal',
+                                        display: 'block',
+                                        py: 1.5,
+                                        px: 2,
+                                        bgcolor: readSet.has(notif.id_notificacion) ? 'transparent' : 'rgba(255,255,255,0.1)'
+                                    }}
                                 >
-                                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                    <Typography
+                                        variant="body1"
+                                        sx={{ fontWeight: 600, mb: 0.5 }}
+                                        color={readSet.has(notif.id_notificacion) ? 'inherit' : '#fff'}
+                                    >
                                         {notif.titulo}
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>

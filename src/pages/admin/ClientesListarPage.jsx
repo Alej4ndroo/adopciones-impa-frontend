@@ -612,6 +612,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     const [filters, setFilters] = useState({ activo: '', docs: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedCliente, setSelectedCliente] = useState(null);
     const [savingEdit, setSavingEdit] = useState(false);
@@ -619,6 +620,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     const [docsCliente, setDocsCliente] = useState(null);
     const [docsList, setDocsList] = useState([]);
     const [docsLoading, setDocsLoading] = useState(false);
+    const [docsNotifyLoading, setDocsNotifyLoading] = useState(false);
     const handleFilterChange = (name, value) => setFilters((prev) => ({ ...prev, [name]: value }));
     const [editForm, setEditForm] = useState({
         nombre: '',
@@ -679,6 +681,12 @@ const ClientesListarPage = ({ isManagementView = false }) => {
     useEffect(() => { 
         fetchClientes(); 
     }, []);
+
+    useEffect(() => {
+        if (error) {
+            setSuccessMessage(null);
+        }
+    }, [error]);
 
     // Filtro de búsqueda
     useEffect(() => {
@@ -909,6 +917,7 @@ const ClientesListarPage = ({ isManagementView = false }) => {
         setDocsCliente(null);
         setDocsList([]);
         setDocsLoading(false);
+        setDocsNotifyLoading(false);
     };
 
     const handleMarkDocsVerified = async () => {
@@ -939,9 +948,50 @@ const ClientesListarPage = ({ isManagementView = false }) => {
             setClientes(updater);
             setFilteredClientes(updater);
             closeDocsDialog();
+            setError(null);
+            setSuccessMessage('Documentación marcada como verificada.');
         } catch (err) {
             console.error('Error al marcar documentos verificados:', err);
             setError('No se pudo marcar la documentación como verificada.');
+        }
+    };
+
+    const handleNotifyDocsIssue = async () => {
+        if (!docsCliente) return;
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            setError('No autenticado. Por favor, inicie sesión.');
+            return;
+        }
+        const confirm = window.confirm(`¿Enviar una notificación a ${docsCliente.nombre || 'este cliente'} para que revise sus documentos?`);
+        if (!confirm) return;
+        try {
+            setDocsNotifyLoading(true);
+            setError(null);
+            setSuccessMessage(null);
+            const response = await fetch(`${API_URL_BACKEND}/notificaciones`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    id_usuario: docsCliente.id_usuario,
+                    tipo_notificacion: 'documento_rechazado',
+                    titulo: 'Actualiza tu documentación',
+                    mensaje: 'Favor de verificar que su documentación esté vigente y correcta.'
+                })
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.mensaje || data.error || 'No se pudo enviar la notificación.');
+            }
+            setSuccessMessage('Notificación enviada al usuario.');
+        } catch (err) {
+            console.error('Error al notificar al usuario:', err);
+            setError(err.message || 'No se pudo enviar la notificación.');
+        } finally {
+            setDocsNotifyLoading(false);
         }
     };
 
@@ -1076,6 +1126,15 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                     onClose={() => setError(null)}
                 >
                     {error}
+                </Alert>
+            )}
+            {successMessage && (
+                <Alert
+                    severity="success"
+                    sx={{ mb: 3, borderRadius: 2 }}
+                    onClose={() => setSuccessMessage(null)}
+                >
+                    {successMessage}
                 </Alert>
             )}
 
@@ -1338,8 +1397,12 @@ const ClientesListarPage = ({ isManagementView = false }) => {
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
                     <Button onClick={closeDocsDialog}>Cerrar</Button>
-                    <Button variant="outlined" disabled>
-                        Notificar error al usuario
+                    <Button
+                        variant="outlined"
+                        onClick={handleNotifyDocsIssue}
+                        disabled={!docsCliente || docsNotifyLoading}
+                    >
+                        {docsNotifyLoading ? 'Enviando...' : 'Notificar error al usuario'}
                     </Button>
                     <Button
                         variant="contained"

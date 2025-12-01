@@ -837,6 +837,7 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
     const [decisionDialogOpen, setDecisionDialogOpen] = useState(false);
     const [decision, setDecision] = useState('rechazar');
     const [selectedId, setSelectedId] = useState(null);
@@ -1091,6 +1092,8 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
             setFilteredAdopciones(updater);
             setDecisionDialogOpen(false);
             setSelectedId(null);
+            setError(null);
+            setSuccessMessage(approve ? 'Adopción aprobada y notificada al usuario.' : 'Adopción rechazada y notificada al usuario.');
         } catch (err) {
             console.error('Error al resolver adopción:', err);
             setError('No se pudo actualizar la adopción. Intenta nuevamente.');
@@ -1209,16 +1212,6 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
                             onClick={() => handleFilterChange('estado', 'en_proceso')}
                         />
                         <Chip
-                            label="Adoptado"
-                            color={filters.estado === 'adoptado' ? 'primary' : 'default'}
-                            onClick={() => handleFilterChange('estado', 'adoptado')}
-                        />
-                        <Chip
-                            label="En revisión"
-                            color={filters.estadoSolicitud === 'en_revision' ? 'primary' : 'default'}
-                            onClick={() => handleFilterChange('estadoSolicitud', 'en_revision')}
-                        />
-                        <Chip
                             label="Aprobada"
                             color={filters.estadoSolicitud === 'aprobada' ? 'primary' : 'default'}
                             onClick={() => handleFilterChange('estadoSolicitud', 'aprobada')}
@@ -1227,16 +1220,6 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
                             label="Rechazada"
                             color={filters.estadoSolicitud === 'rechazada' ? 'primary' : 'default'}
                             onClick={() => handleFilterChange('estadoSolicitud', 'rechazada')}
-                        />
-                        <Chip
-                            label="Docs verificados"
-                            color={filters.documentosVerificados === 'true' ? 'primary' : 'default'}
-                            onClick={() => handleFilterChange('documentosVerificados', 'true')}
-                        />
-                        <Chip
-                            label="Docs pendientes"
-                            color={filters.documentosVerificados === 'false' ? 'primary' : 'default'}
-                            onClick={() => handleFilterChange('documentosVerificados', 'false')}
                         />
                     </Stack>
                 </Stack>
@@ -1250,6 +1233,15 @@ const AdopcionesListarPage = ({ isManagementView = false }) => {
                     onClose={() => setError(null)}
                 >
                     {error}
+                </Alert>
+            )}
+            {successMessage && (
+                <Alert 
+                    severity="success" 
+                    sx={{ mb: 3, borderRadius: 2 }}
+                    onClose={() => setSuccessMessage(null)}
+                >
+                    {successMessage}
                 </Alert>
             )}
 

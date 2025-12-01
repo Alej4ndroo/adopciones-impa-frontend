@@ -148,7 +148,7 @@ const AdoptionRequestPage = ({ isAuthenticated, currentUser, onLoginSuccess, onL
             // Redirigir después de 2 segundos
             setTimeout(() => {
                 navigate('/');
-            }, 2000);
+            }, 10000);
 
         } catch (err) {
             setError(err.message);
@@ -415,9 +415,9 @@ const AdoptionRequestPage = ({ isAuthenticated, currentUser, onLoginSuccess, onL
                 </Card>
 
                 {/* Información adicional */}
-                <Box sx={{ mt: 4, p: 3, bgcolor: 'info.light', borderRadius: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'info.dark' }}>
-                        📋 Próximos pasos
+                <Box sx={{ mt: 4, p: 3, borderRadius: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'red' }}>
+                        Próximos pasos:
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                         1. Revisaremos tu solicitud en un plazo de 2-3 días hábiles
@@ -429,7 +429,7 @@ const AdoptionRequestPage = ({ isAuthenticated, currentUser, onLoginSuccess, onL
                         3. Si todo está en orden, coordinaremos la entrega de tu nueva mascota
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        4. ¡Comenzará tu aventura juntos! 🐾
+                        4. ¡Comenzará su aventura juntos!
                     </Typography>
                 </Box>
 

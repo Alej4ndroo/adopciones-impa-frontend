@@ -205,7 +205,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                             {mascota.nombre}
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 800 }}>
-                            Conoce a {mascota.nombre}: salud verificada, acompañamiento y toda la información que necesitas para tomar una decisión informada.
+                            Conoce a {mascota.nombre}.
                         </Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
                             <Chip icon={mascota.sexo === 'macho' ? <Male /> : <Female />} label={mascota.sexo} color={mascota.sexo === 'macho' ? 'primary' : 'secondary'} sx={{ fontWeight: 600 }} />
@@ -316,7 +316,7 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
 
                             {!isDocVerified && (
                                 <Alert severity="warning" sx={{ borderRadius: 2, fontWeight: 600 }}>
-                                    Debes tener la documentación verificada para adoptar. Actualiza tus documentos en tu perfil.
+                                    Debes tener la documentación verificada para adoptar. Espera la verificación.
                                 </Alert>
                             )}
                             {docWarning && (

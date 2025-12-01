@@ -56,7 +56,7 @@ const MobileCitaCard = ({ cita, onEdit, onReschedule, onView }) => {
 
     const handleView = (e) => {
         e.stopPropagation();
-        if (onView) onView(cita.id_cita);
+        if (onView) onView(cita);
     };
 
     const formatDate = (dateString) => {
@@ -359,7 +359,7 @@ const CitaRow = ({ cita, onEdit, onReschedule, onView }) => {
 
     const handleView = (e) => {
         e.stopPropagation();
-        if (onView) onView(cita.id_cita);
+        if (onView) onView(cita);
     };
 
     const toggleRow = () => {
@@ -864,6 +864,8 @@ const CitasListarPage = ({ isManagementView = false }) => {
     const [rescheduleDateTime, setRescheduleDateTime] = useState('');
     const [rescheduleAction, setRescheduleAction] = useState('finalizar');
     const [rescheduleError, setRescheduleError] = useState('');
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [viewCita, setViewCita] = useState(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editError, setEditError] = useState('');
     const [editForm, setEditForm] = useState({
@@ -1207,8 +1209,14 @@ const CitasListarPage = ({ isManagementView = false }) => {
         }
     };
 
-    const handleView = (idCita) => {
-        navigate(`/citas/${idCita}`);
+    const handleView = (cita) => {
+        setViewCita(cita);
+        setViewDialogOpen(true);
+    };
+
+    const closeViewDialog = () => {
+        setViewDialogOpen(false);
+        setViewCita(null);
     };
 
     // Obtener listas únicas para los filtros
@@ -1459,7 +1467,7 @@ const CitasListarPage = ({ isManagementView = false }) => {
                                 value={rescheduleDateTime}
                                 onChange={(e) => setRescheduleDateTime(e.target.value)}
                                 InputLabelProps={{ shrink: true }}
-                                inputProps={{ min: getTodayMinLocal() }}
+                                inputProps={{ min: getTodayMinLocal(), step: 1800 }}
                                 helperText="Horario permitido: 10:00 a 18:00 (intervalos de 30 min)"
                             />
                         )}
@@ -1565,6 +1573,95 @@ const CitasListarPage = ({ isManagementView = false }) => {
                 <DialogActions>
                     <Button onClick={closeEditDialog}>Cancelar</Button>
                     <Button variant="contained" onClick={handleEditSubmit}>Guardar</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={viewDialogOpen} onClose={closeViewDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Detalles de la cita {viewCita ? `#${viewCita.id_cita}` : ''}</DialogTitle>
+                <DialogContent dividers>
+                    {viewCita ? (
+                        <Stack spacing={2}>
+                            <Box>
+                                <Typography variant="subtitle2" color="text.secondary">Fecha y hora</Typography>
+                                <Typography variant="body1" fontWeight={600}>
+                                    {new Date(viewCita.fecha_cita).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="subtitle2" color="text.secondary">Estado</Typography>
+                                <Chip
+                                    label={viewCita.estado_cita}
+                                    color={
+                                        viewCita.estado_cita === 'completada'
+                                            ? 'success'
+                                            : viewCita.estado_cita === 'cancelada'
+                                                ? 'error'
+                                                : 'info'
+                                    }
+                                />
+                            </Box>
+                            <Divider />
+                            <Box>
+                                <Typography variant="subtitle2" color="text.secondary">Motivo</Typography>
+                                <Typography variant="body2">{viewCita.motivo || 'Sin registro'}</Typography>
+                            </Box>
+                            {viewCita.observaciones && (
+                                <Box>
+                                    <Typography variant="subtitle2" color="text.secondary">Observaciones</Typography>
+                                    <Typography variant="body2">{viewCita.observaciones}</Typography>
+                                </Box>
+                            )}
+                            <Divider />
+                            <Stack spacing={0.5}>
+                                <Typography variant="subtitle2" color="text.secondary">Cliente</Typography>
+                                <Typography variant="body2" fontWeight={600}>{viewCita.usuario?.nombre || 'Sin cliente'}</Typography>
+                                <Typography variant="body2">{viewCita.usuario?.correo_electronico || 'Sin correo'}</Typography>
+                                <Typography variant="body2">{viewCita.usuario?.telefono || 'Sin teléfono'}</Typography>
+                            </Stack>
+                            {viewCita.mascota && (
+                                <>
+                                    <Divider />
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="subtitle2" color="text.secondary">Mascota</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{viewCita.mascota.nombre}</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {viewCita.mascota.especie} · {viewCita.mascota.raza}
+                                        </Typography>
+                                    </Stack>
+                                </>
+                            )}
+                            {viewCita.servicio && (
+                                <>
+                                    <Divider />
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="subtitle2" color="text.secondary">Servicio</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{viewCita.servicio.nombre}</Typography>
+                                        {viewCita.servicio.costo_base && (
+                                            <Typography variant="body2" color="text.secondary">
+                                                ${viewCita.servicio.costo_base} MXN
+                                            </Typography>
+                                        )}
+                                    </Stack>
+                                </>
+                            )}
+                            {viewCita.empleado && (
+                                <>
+                                    <Divider />
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="subtitle2" color="text.secondary">Empleado asignado</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{viewCita.empleado.nombre}</Typography>
+                                        {viewCita.empleado.especialidad && (
+                                            <Typography variant="body2" color="text.secondary">{viewCita.empleado.especialidad}</Typography>
+                                        )}
+                                    </Stack>
+                                </>
+                            )}
+                        </Stack>
+                    ) : (
+                        <Typography variant="body2">Selecciona una cita para ver los detalles.</Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeViewDialog}>Cerrar</Button>
                 </DialogActions>
             </Dialog>
         </Box>

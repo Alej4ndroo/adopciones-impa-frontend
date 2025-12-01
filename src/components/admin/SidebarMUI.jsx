@@ -33,6 +33,7 @@ const routeMap = {
     'Crear Consulta': '/dashboard/consultas/crear',
     'Ver Servicios': '/dashboard/servicios/ver',
     'Nuevo Servicio': '/dashboard/servicios/crear',
+    'Ver Seguimientos': '/dashboard/seguimientos/ver',
     'Ver Documentos': '/dashboard/documentos/ver',
     'Verificar Documento': '/dashboard/documentos/verificar',
 };
@@ -83,6 +84,9 @@ const menuItems = [
     { name: 'Servicios', icon: FileText, requiredPermissions: [], subMenu: [
       { name: 'Ver Servicios', requiredPermissions: [] },
       { name: 'Nuevo Servicio', requiredPermissions: [] }
+    ] },
+    { name: 'Seguimientos', icon: Smile, requiredPermissions: ['ver_adopcion'], subMenu: [
+      { name: 'Ver Seguimientos', requiredPermissions: ['ver_adopcion'] }
     ] },
 ];
 

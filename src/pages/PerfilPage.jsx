@@ -5,7 +5,7 @@ import {
     Typography, Button, CssBaseline, Chip, CircularProgress, Alert,
     Divider, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, IconButton,
-    Stack, Zoom, MenuItem
+    Stack, Zoom, MenuItem, FormControlLabel, Checkbox
 } from '@mui/material';
 import {
     Email, Badge, Pets, Event, Phone, Home, CameraAlt, Edit, Close,
@@ -258,6 +258,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     const [openEditProfile, setOpenEditProfile] = useState(false);
     const [openEditPhoto, setOpenEditPhoto] = useState(false);
     const [openAddAddress, setOpenAddAddress] = useState(false);
+    const [addressError, setAddressError] = useState(null);
 
     // Estados para edición de perfil
     const [editedUser, setEditedUser] = useState({
@@ -289,9 +290,18 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
     const addressList = normalizedDirecciones;
     const hasAddress = Boolean(primaryAddress);
 
-    const normalizeSpaces = (value) => value.replace(/\s+/g, ' ').trim();
+    const normalizeSpaces = (value = '') => value
+        .replace(/\s{2,}/g, ' ')
+        .replace(/^\s+/, '');
     const onlyDigits = (value) => value.replace(/[^0-9]/g, '');
     const limit = (value, max) => value.slice(0, max);
+    const isHalfHourSlot = (dateValue) => {
+        if (!dateValue) return false;
+        const date = new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return false;
+        const minutes = date.getMinutes();
+        return minutes % 30 === 0;
+    };
     const formatDate = (value) => {
         if (!value) return 'N/A';
         const parsed = new Date(value);
@@ -326,6 +336,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
         return local.toISOString().slice(0, 16);
     };
+    const getTodayMinLocal = () => toInputDateTime(new Date());
 
     // Mascotas del usuario (aprobadas/adoptadas)
     const adoptedMascotas = misAdopciones
@@ -347,6 +358,19 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         acta: { tipo_documento: 'acnac' },
         comprobante: { tipo_documento: 'comdom' }
     };
+    const [openSeguimiento, setOpenSeguimiento] = useState(false);
+    const [seguimientoTarget, setSeguimientoTarget] = useState(null);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const [seguimientoForm, setSeguimientoForm] = useState({
+        fecha_seguimiento: todayStr,
+        estado_mascota: '',
+        observaciones: '',
+        requiere_atencion: false,
+        siguiente_seguimiento: ''
+    });
+    const [seguimientoFotos, setSeguimientoFotos] = useState([]);
+    const [seguimientoLoading, setSeguimientoLoading] = useState(false);
+    const [seguimientoError, setSeguimientoError] = useState(null);
 
     const refreshUser = async (userId, fallbackUser = null) => {
         try {
@@ -573,6 +597,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         } else {
             setNewAddress(initialAddressState);
         }
+        setAddressError(null);
         setOpenAddAddress(true);
     };
 
@@ -728,15 +753,119 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         }
     };
 
+    const openSeguimientoDialog = (adopcion) => {
+        setSeguimientoTarget(adopcion);
+        setSeguimientoForm({
+            fecha_seguimiento: new Date().toISOString().split('T')[0],
+            estado_mascota: '',
+            observaciones: '',
+            requiere_atencion: false,
+            siguiente_seguimiento: ''
+        });
+        setSeguimientoFotos([]);
+        setSeguimientoError(null);
+        setOpenSeguimiento(true);
+    };
+
+    const handleSeguimientoInputChange = (field) => (event) => {
+        const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+        setSeguimientoForm((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleSeguimientoPhotoChange = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            const { dataUrl } = await readFileAsBase64(file);
+            setSeguimientoFotos((prev) => [
+                ...prev,
+                { id: Date.now(), preview: dataUrl, url: dataUrl, descripcion: '' }
+            ]);
+            event.target.value = '';
+        } catch (err) {
+            console.error('Error al leer foto de seguimiento:', err);
+        }
+    };
+
+    const handleSeguimientoFotoDescripcion = (id, value) => {
+        setSeguimientoFotos((prev) =>
+            prev.map((foto) => (foto.id === id ? { ...foto, descripcion: value } : foto))
+        );
+    };
+
+    const handleSeguimientoFotoRemove = (id) => {
+        setSeguimientoFotos((prev) => prev.filter((foto) => foto.id !== id));
+    };
+
+    const handleSubmitSeguimiento = async () => {
+        if (!seguimientoTarget) return;
+        if (!seguimientoForm.estado_mascota.trim()) {
+            setSeguimientoError('Describe brevemente el estado de la mascota.');
+            return;
+        }
+        if (seguimientoFotos.length === 0) {
+            setSeguimientoError('Adjunta al menos una foto del seguimiento.');
+            return;
+        }
+        setSeguimientoLoading(true);
+        setSeguimientoError(null);
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                setSeguimientoError('Debes iniciar sesión.');
+                setSeguimientoLoading(false);
+                return;
+            }
+            const payload = {
+                id_adopcion: seguimientoTarget.id_adopcion,
+                fecha_seguimiento: seguimientoForm.fecha_seguimiento,
+                estado_mascota: seguimientoForm.estado_mascota,
+                observaciones: seguimientoForm.observaciones || null,
+                requiere_atencion: seguimientoForm.requiere_atencion,
+                siguiente_seguimiento: seguimientoForm.siguiente_seguimiento || null,
+                fotos: seguimientoFotos.map((foto) => ({
+                    url: foto.url,
+                    descripcion: foto.descripcion || null
+                }))
+            };
+            const resp = await fetch(`${VITE_API_URL_BACKEND}/seguimientosAdopcion/crear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                throw new Error(data.mensaje || data.error || 'No se pudo registrar el seguimiento.');
+            }
+            setSuccessMessage('Seguimiento registrado correctamente.');
+            setOpenSeguimiento(false);
+            setSeguimientoTarget(null);
+        } catch (err) {
+            console.error('Error al registrar seguimiento:', err);
+            setSeguimientoError(err.message);
+        } finally {
+            setSeguimientoLoading(false);
+        }
+    };
+
+    const handleCloseAddressModal = () => {
+        setAddressError(null);
+        setOpenAddAddress(false);
+    };
+
     const handleAddAddress = async () => {
         try {
             setError(null);
+            setAddressError(null);
             setSuccessMessage(null);
 
             const requiredFields = ['calle', 'numero_exterior', 'colonia', 'ciudad', 'estado', 'codigo_postal'];
             const missing = requiredFields.filter((field) => !String(newAddress[field] || '').trim());
             if (missing.length) {
-                setError('Completa todos los campos obligatorios de la dirección.');
+                setAddressError('Completa todos los campos obligatorios de la dirección.');
                 return;
             }
 
@@ -751,7 +880,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                 return !/^[0-9]+$/.test(value);
             });
             if (nonNumeric) {
-                setError(`${nonNumeric.label} solo debe contener números.`);
+                setAddressError(`${nonNumeric.label} solo debe contener números.`);
                 return;
             }
 
@@ -761,7 +890,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                 return value.length !== length;
             });
             if (invalidLength) {
-                setError(`${invalidLength.label} debe tener ${invalidLength.length} dígitos.`);
+                setAddressError(`${invalidLength.label} debe tener ${invalidLength.length} dígitos.`);
                 return;
             }
 
@@ -799,12 +928,12 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             await refreshUser(userData.id_usuario, patchedUser);
 
             setSuccessMessage('Dirección actualizada correctamente');
-            setOpenAddAddress(false);
             setNewAddress(initialAddressState);
+            handleCloseAddressModal();
 
         } catch (err) {
             console.error('Error al agregar dirección:', err);
-            setError(err.message);
+            setAddressError(err.message || 'No se pudo guardar la dirección.');
         }
     };
 
@@ -852,6 +981,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         }
         if (hasMascotas && !bookingForm.id_mascota) {
             setBookingError('Selecciona una mascota para este servicio.');
+            return;
+        }
+        if (!isHalfHourSlot(bookingForm.fecha_cita)) {
+            setBookingError('Selecciona horarios en intervalos de 30 minutos (ej. 10:00, 10:30).');
             return;
         }
 
@@ -923,6 +1056,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
         const hour = selectedDate.getHours();
         if (hour < 10 || hour >= 18) {
             setRescheduleError('El horario de atención es de 10:00 a 18:00.');
+            return;
+        }
+        if (!isHalfHourSlot(rescheduleDate)) {
+            setRescheduleError('Selecciona horarios en intervalos de 30 minutos (ej. 10:00, 10:30).');
             return;
         }
 
@@ -1547,9 +1684,9 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                     ) : (
                                         <Stack spacing={1.1}>
                                             {misAdopciones.map((adopcion) => {
-                                                const estadoColor = adopcion.estado === 'aprobada'
+                                                const estadoColor = adopcion.estado_solicitud === 'aprobada'
                                                     ? 'success'
-                                                    : adopcion.estado === 'rechazada'
+                                                    : adopcion.estado_solicitud === 'rechazada'
                                                         ? 'error'
                                                         : 'warning';
                                                 return (
@@ -1647,11 +1784,19 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                                                                     <Stack direction="row" spacing={1} alignItems="center">
                                                                         <Chip
                                                                             icon={<Pets fontSize="small" />}
-                                                                            label={`Entrega: ${fechaEntrega}`}
+                                                                            label={`Adoptada el ${fechaEntrega}`}
                                                                             size="small"
                                                                             sx={{ fontWeight: 600 }}
                                                                         />
                                                                     </Stack>
+                                                                    <Button
+                                                                        variant="contained"
+                                                                        size="small"
+                                                                        sx={{ mt: 1, alignSelf: 'flex-start' }}
+                                                                        onClick={() => openSeguimientoDialog(adopcion)}
+                                                                    >
+                                                                        Realizar seguimiento
+                                                                    </Button>
                                                                 </Box>
                                                             </Box>
                                                         </Grid>
@@ -1858,14 +2003,19 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
             </Dialog>
 
             {/* Modal: Agregar/Editar Dirección */}
-            <Dialog open={openAddAddress} onClose={() => setOpenAddAddress(false)} maxWidth="md" fullWidth>
+            <Dialog open={openAddAddress} onClose={handleCloseAddressModal} maxWidth="md" fullWidth>
                 <DialogTitle>
                     {hasAddress ? 'Editar Dirección' : 'Agregar Dirección'}
-                    <IconButton onClick={() => setOpenAddAddress(false)} sx={{ position: 'absolute', right: 8, top: 8 }} >
+                    <IconButton onClick={handleCloseAddressModal} sx={{ position: 'absolute', right: 8, top: 8 }} >
                         <Close />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
+                    {addressError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {addressError}
+                        </Alert>
+                    )}
                     <Grid container spacing={2} sx={{ pt: 2 }}>
                         <Grid item xs={12} sm={8}>
                             <TextField
@@ -1943,9 +2093,107 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenAddAddress(false)}>Cancelar</Button>
+                    <Button onClick={handleCloseAddressModal}>Cancelar</Button>
                     <Button onClick={handleAddAddress} variant="contained">
                         {hasAddress ? 'Guardar cambios' : 'Agregar Dirección'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Modal Seguimiento */}
+            <Dialog open={openSeguimiento} onClose={() => setOpenSeguimiento(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    Seguimiento de {seguimientoTarget?.mascota?.nombre || 'tu mascota'}
+                    <IconButton onClick={() => setOpenSeguimiento(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        {seguimientoError && <Alert severity="error">{seguimientoError}</Alert>}
+                        <TextField
+                            label="Fecha de seguimiento"
+                            type="date"
+                            value={seguimientoForm.fecha_seguimiento}
+                            onChange={handleSeguimientoInputChange('fecha_seguimiento')}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Estado de la mascota"
+                            value={seguimientoForm.estado_mascota}
+                            onChange={handleSeguimientoInputChange('estado_mascota')}
+                            fullWidth
+                            required
+                        />
+                        <TextField
+                            label="Observaciones"
+                            value={seguimientoForm.observaciones}
+                            onChange={handleSeguimientoInputChange('observaciones')}
+                            fullWidth
+                            multiline
+                            minRows={3}
+                        />
+                        <TextField
+                            label="Próximo seguimiento"
+                            type="date"
+                            value={seguimientoForm.siguiente_seguimiento}
+                            onChange={handleSeguimientoInputChange('siguiente_seguimiento')}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                        />
+                        <Box>
+                            <Button
+                                component="label"
+                                variant="outlined"
+                                startIcon={<CloudUpload />}
+                                sx={{ mb: 1 }}
+                            >
+                                Subir foto
+                                <input type="file" hidden accept="image/*" onChange={handleSeguimientoPhotoChange} />
+                            </Button>
+                            <Stack spacing={1}>
+                                {seguimientoFotos.map((foto) => (
+                                    <Card key={foto.id} variant="outlined" sx={{ p: 1.5 }}>
+                                        <Stack direction="row" spacing={2}>
+                                            <Box
+                                                component="img"
+                                                src={foto.preview}
+                                                alt="Foto seguimiento"
+                                                sx={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 1 }}
+                                            />
+                                            <Box sx={{ flex: 1 }}>
+                                                <TextField
+                                                    label="Descripción"
+                                                    value={foto.descripcion || ''}
+                                                    onChange={(e) => handleSeguimientoFotoDescripcion(foto.id, e.target.value)}
+                                                    fullWidth
+                                                    size="small"
+                                                />
+                                                <Button
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() => handleSeguimientoFotoRemove(foto.id)}
+                                                    sx={{ mt: 1 }}
+                                                >
+                                                    Eliminar
+                                                </Button>
+                                            </Box>
+                                        </Stack>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        </Box>
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenSeguimiento(false)}>Cancelar</Button>
+                    <Button
+                        onClick={handleSubmitSeguimiento}
+                        variant="contained"
+                        disabled={seguimientoLoading}
+                    >
+                        {seguimientoLoading ? <CircularProgress size={20} /> : 'Guardar seguimiento'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1968,7 +2216,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                             InputLabelProps={{ shrink: true }}
                             fullWidth
                             required
-                            inputProps={{ min: toInputDateTime(new Date()) }}
+                            inputProps={{ min: getTodayMinLocal(), step: 1800 }}
                         />
                         <TextField
                             label="Motivo"
@@ -2062,7 +2310,7 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                             onChange={(e) => setRescheduleDate(e.target.value)}
                             InputLabelProps={{ shrink: true }}
                             fullWidth
-                            inputProps={{ min: toInputDateTime(new Date()) }}
+                            inputProps={{ min: getTodayMinLocal(), step: 1800 }}
                         />
                         {rescheduleTarget?.servicio?.nombre && (
                             <Alert severity="info">Servicio: {rescheduleTarget.servicio.nombre}</Alert>
