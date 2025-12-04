@@ -263,6 +263,7 @@ const EmployeeRow = ({ empleado, onToggleActive, onEdit }) => {
     // Normalizar acceso a datos (tu API puede devolver usuarios o usuario)
     const usuario = empleado.usuarios || empleado.usuario;
     const direccion = empleado.direccion;
+    const fotoSrc = sanitizeBase64Image(usuario?.foto_perfil_base64) || undefined;
 
     return (
         <>
