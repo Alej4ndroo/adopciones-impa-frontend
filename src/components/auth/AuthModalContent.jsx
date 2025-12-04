@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
     Box, Button, TextField, Typography, Link, 
     InputAdornment, IconButton, Stack, Alert
@@ -10,6 +10,24 @@ import {
 import axios from 'axios';
 
 const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
+
+const ADULT_MIN_AGE = 18;
+const getAdultMaxDate = () => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() - ADULT_MIN_AGE);
+    today.setHours(0, 0, 0, 0);
+    const local = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+    return local.toISOString().split('T')[0];
+};
+
+const isAdult = (birthDateStr) => {
+    if (!birthDateStr) return false;
+    const birthDate = new Date(birthDateStr);
+    if (Number.isNaN(birthDate.getTime())) return false;
+    const today = new Date();
+    const adultDate = new Date(today.getFullYear() - ADULT_MIN_AGE, today.getMonth(), today.getDate());
+    return birthDate <= adultDate;
+};
 
 // --- FUNCIÓN HELPER PARA VALIDAR ---
 const checkPasswordValidation = (password) => {
@@ -60,6 +78,7 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
         confirmPassword: '',
         fecha_nacimiento: ''
     });
+    const adultMaxDate = useMemo(() => getAdultMaxDate(), []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -122,6 +141,11 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
 
         if (formData.password !== formData.confirmPassword) {
             setError('Las contraseñas no coinciden');
+            return;
+        }
+
+        if (!isAdult(formData.fecha_nacimiento)) {
+            setError('Debes ser mayor de edad para registrarte.');
             return;
         }
 
@@ -426,6 +450,7 @@ const AuthModalContent = ({ onLoginSuccess, onClose }) => {
                     value={formData.fecha_nacimiento} 
                     onChange={handleChange} 
                     required
+                    inputProps={{ max: adultMaxDate }}
                     InputLabelProps={{
                       shrink: true,
                     }}

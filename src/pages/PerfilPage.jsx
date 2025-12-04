@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 // Componentes Separados
 import PublicNavbar from '../components/public/PublicNavbar';
 import PublicFooter from '../components/public/PublicFooter';
+import { asDataUrlImage } from '../utils/base64';
 
 // URL de la API
 const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
@@ -237,10 +238,11 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-// Asegura que el string base64 tenga el prefijo data URL para mostrar la imagen
-const asDataUrlImage = (value) => {
-    if (!value) return null;
-    return value.startsWith('data:') ? value : `data:image/jpeg;base64,${value}`;
+const addDaysToDate = (dateString, daysToAdd = 15) => {
+    const base = dateString ? new Date(dateString) : new Date();
+    if (Number.isNaN(base.getTime())) return '';
+    base.setDate(base.getDate() + daysToAdd);
+    return base.toISOString().split('T')[0];
 };
 
 const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout }) => {
@@ -755,12 +757,13 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
 
     const openSeguimientoDialog = (adopcion) => {
         setSeguimientoTarget(adopcion);
+        const today = new Date().toISOString().split('T')[0];
         setSeguimientoForm({
-            fecha_seguimiento: new Date().toISOString().split('T')[0],
+            fecha_seguimiento: today,
             estado_mascota: '',
             observaciones: '',
             requiere_atencion: false,
-            siguiente_seguimiento: ''
+            siguiente_seguimiento: addDaysToDate(today)
         });
         setSeguimientoFotos([]);
         setSeguimientoError(null);
@@ -769,7 +772,16 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
 
     const handleSeguimientoInputChange = (field) => (event) => {
         const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-        setSeguimientoForm((prev) => ({ ...prev, [field]: value }));
+        if (field === 'fecha_seguimiento') {
+            const nextDate = addDaysToDate(value);
+            setSeguimientoForm((prev) => ({
+                ...prev,
+                fecha_seguimiento: value,
+                siguiente_seguimiento: nextDate
+            }));
+        } else {
+            setSeguimientoForm((prev) => ({ ...prev, [field]: value }));
+        }
     };
 
     const handleSeguimientoPhotoChange = async (event) => {
@@ -2138,9 +2150,10 @@ const PerfilPage = ({ isAuthenticated, currentUser, onProfileUpdate, onLogout })
                             label="Próximo seguimiento"
                             type="date"
                             value={seguimientoForm.siguiente_seguimiento}
-                            onChange={handleSeguimientoInputChange('siguiente_seguimiento')}
                             InputLabelProps={{ shrink: true }}
+                            InputProps={{ readOnly: true }}
                             fullWidth
+                            helperText="Se agenda automáticamente 15 días después."
                         />
                         <Box>
                             <Button

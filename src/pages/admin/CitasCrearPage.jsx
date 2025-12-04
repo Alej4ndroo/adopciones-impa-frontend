@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import {
     Box, Typography, TextField, Button,
@@ -29,7 +29,15 @@ const toInputDateTime = (dateValue) => {
     return local.toISOString().slice(0, 16);
 };
 
-const getTodayMinLocal = () => toInputDateTime(new Date());
+const getNextHalfHourMin = () => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const remainder = now.getMinutes() % 30;
+    if (remainder > 0) {
+        now.setMinutes(now.getMinutes() + (30 - remainder));
+    }
+    return toInputDateTime(now);
+};
 
 const isHalfHourSlot = (value) => {
     if (!value) return false;
@@ -40,6 +48,7 @@ const isHalfHourSlot = (value) => {
 
 const CitasCrearPage = () => {
     const theme = useTheme();
+    const minDateTime = useMemo(() => getNextHalfHourMin(), []);
     
     // Estado del formulario
     const [formData, setFormData] = useState({
@@ -456,7 +465,7 @@ const handleAutocompleteChange = (name, value) => {
                             value={formData.fecha_cita} 
                             onChange={handleChange} 
                             InputLabelProps={{ shrink: true }} 
-                            inputProps={{ min: getTodayMinLocal(), step: 1800 }}
+                            inputProps={{ min: minDateTime, step: 1800 }}
                             error={Boolean(fieldErrors.fecha)}
                             helperText={fieldErrors.fecha || 'Horario permitido: 10:00 a 18:00 y en intervalos de 30 minutos.'}
                             sx={{ 

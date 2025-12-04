@@ -6,6 +6,8 @@ import {
 import { Login, Close, Logout, Notifications, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IMPALogo from '../../assets/img/logo_impa_azul.png'; 
+import { sanitizeBase64Image } from '../../utils/base64';
+import { mergeNotificationsLists } from '../../utils/notifications';
 
 // ⚙️ 1. Añadimos la variable de entorno para la URL de la API
 const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
@@ -76,28 +78,6 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal
             setNotifications([]);
         }
     }, [historyKey]);
-    const mergeNotifications = useCallback((prevList, incomingList) => {
-        const map = new Map();
-        (prevList || []).forEach((item) => {
-            if (item?.id_notificacion) {
-                map.set(item.id_notificacion, item);
-            }
-        });
-        (incomingList || []).forEach((item) => {
-            if (item?.id_notificacion) {
-                map.set(item.id_notificacion, item);
-            }
-        });
-        const merged = Array.from(map.values()).sort((a, b) => {
-            const dateA = new Date(a.creada_at || a.fecha || 0).getTime();
-            const dateB = new Date(b.creada_at || b.fecha || 0).getTime();
-            if (Number.isNaN(dateA) || Number.isNaN(dateB)) {
-                return (b.id_notificacion || 0) - (a.id_notificacion || 0);
-            }
-            return dateB - dateA;
-        });
-        return merged;
-    }, []);
     const markNotificationAsRead = useCallback((notifId) => {
         if (!notifId) return;
         setReadNotificationIds((prev) => {
@@ -188,7 +168,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal
             // ⚙️ 3d. Usamos los datos reales de la API
             const data = await response.json(); 
             setNotifications((prev) => {
-                const merged = mergeNotifications(prev, data);
+                const merged = mergeNotificationsLists(prev, data);
                 persistNotificationsHistory(merged);
                 return merged;
             });
@@ -201,7 +181,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal
                 setLoadingNotif(false);
             }
         }
-    }, [isAuthenticated, currentUser?.id_usuario, mergeNotifications, persistNotificationsHistory]);
+    }, [isAuthenticated, currentUser?.id_usuario, persistNotificationsHistory]);
 
 
     // -----------------------------------------------------------------
@@ -395,7 +375,7 @@ const PublicNavbar = ({ isAuthenticated, currentUser, onLogout, onOpenLoginModal
                             >
                                 <Avatar
                                     alt={currentUser?.nombre}
-                                    src={currentUser?.foto_perfil_base64 ? `data:image/jpeg;base64,${currentUser.foto_perfil_base64}` : undefined}
+                                    src={sanitizeBase64Image(currentUser?.foto_perfil_base64) || undefined}
                                     sx={{
                                         bgcolor: currentUser?.foto_perfil_base64 ? 'transparent' : stringToColor(currentUser?.nombre || 'usuario'),
                                         width: 40,

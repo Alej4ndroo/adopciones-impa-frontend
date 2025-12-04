@@ -277,7 +277,6 @@ const PetDetailPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout,
                         <Box sx={{ bgcolor: 'white', borderRadius: 4, p: { xs: 2.5, md: 3.5 }, boxShadow: '0 24px 60px rgba(15,23,42,0.08)', border: '1px solid #e7e9f4', display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' }, gap: 1.5 }}>
                                 <Box sx={{ p: 2.4, borderRadius: 3, bgcolor: '#f6f8ff', border: '1px solid #e6e9f0' }}>
-                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, letterSpacing: 0.5 }}>Datos rápidos</Typography>
                                     <Stack spacing={0.6}>
                                         <Typography variant="body2"><strong>Especie:</strong> {mascota.especie || 'N/D'}</Typography>
                                         <Typography variant="body2"><strong>Edad:</strong> {calcularEdad(mascota.edad_en_meses)}</Typography>

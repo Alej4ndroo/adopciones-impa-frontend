@@ -22,6 +22,7 @@ import {
     CalendarToday as CalendarIcon,
     Search as SearchIcon
 } from '@mui/icons-material';
+import { sanitizeBase64Image } from '../../utils/base64';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const CLIENTES_ENDPOINT = '/usuarios/listar-clientes';
@@ -57,9 +58,7 @@ const MobileClientCard = ({ cliente, onDelete, onEdit }) => {
         onDelete(cliente.id_usuario, nextState);
     };
 
-    const fotoSrc = cliente.foto_perfil_base64
-        ? `data:image/jpeg;base64,${cliente.foto_perfil_base64}`
-        : undefined;
+    const fotoSrc = sanitizeBase64Image(cliente.foto_perfil_base64) || undefined;
 
     return (
         <Card
@@ -270,9 +269,7 @@ const ClientRow = ({ cliente, onDelete, onEdit, onViewDocs }) => {
         setOpen(!open);
     };
 
-    const fotoSrc = cliente.foto_perfil_base64
-        ? `data:image/jpeg;base64,${cliente.foto_perfil_base64}`
-        : undefined;
+    const fotoSrc = sanitizeBase64Image(cliente.foto_perfil_base64) || undefined;
 
     return (
         <>

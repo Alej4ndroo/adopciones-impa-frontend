@@ -23,6 +23,7 @@ import {
     CalendarToday as CalendarIcon,
     Search as SearchIcon
 } from '@mui/icons-material';
+import { sanitizeBase64Image } from '../../utils/base64';
 
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const EMPLEADOS_ENDPOINT = '/empleados/listar';
@@ -35,6 +36,7 @@ const MobileEmployeeCard = ({ empleado, usuario, onToggleActive, onEdit }) => {
     const fullAddress = empleado.direccion?.calle
         ? `${empleado.direccion.calle || ''} ${empleado.direccion.numero_exterior || ''}, ${empleado.direccion.colonia || ''}, ${empleado.direccion.ciudad || ''}, ${empleado.direccion.estado || ''}, C.P. ${empleado.direccion.codigo_postal || ''}`.trim()
         : 'Dirección no registrada';
+    const fotoSrc = sanitizeBase64Image(usuario?.foto_perfil_base64) || undefined;
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -85,7 +87,7 @@ const MobileEmployeeCard = ({ empleado, usuario, onToggleActive, onEdit }) => {
             >
                 <Stack direction="row" spacing={2} alignItems="center">
                     <Avatar
-                        src={usuario?.foto_perfil_base64 || undefined}
+                        src={fotoSrc}
                         sx={{
                             bgcolor: usuario?.activo ? '#1976d2' : theme.palette.grey[400],
                             width: 56,
@@ -300,7 +302,7 @@ const EmployeeRow = ({ empleado, onToggleActive, onEdit }) => {
                 </TableCell>
                 <TableCell sx={{ width: 60 }}>
                     <Avatar
-                        src={usuario?.foto_perfil_base64 || undefined}
+                        src={fotoSrc}
                         sx={{
                             bgcolor: usuario?.activo ? '#1976d2' : theme.palette.grey[400],
                             width: 45,

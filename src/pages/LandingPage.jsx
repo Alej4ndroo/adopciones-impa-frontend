@@ -407,11 +407,6 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                         <Grid item xs={12} md={7}>
                             <Fade in timeout={1200}>
                                 <Box>
-                                    <Chip
-                                        label="Adopciones responsables"
-                                        color="secondary"
-                                        sx={{ mb: 2, fontWeight: 700, bgcolor: '#fff', color: 'primary.main' }}
-                                    />
                                     <Typography 
                                         variant="h1" 
                                         sx={{ fontSize: { xs: '3rem', md: '5rem' }, mb: 3, lineHeight: 1.1 }}
@@ -594,7 +589,7 @@ const LandingPage = ({ isAuthenticated, currentUser, onLoginSuccess, onLogout, o
                 </Container>
             </Box>
 
-            {/* --- SERVICIOS SECTION: Alto y Centrado corregidos --- */}
+            {/* --- SERVICIOS: Alto y Centrado corregidos --- */}
             <Box sx={{ py: 10, bgcolor: 'background.default' }}>
                 <Container maxWidth="lg">
                     <Box sx={{ textAlign: 'center', mb: 6 }}>

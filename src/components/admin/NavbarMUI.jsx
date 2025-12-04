@@ -6,6 +6,9 @@ import {
 } from '@mui/material';
 import { UserCircle, LogOut, Menu as MenuIcon } from 'lucide-react';
 import { Notifications } from '@mui/icons-material'; // 1. Icono de MUI
+import axios from 'axios';
+import { sanitizeBase64Image } from '../../utils/base64';
+import { mergeNotificationsLists } from '../../utils/notifications';
 
 // 2. Añadimos la variable de entorno
 const VITE_API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
@@ -55,28 +58,6 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
             setNotifications([]);
         }
     }, [historyKey]);
-    const mergeNotifications = useCallback((prevList, incomingList) => {
-        const map = new Map();
-        (prevList || []).forEach((item) => {
-            if (item?.id_notificacion) {
-                map.set(item.id_notificacion, item);
-            }
-        });
-        (incomingList || []).forEach((item) => {
-            if (item?.id_notificacion) {
-                map.set(item.id_notificacion, item);
-            }
-        });
-        const merged = Array.from(map.values()).sort((a, b) => {
-            const dateA = new Date(a.creada_at || a.fecha || 0).getTime();
-            const dateB = new Date(b.creada_at || b.fecha || 0).getTime();
-            if (Number.isNaN(dateA) || Number.isNaN(dateB)) {
-                return (b.id_notificacion || 0) - (a.id_notificacion || 0);
-            }
-            return dateB - dateA;
-        });
-        return merged;
-    }, []);
     const markNotificationAsRead = useCallback((notifId) => {
         if (!notifId) return;
         setReadNotificationIds((prev) => {
@@ -95,15 +76,12 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
 
     // Efecto para la foto de perfil (sin cambios)
     useEffect(() => {
-        if (currentUser?.foto_perfil_base64) {
-            const fotoRaw = currentUser.foto_perfil_base64;
-            const fotoURI = fotoRaw.startsWith('data:')
-                ? fotoRaw.replace(/\s+/g, '')
-                : `data:image/jpeg;base64,${fotoRaw.replace(/\s+/g, '')}`;
-            setFotoPerfil(fotoURI);
-        } else {
+        if (!currentUser?.foto_perfil_base64) {
             setFotoPerfil(null);
+            return;
         }
+        const safeFoto = sanitizeBase64Image(currentUser.foto_perfil_base64);
+        setFotoPerfil(safeFoto);
     }, [currentUser]);
 
     const userName = currentUser?.nombre || 'Empleado';
@@ -145,7 +123,7 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
 
             const data = await response.json();
             setNotifications((prev) => {
-                const merged = mergeNotifications(prev, data);
+                const merged = mergeNotificationsLists(prev, data);
                 persistNotificationsHistory(merged);
                 return merged;
             });
@@ -157,7 +135,7 @@ const NavbarMUI = ({ sidebarWidth, currentUser, onLogout, onDrawerToggle }) => {
                 setLoadingNotif(false);
             }
         }
-    }, [currentUser, mergeNotifications, persistNotificationsHistory]); // Depende de currentUser
+    }, [currentUser, persistNotificationsHistory]); // Depende de currentUser
 
 
     // -----------------------------------------------------------------

@@ -25,11 +25,82 @@ import esLocale from '@fullcalendar/core/locales/es'; // ◀Para poner el calend
 const API_URL_BACKEND = import.meta.env.VITE_API_URL_BACKEND;
 const API_URLS = {
     MASCOTAS_DISPONIBLES: `${API_URL_BACKEND}/mascotas/contar`,
-    SOLICITUDES_PENDIENTES: `${API_URL_BACKEND}/adopciones/pendientes`, 
-    CITAS_HOY: `${API_URL_BACKEND}/citas/contar`, 
-    INGRESOS_MES: `${API_URL_BACKEND}/finanzas/ingresos/mes`,
+    CITAS_HOY: `${API_URL_BACKEND}/citas/contar`,
     // --- NUEVA RUTA ---
-    CITAS_LISTAR: `${API_URL_BACKEND}/citas/listar`, 
+    CITAS_LISTAR: `${API_URL_BACKEND}/citas/listar`,
+};
+const LISTAR_ADOPCIONES = `${API_URL_BACKEND}/adopciones/listar`;
+
+const isSameDay = (reference, compare) => (
+    reference.getFullYear() === compare.getFullYear() &&
+    reference.getMonth() === compare.getMonth() &&
+    reference.getDate() === compare.getDate()
+);
+
+const getMonthlyRevenueFromCitas = (citas = [], referenceDate = new Date()) => {
+    const today = new Date(referenceDate);
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    today.setHours(0, 0, 0, 0);
+
+    return citas.reduce((total, cita) => {
+        const estado = (cita.estado_cita || '').toLowerCase();
+        if (estado !== 'completada') return total;
+        const fechaEvento = cita.fecha_cita || cita.fecha_hora;
+        if (!fechaEvento) return total;
+        const citaDate = new Date(fechaEvento);
+        if (
+            Number.isNaN(citaDate.getTime()) ||
+            citaDate.getFullYear() !== currentYear ||
+            citaDate.getMonth() !== currentMonth
+        ) {
+            return total;
+        }
+        const costo = parseFloat(cita.costo ?? cita.servicio?.costo_base ?? 0);
+        return total + (Number.isNaN(costo) ? 0 : costo);
+    }, 0);
+};
+
+const calculateFinancialSummary = (citas = [], statusColors, theme, referenceDate = new Date()) => {
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+
+    let ingresosAcumulados = getMonthlyRevenueFromCitas(citas, referenceDate);
+    let citasProgramadasHoy = 0;
+
+    const events = citas.map((cita) => {
+        const statusColor = statusColors[cita.estado_cita] || statusColors.default;
+        const serviceName = cita.servicio?.nombre || 'Servicio';
+        const fechaEvento = cita.fecha_cita || cita.fecha_hora;
+        const citaDate = fechaEvento ? new Date(fechaEvento) : null;
+        const estado = (cita.estado_cita || '').toLowerCase();
+
+        if (citaDate && !Number.isNaN(citaDate.getTime())) {
+            if (estado === 'programada' && isSameDay(today, citaDate)) {
+                citasProgramadasHoy += 1;
+            }
+        }
+
+        return {
+            id: cita.id_cita,
+            title: serviceName,
+            start: fechaEvento,
+            backgroundColor: alpha(statusColor, 0.14),
+            borderColor: 'transparent',
+            textColor: theme.palette.text.primary,
+            extendedProps: {
+                ...cita,
+                statusColor,
+                serviceName,
+            }
+        };
+    });
+
+    return {
+        events,
+        citasProgramadasHoy,
+        ingresosMes: Number(ingresosAcumulados.toFixed(2))
+    };
 };
 
 // -------------------------------------------------------------------
@@ -184,7 +255,6 @@ const DashboardContentMUI = () => {
     // 2. FUNCIÓN ASÍNCRONA PARA EL FETCH DE KPIs (Se mantiene)
     useEffect(() => {
         const fetchNumericValue = async (url) => {
-            // Asumimos que no necesitas token para estos contadores públicos
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -194,35 +264,61 @@ const DashboardContentMUI = () => {
             
             const data = await response.json(); 
             
-            if (typeof data === 'number' && !isNaN(data)) {
+            if (typeof data === 'number' && !Number.isNaN(data)) {
                 return data; 
             }
             const parsedNumber = parseFloat(data);
-            if (!isNaN(parsedNumber)) {
+            if (!Number.isNaN(parsedNumber)) {
                 return parsedNumber;
             }
 
             return 0;
         };
 
+        const fetchPendingAdoptions = async (headers) => {
+            try {
+                const response = await axios.get(LISTAR_ADOPCIONES, { headers });
+                const adopciones = Array.isArray(response.data) ? response.data : [];
+                return adopciones.filter((adopcion) => {
+                    const estadoSolicitud = (adopcion.estado_solicitud || adopcion.estado || '').toLowerCase();
+                    return estadoSolicitud === 'en_revision' || estadoSolicitud === 'pendiente';
+                }).length;
+            } catch (error) {
+                console.error("Error al contar adopciones pendientes:", error);
+                return null;
+            }
+        };
+
         const fetchKpis = async () => {
             setKpiMetrics(prev => ({ ...prev, loadingKpis: true }));
+            const token = localStorage.getItem('authToken');
+            const headers = token ? { Authorization: `Bearer ${token}` } : null;
+            const pendingPromise = headers ? fetchPendingAdoptions(headers) : Promise.resolve(null);
+            const citasPromise = headers
+                ? axios.get(API_URLS.CITAS_LISTAR, { headers }).then((res) => res.data).catch((err) => {
+                    console.error("Error al cargar citas para ingresos:", err);
+                    return [];
+                })
+                : Promise.resolve([]);
 
             try {
-                // Hacemos las peticiones en paralelo
-                const [mascotasCount, citasCount, solicitudesCount, ingresosTotal] = await Promise.allSettled([
+                const [mascotasCount, citasCount] = await Promise.allSettled([
                     fetchNumericValue(API_URLS.MASCOTAS_DISPONIBLES),
-                    fetchNumericValue(API_URLS.CITAS_HOY),
-                    fetchNumericValue(API_URLS.SOLICITUDES_PENDIENTES),
-                    fetchNumericValue(API_URLS.INGRESOS_MES)
+                    fetchNumericValue(API_URLS.CITAS_HOY)
                 ]);
 
-                // Actualizamos el estado, manejando resultados exitosos o fallidos
+                const [solicitudesPendientes, citasData] = await Promise.all([
+                    pendingPromise,
+                    citasPromise
+                ]);
+
+                const ingresosMes = headers ? getMonthlyRevenueFromCitas(Array.isArray(citasData) ? citasData : []) : null;
+
                 setKpiMetrics({
                     mascotasDisponibles: mascotasCount.status === 'fulfilled' ? mascotasCount.value : null,
-                    solicitudesPendientes: solicitudesCount.status === 'fulfilled' ? solicitudesCount.value : null,
+                    solicitudesPendientes,
                     citasProgramadasHoy: citasCount.status === 'fulfilled' ? citasCount.value : null,
-                    ingresosMes: ingresosTotal.status === 'fulfilled' ? ingresosTotal.value : null,
+                    ingresosMes,
                     loadingKpis: false,
                 });
 
@@ -260,27 +356,19 @@ const DashboardContentMUI = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                // Transformamos los datos para FullCalendar
-                const events = response.data.map(cita => {
-                    const statusColor = statusColors[cita.estado_cita] || statusColors.default;
-                    const serviceName = cita.servicio?.nombre || 'Servicio';
-                    return {
-                        id: cita.id_cita,
-                        title: serviceName, // Mostrar tipo de servicio
-                        start: cita.fecha_cita, // FullCalendar entiende fechas ISO 8601
-                        backgroundColor: alpha(statusColor, 0.14),
-                        borderColor: 'transparent',
-                        textColor: theme.palette.text.primary,
-                        extendedProps: {
-                            // Aquí puedes guardar más datos si quieres usarlos en un 'eventClick'
-                            ...cita,
-                            statusColor,
-                            serviceName,
-                        }
-                    };
-                });
+                const citasData = Array.isArray(response.data) ? response.data : [];
+                const { events, citasProgramadasHoy, ingresosMes } = calculateFinancialSummary(
+                    citasData,
+                    statusColors,
+                    theme
+                );
                 
                 setCalendarEvents(events);
+                setKpiMetrics((prev) => ({
+                    ...prev,
+                    ingresosMes,
+                    citasProgramadasHoy
+                }));
 
             } catch (error) {
                 console.error("Error al cargar las citas del calendario:", error);
@@ -377,7 +465,7 @@ const DashboardContentMUI = () => {
             <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 4 }}>
                 
                 {/* 1. Mascotas Disponibles */}
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <KpiCard 
                         title="Mascotas Disponibles" 
                         value={kpiMetrics.mascotasDisponibles} 
@@ -389,7 +477,7 @@ const DashboardContentMUI = () => {
                 </Grid>
                 
                 {/* 2. Solicitudes de Adopción Pendientes */}
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <KpiCard 
                         title="Solicitudes Pendientes" 
                         value={kpiMetrics.solicitudesPendientes} 
@@ -401,7 +489,7 @@ const DashboardContentMUI = () => {
                 </Grid>
                 
                 {/* 3. Citas Programadas Hoy */}
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <KpiCard 
                         title="Citas Programadas (Hoy)" 
                         value={kpiMetrics.citasProgramadasHoy} 
@@ -413,7 +501,7 @@ const DashboardContentMUI = () => {
                 </Grid>
                 
                 {/* 4. Ingresos por Servicios */}
-                <Grid item xs={12} sm={6} lg={3}>
+                <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <KpiCard 
                         title="Ingresos Netos (Mes)" 
                         value={kpiMetrics.ingresosMes} 
@@ -431,7 +519,7 @@ const DashboardContentMUI = () => {
             {/* 🔑 FILA INFERIOR: CALENDARIO DE CITAS                              */}
             {/* ------------------------------------------------------------------- */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                     <Paper 
                         elevation={0} 
                         sx={{ 
